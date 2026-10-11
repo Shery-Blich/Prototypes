@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Asteroid Dodger Prototype</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="dodger-wrap">
+    <div class="hud-panel">
+      <span>Survival Time: <strong id="hud-score">0.0s</strong></span>
+      <span>Best Time: <strong id="hud-best">0.0s</strong></span>
+    </div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+  </div>
+
+  <script type="module" src="/src/shared/nav.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

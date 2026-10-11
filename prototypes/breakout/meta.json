@@ -1,0 +1,6 @@
+{
+  "title": "Neon Breakout",
+  "description": "Brick breaker arcade prototype featuring colorful destructible grid, ball bounce reflection angles, lives, and combo scoring.",
+  "tags": ["2D", "Arcade", "Physics", "Destruction"],
+  "controls": "Mouse or A/D / Left/Right to steer paddle"
+}

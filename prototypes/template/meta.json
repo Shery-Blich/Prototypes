@@ -1,0 +1,6 @@
+{
+  "title": "Starter Prototype Template",
+  "description": "Clean canvas template with game loop, keyboard input, and sound effects ready to go.",
+  "tags": ["2D", "Canvas", "Template"],
+  "controls": "WASD or Arrow Keys to move circle"
+}

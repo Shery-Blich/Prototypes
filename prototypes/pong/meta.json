@@ -1,0 +1,6 @@
+{
+  "title": "Retro Pong",
+  "description": "Classic 2-player/AI table tennis with paddle collision physics, ball acceleration, and audio feedback.",
+  "tags": ["2D", "Arcade", "Physics", "AI"],
+  "controls": "W / S or Up / Down arrows to move left paddle"
+}
