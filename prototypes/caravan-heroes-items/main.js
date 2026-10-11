@@ -401,11 +401,13 @@ function simulate(teamA, teamB) {
   function exec(src, own, enemy, indexBeforeRemoval) {
     const key = src.item;
     const a = ABILITIES[key];
-    // Potions are one-time: consumed the moment they fire.
-    src.item = null; src.used = key;
     const prefix = `${label(src)} uses ${a.icon} ${a.name}`;
+    // Potions are one-time per battle: used up only when the effect actually happens.
+    // If it fizzles (no valid target) it stays on the hero for the next battle.
+    const consume = () => { src.item = null; src.used = key; };
     if (a.effect === 'damage') {
       if (!enemy.length) return;
+      consume();
       const target = a.enemy === 'front' ? enemy[0] : enemy[rnd(enemy.length)];
       target.hp -= a.dmg;
       snap(src.team === 0 ? 'p' : 'e', `${prefix}: ${a.dmg} dmg to ${label(target)} (♥ ${Math.max(target.hp, 0)})`, { [src.uid]: 'acting', [target.uid]: 'hit' });
@@ -414,9 +416,10 @@ function simulate(teamA, teamB) {
     } else {
       const target = friendTarget(src, own, indexBeforeRemoval, a.friend);
       if (!target) {
-        snap('s', `${prefix}, but there is no valid friend to buff.`, { [src.uid]: 'acting' });
+        snap('s', `${label(src)}'s ${a.icon} ${a.name} fizzled — no valid friend to buff. Potion kept.`, { [src.uid]: 'acting' });
         return;
       }
+      consume();
       target.atk += a.atk; target.hp += a.hp; target.maxHp += a.hp;
       snap(src.team === 0 ? 'p' : 'e', `${prefix}: ${label(target)} +${a.atk} dmg +${a.hp} hp → ${target.atk}/${target.hp}`, { [src.uid]: 'acting', [target.uid]: 'buffed' });
     }
@@ -507,25 +510,17 @@ function finishBattle() {
   clearTimeout(stepTimer);
   b.done = true;
   b.consumed = [];
-  // Remove potions that fired during the battle.
+  b.kept = [];
+  // Potions that fired are gone; every other potion stays on its hero, whatever the outcome.
   for (const u of b.player) {
     if (u.used) { delete state.equipped[u.slot]; b.consumed.push(u.used); }
   }
+  b.kept = Object.values(state.equipped);
   b.rewards = [];
   if (b.winner === 0) {
     const ids = Object.keys(ABILITIES);
     for (let i = 0; i < b.cell.tier + 1; i++) b.rewards.push(ids[Math.floor(Math.random() * ids.length)]);
     state.inventory.push(...b.rewards);
-  } else if (b.winner === 1) {
-    // Defeat: lose everything (inventory + equipped potions).
-    b.lost = state.inventory.length + Object.keys(state.equipped).length;
-    state.inventory = [];
-    state.equipped = {};
-  } else {
-    // Tie: unequip everything, then lose half of all items (rounded up), like BackpackData.RemoveHalfItems.
-    for (const slot of Object.keys(state.equipped)) unequip(slot, false);
-    b.lost = Math.ceil(state.inventory.length / 2);
-    for (let i = 0; i < b.lost; i++) state.inventory.splice(Math.floor(Math.random() * state.inventory.length), 1);
   }
   render();
 }
@@ -562,14 +557,20 @@ function renderBattle() {
 }
 
 function resultBanner(b) {
-  const used = b.consumed.length ? `\nPotions used up this battle: ${b.consumed.map(k => ABILITIES[k].name).join(', ')}` : '';
+  const names = ks => ks.map(k => ABILITIES[k].name).join(', ');
+  const potions = `
+Used up (gone): ${b.consumed.length ? names(b.consumed) : 'none'}
+Not used (still on your heroes): ${b.kept.length ? names(b.kept) : 'none'}`;
   if (b.winner === 0) {
-    return el('div', { class: 'banner win' }, `Victory!\nYou gained ${b.rewards.length} potion(s): ${b.rewards.map(k => ABILITIES[k].name).join(', ')}${used}`);
+    return el('div', { class: 'banner win' }, `Victory!
+You gained ${b.rewards.length} potion(s): ${names(b.rewards)}${potions}`);
   }
   if (b.winner === 1) {
-    return el('div', { class: 'banner lose' }, `Wiped out!\nThe enemy tribe looted you — ${b.lost ? `you lost all ${b.lost} remaining item(s)` : 'you had no items left to lose'}.\nMap progress is kept; you stay where you were.${used}`);
+    return el('div', { class: 'banner lose' }, `Wiped out!
+Map progress is kept; you stay where you were.${potions}`);
   }
-  return el('div', { class: 'banner tie' }, `A Tie!\nYou and the enemy tribe escaped, but they looted half your items (${b.lost}). All potions were unequipped.${used}`);
+  return el('div', { class: 'banner tie' }, `A Tie!
+You stay where you were.${potions}`);
 }
 
 function returnToMap() {
@@ -580,8 +581,8 @@ function returnToMap() {
     state.lastResult = { cls: 'win', text: `Won the Tier ${b.cell.tier} battle — gained ${b.rewards.length} potion(s).` };
   } else {
     state.lastResult = b.winner === 1
-      ? { cls: 'lose', text: 'Lost the last battle — all items gone. You stayed in place.' }
-      : { cls: 'tie', text: 'Tied the last battle — lost half your items. You stayed in place.' };
+      ? { cls: 'lose', text: 'Lost the last battle — you stayed in place. Unused potions kept.' }
+      : { cls: 'tie', text: 'Tied the last battle — you stayed in place. Unused potions kept.' };
   }
   state.battle = null;
   go('map');
