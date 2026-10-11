@@ -7,13 +7,18 @@ const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 }[c]));
 
-function renderGrid() {
-  const grid = document.getElementById('prototypes-list');
+const formatDate = (iso) => {
+  const d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+function renderList() {
+  const list = document.getElementById('prototypes-list');
   const visible = prototypes.filter(p => !p.hidden);
 
   if (visible.length === 0) {
-    grid.innerHTML = `
-      <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: #64748b;">
+    list.innerHTML = `
+      <div class="empty-state">
         <h3>No prototypes yet</h3>
         <p style="margin-top: 8px;">Run <code>npm run new &lt;name&gt;</code> to make one.</p>
       </div>
@@ -21,19 +26,26 @@ function renderGrid() {
     return;
   }
 
-  grid.innerHTML = visible.map(proto => {
+  // List is sorted newest first, so the first dated entry is the latest
+  list.innerHTML = visible.map((proto, i) => {
     const url = `${BASE}${proto.id}/`;
+    const date = proto.created ? formatDate(proto.created) : '';
+    const isLatest = i === 0 && !!proto.created;
     return `
-      <div class="prototype-card">
-        <div class="card-top">
-          <h2 class="card-title">${escapeHtml(proto.title)}</h2>
-          <a href="${url}" class="endpoint-pill" title="Direct URL Endpoint">/${escapeHtml(proto.id)}</a>
+      <a href="${url}" class="prototype-row${isLatest ? ' is-latest' : ''}">
+        <div class="row-main">
+          <div class="row-heading">
+            <h2 class="row-title">${escapeHtml(proto.title)}</h2>
+            ${isLatest ? '<span class="latest-tag">Latest</span>' : ''}
+            <span class="endpoint-pill">/${escapeHtml(proto.id)}</span>
+          </div>
+          <p class="row-desc">${escapeHtml(proto.description)}</p>
         </div>
-        <p class="card-desc">${escapeHtml(proto.description)}</p>
-        <div class="card-actions">
-          <a href="${url}" class="btn btn-launch btn-launch-primary">Play Prototype ➔</a>
+        <div class="row-meta">
+          ${date ? `<time class="row-date" datetime="${escapeHtml(proto.created)}">${date}</time>` : ''}
+          <span class="row-arrow" aria-hidden="true">➔</span>
         </div>
-      </div>
+      </a>
     `;
   }).join('');
 }
@@ -46,4 +58,4 @@ modal?.addEventListener('click', (e) => {
   if (e.target === modal) modal.classList.remove('open');
 });
 
-renderGrid();
+renderList();

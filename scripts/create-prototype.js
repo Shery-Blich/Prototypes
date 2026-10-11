@@ -54,7 +54,7 @@ fs.cpSync(templateDir, targetDir, { recursive: true });
 const metaFile = path.resolve(targetDir, 'meta.json');
 if (fs.existsSync(metaFile)) {
   const title = protoName.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  const meta = { title, description: `Prototype for ${title}` };
+  const meta = { title, description: `Prototype for ${title}`, created: new Date().toISOString() };
   fs.writeFileSync(metaFile, JSON.stringify(meta, null, 2), 'utf-8');
 }
 

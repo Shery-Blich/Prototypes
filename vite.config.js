@@ -48,8 +48,10 @@ function getPrototypesList() {
       title: meta.title || toTitle(name),
       description: meta.description || '',
       hidden: !!meta.hidden,
+      created: meta.created || null,
     };
-  }).sort((a, b) => a.title.localeCompare(b.title));
+  // Newest first; prototypes without a created date go last
+  }).sort((a, b) => (Date.parse(b.created) || 0) - (Date.parse(a.created) || 0) || a.title.localeCompare(b.title));
 }
 
 function prototypesPlugin() {
