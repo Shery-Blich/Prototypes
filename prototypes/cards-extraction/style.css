@@ -7,7 +7,7 @@ body {
   min-height: 100vh;
 }
 
-#app { max-width: 1100px; margin: 0 auto; padding: 16px; }
+#app { max-width: 1400px; margin: 0 auto; padding: 16px; }
 
 .hidden { display: none !important; }
 
@@ -29,6 +29,14 @@ body {
 .row { display: flex; gap: 10px; flex-wrap: wrap; min-height: 150px; align-items: flex-start; }
 /* Player rows: index 0 (front) is shown on the right, facing the enemy */
 .row-team, #battle-player { flex-direction: row-reverse; justify-content: flex-start; }
+
+.prep-top { display: flex; gap: 14px; align-items: stretch; }
+.prep-top .panel { flex: 1; min-width: 0; }
+.prep-top .row { flex-wrap: nowrap; }
+.prep-top .card { width: 104px; }
+.prep-top .card-text { font-size: 9.5px; }
+.prep-top .card.empty { width: 104px; }
+@media (max-width: 1240px) { .prep-top { flex-direction: column; } }
 
 .prep-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
 
@@ -91,6 +99,51 @@ body {
 }
 .card-ctrls button:disabled { opacity: 0.3; cursor: default; }
 .card-ctrls button:hover:not(:disabled) { border-color: #818cf8; }
+
+/* Ability preview */
+.card.selectable { cursor: pointer; }
+.card.selectable:hover { border-color: #818cf8; }
+.card.preview-source { border-color: #a855f7 !important; box-shadow: 0 0 0 2px #a855f7, 0 0 16px rgba(168, 85, 247, 0.6); }
+.card.preview-help { border-color: #22c55e !important; box-shadow: 0 0 12px rgba(34, 197, 94, 0.55); }
+.card.preview-harm { border-color: #ef4444 !important; box-shadow: 0 0 12px rgba(239, 68, 68, 0.55); }
+.stat.stat-up { background: #14532d; color: #4ade80; outline: 1px solid #4ade80; }
+.stat.stat-down { background: #450a0a; color: #f87171; outline: 1px solid #f87171; }
+.pv-rand { color: #fbbf24; font-weight: 800; }
+.card.preview-summon {
+  border: 2px dashed #22c55e; background: rgba(20, 83, 45, 0.35); opacity: 0.85;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.45);
+}
+.summon-tag {
+  position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+  background: #22c55e; color: #052e16; font-size: 9px; font-weight: 800;
+  padding: 1px 6px; border-radius: 4px; letter-spacing: 0.05em; white-space: nowrap;
+}
+.card.preview-faints .card-emoji { opacity: 0.4; }
+.pv-badge {
+  position: absolute; top: 4px; right: 6px; font-size: 16px;
+  background: #422006; border: 1px solid #fbbf24; border-radius: 50%;
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+}
+#prep-screen { position: relative; }
+.prep-top .row { padding-top: 34px; }
+.preview-arrows { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 20; overflow: visible; }
+.arrow { fill: none; stroke-width: 2.5; stroke-dasharray: 7 4; animation: arrow-flow 0.8s linear infinite; }
+.arrow.help { stroke: #4ade80; }
+.arrow.harm { stroke: #f87171; }
+.arrowhead.help { fill: #4ade80; }
+.arrowhead.harm { fill: #f87171; }
+@keyframes arrow-flow { to { stroke-dashoffset: -11; } }
+.arrow-label {
+  font-size: 13px; font-weight: 800; paint-order: stroke;
+  stroke: #0f172a; stroke-width: 4px; stroke-linejoin: round;
+}
+.arrow-label.help { fill: #4ade80; }
+.arrow-label.harm { fill: #f87171; }
+
+.preview-info {
+  background: #1e1b4b; border: 1px solid #6366f1; border-radius: 10px;
+  padding: 10px 14px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;
+}
 
 /* ---------- Battle ---------- */
 .battle-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; font-size: 14px; }

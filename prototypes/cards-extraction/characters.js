@@ -1,11 +1,15 @@
 // Character definitions. Abilities follow Super Auto Pets style triggers:
 //   startOfBattle, beforeAttack, hurt, faint, knockOut, friendAheadAttacks
 // Each ability's `run(api, self, ctx)` is async so the battle can animate it.
+// `preview(p)` describes one trigger's effect for the prep-screen preview:
+//   p = { self, ahead, behind, behind2, friends, enemies, all } (all excluding self)
+//   returns [{ targets, atk?, hp? (negative = damage), shield?, random? } | { summon: id, count }]
 
 export const CHARACTERS = {
   archer: {
     name: 'Archer', emoji: '🏹', atk: 2, hp: 2,
     trigger: 'startOfBattle', text: 'Start of battle: deal 1 damage to a random enemy.',
+    preview: p => [{ targets: p.enemies, hp: -1, random: true }],
     async run(api, self) {
       const t = api.randomOf(api.enemiesOf(self));
       if (t) await api.damage(t, 1, self);
@@ -14,6 +18,7 @@ export const CHARACTERS = {
   bard: {
     name: 'Bard', emoji: '🎻', atk: 1, hp: 3,
     trigger: 'startOfBattle', text: 'Start of battle: give the friend ahead +2 attack.',
+    preview: p => [{ targets: [p.ahead], atk: 2 }],
     async run(api, self) {
       const t = api.friendAhead(self);
       if (t) await api.buff(t, 2, 0, self);
@@ -22,6 +27,7 @@ export const CHARACTERS = {
   medic: {
     name: 'Medic', emoji: '⛑️', atk: 2, hp: 2,
     trigger: 'faint', text: 'Faint: give a random friend +2/+1.',
+    preview: p => [{ targets: p.friends, atk: 2, hp: 1, random: true }],
     async run(api, self) {
       const t = api.randomOf(api.friendsOf(self));
       if (t) await api.buff(t, 2, 1, self);
@@ -30,6 +36,7 @@ export const CHARACTERS = {
   necromancer: {
     name: 'Necromancer', emoji: '🧙', atk: 1, hp: 2,
     trigger: 'faint', text: 'Faint: summon a 1/1 Skeleton.',
+    preview: () => [{ summon: 'skeleton', count: 1 }],
     async run(api, self, ctx) {
       await api.summon(self.side, ctx.index, 'skeleton');
     },
@@ -37,6 +44,7 @@ export const CHARACTERS = {
   shepherd: {
     name: 'Shepherd', emoji: '🧑‍🌾', atk: 2, hp: 2,
     trigger: 'faint', text: 'Faint: summon two 2/1 Wolves.',
+    preview: () => [{ summon: 'wolf', count: 2 }],
     async run(api, self, ctx) {
       await api.summon(self.side, ctx.index, 'wolf');
       await api.summon(self.side, ctx.index, 'wolf');
@@ -45,6 +53,7 @@ export const CHARACTERS = {
   alchemist: {
     name: 'Alchemist', emoji: '💣', atk: 3, hp: 2,
     trigger: 'faint', text: 'Faint: deal 2 damage to ALL characters.',
+    preview: p => [{ targets: p.all, hp: -2 }],
     async run(api, self) {
       await api.damageMany(api.allUnits(), 2, self);
     },
@@ -52,6 +61,7 @@ export const CHARACTERS = {
   bannerman: {
     name: 'Bannerman', emoji: '🚩', atk: 2, hp: 2,
     trigger: 'faint', text: 'Faint: give the two friends behind +1/+1.',
+    preview: p => [{ targets: [p.behind, p.behind2], atk: 1, hp: 1 }],
     async run(api, self, ctx) {
       const team = api.team(self.side);
       for (const t of team.slice(ctx.index, ctx.index + 2)) await api.buff(t, 1, 1, self);
@@ -60,6 +70,7 @@ export const CHARACTERS = {
   cleric: {
     name: 'Cleric', emoji: '🙏', atk: 1, hp: 3,
     trigger: 'faint', text: 'Faint: give the friend behind a Shield (blocks the next hit).',
+    preview: p => [{ targets: [p.behind], shield: true }],
     async run(api, self, ctx) {
       const t = api.team(self.side)[ctx.index];
       if (t) await api.shield(t, self);
@@ -68,6 +79,7 @@ export const CHARACTERS = {
   thornguard: {
     name: 'Thornguard', emoji: '🌵', atk: 3, hp: 3,
     trigger: 'hurt', text: 'Hurt: deal 2 damage to a random enemy.',
+    preview: p => [{ targets: p.enemies, hp: -2, random: true }],
     async run(api, self) {
       const t = api.randomOf(api.enemiesOf(self));
       if (t) await api.damage(t, 2, self);
@@ -76,6 +88,7 @@ export const CHARACTERS = {
   paladin: {
     name: 'Paladin', emoji: '🛡️', atk: 2, hp: 5,
     trigger: 'hurt', text: 'Hurt: give the friend behind +1/+2.',
+    preview: p => [{ targets: [p.behind], atk: 1, hp: 2 }],
     async run(api, self) {
       const t = api.friendBehind(self);
       if (t) await api.buff(t, 1, 2, self);
@@ -84,6 +97,7 @@ export const CHARACTERS = {
   rager: {
     name: 'Rager', emoji: '😡', atk: 1, hp: 4,
     trigger: 'hurt', text: 'Hurt: gain +2 attack.',
+    preview: p => [{ targets: [p.self], atk: 2 }],
     async run(api, self) {
       await api.buff(self, 2, 0, self);
     },
@@ -91,6 +105,7 @@ export const CHARACTERS = {
   golem: {
     name: 'Golem', emoji: '🗿', atk: 2, hp: 6,
     trigger: 'hurt', text: 'Hurt: gain a Shield (once per battle).',
+    preview: p => [{ targets: [p.self], shield: true }],
     async run(api, self) {
       if (self.usedOnce) return;
       self.usedOnce = true;
@@ -100,6 +115,7 @@ export const CHARACTERS = {
   brute: {
     name: 'Brute', emoji: '🪓', atk: 4, hp: 3,
     trigger: 'knockOut', text: 'Knock out: gain +2/+2.',
+    preview: p => [{ targets: [p.self], atk: 2, hp: 2 }],
     async run(api, self) {
       await api.buff(self, 2, 2, self);
     },
@@ -107,6 +123,7 @@ export const CHARACTERS = {
   berserker: {
     name: 'Berserker', emoji: '🐘', atk: 3, hp: 5,
     trigger: 'beforeAttack', text: 'Before attack: deal 1 damage to the friend behind.',
+    preview: p => [{ targets: [p.behind], hp: -1 }],
     async run(api, self) {
       const t = api.friendBehind(self);
       if (t) await api.damage(t, 1, self);
@@ -115,6 +132,7 @@ export const CHARACTERS = {
   squire: {
     name: 'Squire', emoji: '🐴', atk: 1, hp: 2,
     trigger: 'friendAheadAttacks', text: 'Friend ahead attacks: gain +2/+2.',
+    preview: p => [{ targets: [p.self], atk: 2, hp: 2 }],
     async run(api, self) {
       await api.buff(self, 2, 2, self);
     },

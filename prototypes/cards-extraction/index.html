@@ -17,19 +17,24 @@
 
     <!-- PREP SCREEN -->
     <section id="prep-screen" class="screen">
-      <div class="panel">
-        <h2>Next opponent</h2>
-        <div id="enemy-preview" class="row row-enemy"></div>
-      </div>
+      <svg id="preview-arrows" class="preview-arrows"></svg>
+      <div class="prep-top">
+        <div class="panel panel-team">
+          <h2>Your team <span class="hint">(1-5 characters · front is on the right · click a character to preview its ability · if you lose, all of them are lost)</span></h2>
+          <div id="team-slots" class="row row-team"></div>
+          <div class="prep-actions">
+            <button id="btn-fight" class="btn btn-primary">⚔ Fight</button>
+            <span id="fight-hint" class="hint"></span>
+          </div>
+        </div>
 
-      <div class="panel">
-        <h2>Your team <span class="hint">(1-5 characters · front is on the right · if you lose, all of them are lost)</span></h2>
-        <div id="team-slots" class="row row-team"></div>
-        <div class="prep-actions">
-          <button id="btn-fight" class="btn btn-primary">⚔ Fight</button>
-          <span id="fight-hint" class="hint"></span>
+        <div class="panel panel-enemy">
+          <h2>Next opponent <span class="hint">(front is on the left)</span></h2>
+          <div id="enemy-preview" class="row row-enemy"></div>
         </div>
       </div>
+
+      <div id="preview-info" class="preview-info hidden"></div>
 
       <div class="panel">
         <h2>Roster <span class="hint">(click to add to team)</span></h2>

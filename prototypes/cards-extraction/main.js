@@ -18,6 +18,7 @@ const state = {
   enemy: [],         // [{id, atkBonus, hpBonus}]
   speed: 1,
   inBattle: false,
+  previewKey: null,  // selected prep card: 'p<rosterUid>' or 'e<index>'
 };
 
 // ---------- Run setup ----------
@@ -78,10 +79,13 @@ function showPrep() {
   $('battle-screen').classList.add('hidden');
   $('result-overlay').classList.add('hidden');
   renderPrep();
+  resetIdle();
 }
 
 function renderPrep() {
   updateHud();
+
+  const lineup = { player: [], enemy: [] };
 
   const enemyRow = $('enemy-preview');
   enemyRow.innerHTML = '';
@@ -89,6 +93,7 @@ function renderPrep() {
     const d = CHARACTERS[e.id];
     const el = cardEl(e.id, d.atk + e.atkBonus, d.hp + e.hpBonus);
     if (i === 0) el.appendChild(frontTag());
+    lineup.enemy.push(previewable(el, `e${i}`, 'enemy', e.id, d.atk + e.atkBonus, d.hp + e.hpBonus));
     enemyRow.appendChild(el);
   });
 
@@ -115,6 +120,7 @@ function renderPrep() {
       ctrlBtn('▶', 'Move forward', i > 0, () => swap(i, i - 1)),
     );
     el.appendChild(ctrls);
+    lineup.player.push(previewable(el, `p${uid}`, 'player', c.id, d.atk, d.hp));
     teamRow.appendChild(el);
   }
 
@@ -139,6 +145,188 @@ function renderPrep() {
   $('fight-hint').textContent = ok
     ? `${n} character${n > 1 ? 's' : ''} at risk`
     : `Pick at least ${MIN_TEAM} character${MIN_TEAM > 1 ? 's' : ''}`;
+
+  showAbilityPreview(lineup);
+}
+
+// ---------- Ability preview (prep screen) ----------
+
+const TRIGGER_NOTES = {
+  startOfBattle: 'Once, at the start of battle.',
+  hurt: 'Every time it takes damage.',
+  faint: 'Once, when it faints (shown as if it faints in its current slot).',
+  knockOut: 'Every time its attack knocks out an enemy.',
+  beforeAttack: 'Every time, right before it attacks.',
+  friendAheadAttacks: 'Every time the friend directly ahead of it attacks.',
+};
+
+// Clicking a lineup card selects it; clicking it again (or another card) ends/switches the preview.
+function previewable(el, key, side, id, atk, hp) {
+  el.classList.add('selectable');
+  el.addEventListener('click', () => {
+    state.previewKey = state.previewKey === key ? null : key;
+    renderPrep();
+  });
+  return { el, key, side, id, atk, hp };
+}
+
+function showAbilityPreview(lineup) {
+  const info = $('preview-info');
+  const all = [...lineup.player, ...lineup.enemy];
+  const self = all.find(u => u.key === state.previewKey);
+  if (!self) {
+    state.previewKey = null;
+    info.classList.add('hidden');
+    drawArrows(null, []);
+    return;
+  }
+
+  const def = CHARACTERS[self.id];
+  const team = lineup[self.side];
+  const foes = lineup[self.side === 'player' ? 'enemy' : 'player'];
+  const i = team.indexOf(self);
+  const effects = def.preview({
+    self,
+    ahead: team[i - 1],
+    behind: team[i + 1],
+    behind2: team[i + 2],
+    friends: team.filter(u => u !== self),
+    enemies: foes,
+    all: all.filter(u => u !== self),
+  });
+
+  self.el.classList.add('preview-source');
+  let anyTarget = false;
+  let extra = '';
+  const arrows = [];
+  for (const fx of effects) {
+    if (fx.summon) {
+      // It faints first, so the team has one more free slot than now.
+      const room = MAX_TEAM - (team.length - 1);
+      const shown = Math.min(fx.count, room);
+      const d = CHARACTERS[fx.summon];
+      for (let k = 0; k < shown; k++) {
+        arrows.push({ el: addSummonGhost(self, fx.summon), label: `+${d.emoji} ${d.atk}/${d.hp}`, cls: 'help' });
+      }
+      if (shown < fx.count) extra += ` Only ${shown} of ${fx.count} fit (team is full).`;
+      anyTarget = anyTarget || shown > 0;
+      continue;
+    }
+    for (const u of fx.targets.filter(Boolean)) {
+      anyTarget = true;
+      applyPreview(u, fx);
+      arrows.push({ el: u.el, label: effectLabel(fx), cls: (fx.atk || 0) < 0 || (fx.hp || 0) < 0 ? 'harm' : 'help' });
+    }
+  }
+
+  const slot = self.side === 'player' ? `your slot ${i + 1}` : `enemy slot ${i + 1}`;
+  if (effects.some(fx => fx.summon)) extra = ' Summons take its place in the line.' + extra;
+  else if (!anyTarget) extra += ' No valid target in this position.';
+  if (effects.some(fx => fx.random && fx.targets.some(Boolean))) extra += ' <span class="pv-rand">?</span> = one of these, picked at random.';
+  info.innerHTML = `<b>${def.emoji} ${def.name}</b> (${slot}): ${def.text} <span class="hint">${TRIGGER_NOTES[def.trigger]}${extra}</span>`;
+  info.classList.remove('hidden');
+  drawArrows(self.el, arrows);
+}
+
+function effectLabel(fx) {
+  const atk = fx.atk || 0, hp = fx.hp || 0;
+  const sign = n => (n > 0 ? `+${n}` : `${n}`);
+  let text;
+  if (fx.shield) text = '+🛡';
+  else if (atk && hp) text = `${sign(atk)}/${sign(hp)}`;
+  else if (atk) text = `${sign(atk)} ⚔`;
+  else text = `${sign(hp)} ❤`;
+  return fx.random ? `${text} ?` : text;
+}
+
+// Curved arrows from the selected card to everything it affects, with the amount under each tip.
+function drawArrows(sourceEl, arrows) {
+  const svg = $('preview-arrows');
+  svg.innerHTML = '';
+  if (!sourceEl || !arrows.length) return;
+
+  const host = $('prep-screen').getBoundingClientRect();
+  svg.setAttribute('width', host.width);
+  svg.setAttribute('height', host.height);
+  const NS = 'http://www.w3.org/2000/svg';
+  const mk = (tag, attrs) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    svg.appendChild(e);
+    return e;
+  };
+  const defs = mk('defs', {});
+  for (const cls of ['help', 'harm']) {
+    const m = document.createElementNS(NS, 'marker');
+    for (const [k, v] of Object.entries({ id: `arrowhead-${cls}`, viewBox: '0 0 10 10', refX: 6, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' })) m.setAttribute(k, v);
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', 'M0,0 L10,5 L0,10 z');
+    path.setAttribute('class', `arrowhead ${cls}`);
+    m.appendChild(path);
+    defs.appendChild(m);
+  }
+
+  const src = sourceEl.getBoundingClientRect();
+  const sx = src.left + src.width / 2 - host.left;
+  const sy = src.top - host.top;
+  const GAP = 24; // space between arrow tip and the target card's top (label sits there)
+
+  for (const a of arrows) {
+    const r = a.el.getBoundingClientRect();
+    const tx = r.left + r.width / 2 - host.left;
+    const ty = r.top - host.top - GAP;
+    let d;
+    if (a.el === sourceEl) {
+      // Self: loop leaving the card's top-left, landing on its top-right
+      const x1 = r.left - host.left + 22, x2 = r.right - host.left - 22;
+      d = `M${x1},${sy} C${x1 - 10},${sy - 60} ${x2 + 10},${sy - 60} ${x2},${ty}`;
+    } else {
+      const lift = 40 + Math.abs(tx - sx) * 0.18;
+      const cy = Math.min(sy, ty) - lift;
+      d = `M${sx},${sy} Q${(sx + tx) / 2},${cy} ${tx},${ty}`;
+    }
+    mk('path', { d, class: `arrow ${a.cls}`, 'marker-end': `url(#arrowhead-${a.cls})` });
+    const label = mk('text', { x: tx, y: ty + 15, class: `arrow-label ${a.cls}`, 'text-anchor': 'middle' });
+    label.textContent = a.label;
+  }
+}
+
+// Ghost card of a summoned token, inserted right behind the summoner (where it will appear).
+function addSummonGhost(self, id) {
+  const d = CHARACTERS[id];
+  const ghost = cardEl(id, d.atk, d.hp, { cls: 'preview-summon' });
+  const tag = document.createElement('div');
+  tag.className = 'summon-tag';
+  tag.textContent = '+ SUMMON';
+  ghost.appendChild(tag);
+  self.el.classList.add('preview-faints');
+  self.el.after(ghost);
+  // Keep the player row at 5 cards by dropping a trailing empty slot.
+  const empty = self.el.parentElement.querySelector('.card.empty:last-child');
+  if (empty) empty.remove();
+  return ghost;
+}
+
+function applyPreview(u, fx) {
+  const atk = fx.atk || 0, hp = fx.hp || 0;
+  const atkEl = u.el.querySelector('.atk-val');
+  const hpEl = u.el.querySelector('.hp-val');
+  if (atk) {
+    atkEl.textContent = u.atk + atk;
+    atkEl.parentElement.classList.add(atk > 0 ? 'stat-up' : 'stat-down');
+  }
+  if (hp) {
+    hpEl.textContent = Math.max(0, u.hp + hp);
+    hpEl.parentElement.classList.add(hp > 0 ? 'stat-up' : 'stat-down');
+  }
+  if (fx.shield) u.el.classList.add('shielded');
+  u.el.classList.add(atk < 0 || hp < 0 ? 'preview-harm' : 'preview-help');
+  if (fx.random) {
+    const q = document.createElement('div');
+    q.className = 'pv-rand pv-badge';
+    q.textContent = '?';
+    u.el.appendChild(q);
+  }
 }
 
 function frontTag() {
@@ -229,6 +417,8 @@ function setSpeed(s) {
 async function startBattle() {
   if (state.inBattle) return;
   state.inBattle = true;
+  state.previewKey = null;
+  stopIdleCycle();
   audio.init();
 
   const participants = state.team.map(uid => state.roster.find(r => r.uid === uid));
@@ -297,7 +487,53 @@ function showResult(result, participants) {
   $('result-overlay').classList.remove('hidden');
 }
 
+// ---------- Idle preview cycle ----------
+// After 5s without input on the prep screen, step through every card's preview in acting order.
+
+const IDLE_MS = 5000;
+const CYCLE_MS = 2500;
+let idleTimer = null;
+let cycleTimer = null;
+
+function resetIdle() {
+  clearTimeout(idleTimer);
+  clearTimeout(cycleTimer);  // any input stops the cycle, leaving the current preview shown
+  if (state.inBattle) return;
+  idleTimer = setTimeout(startIdleCycle, IDLE_MS);
+}
+
+function stopIdleCycle() {
+  clearTimeout(idleTimer);
+  clearTimeout(cycleTimer);
+}
+
+function startIdleCycle() {
+  // Acting order: fronts first (player, then enemy), then each side's 2nd, 3rd, ...
+  const keys = [];
+  for (let i = 0; i < MAX_TEAM; i++) {
+    if (state.team[i] !== undefined) keys.push(`p${state.team[i]}`);
+    if (state.enemy[i]) keys.push(`e${i}`);
+  }
+  if (!keys.length || state.inBattle) return;
+  let idx = Math.max(0, keys.indexOf(state.previewKey) + 1) % keys.length;
+  const step = () => {
+    state.previewKey = keys[idx];
+    renderPrep();
+    idx = (idx + 1) % keys.length;
+    cycleTimer = setTimeout(step, CYCLE_MS);
+  };
+  step();
+}
+
+for (const ev of ['mousemove', 'pointerdown', 'keydown', 'wheel', 'touchstart']) {
+  window.addEventListener(ev, resetIdle, { passive: true, capture: true });
+}
+
 // ---------- Wiring ----------
+
+window.addEventListener('resize', () => {
+  if (state.previewKey && !state.inBattle) renderPrep();
+});
 
 $('btn-fight').addEventListener('click', startBattle);
 $('btn-skip').addEventListener('click', () => setSpeed(1000));
