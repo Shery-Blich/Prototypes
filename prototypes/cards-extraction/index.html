@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cards Extraction Prototype</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="hud">
+      <div class="hud-stat">Battle <b id="hud-battle">1</b></div>
+      <div class="hud-stat">Wins <b id="hud-wins">0</b></div>
+      <div class="hud-stat">Losses <b id="hud-losses">0</b></div>
+      <div class="hud-stat">Roster <b id="hud-roster">0</b></div>
+    </header>
+
+    <!-- PREP SCREEN -->
+    <section id="prep-screen" class="screen">
+      <div class="panel">
+        <h2>Next opponent</h2>
+        <div id="enemy-preview" class="row row-enemy"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Your team <span class="hint">(1-5 characters · front is on the right · if you lose, all of them are lost)</span></h2>
+        <div id="team-slots" class="row row-team"></div>
+        <div class="prep-actions">
+          <button id="btn-fight" class="btn btn-primary">⚔ Fight</button>
+          <span id="fight-hint" class="hint"></span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Roster <span class="hint">(click to add to team)</span></h2>
+        <div id="roster" class="row row-roster"></div>
+      </div>
+    </section>
+
+    <!-- BATTLE SCREEN -->
+    <section id="battle-screen" class="screen hidden">
+      <div class="battle-controls">
+        <span>Speed:</span>
+        <button class="btn speed" data-speed="1">1x</button>
+        <button class="btn speed" data-speed="2">2x</button>
+        <button class="btn speed" data-speed="4">4x</button>
+        <button class="btn" id="btn-skip">Skip ⏭</button>
+        <span id="turn-label" class="turn-label"></span>
+      </div>
+      <div class="arena">
+        <div class="side side-player">
+          <div class="side-label">YOU</div>
+          <div id="battle-player" class="row"></div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="side side-enemy">
+          <div class="side-label">ENEMY</div>
+          <div id="battle-enemy" class="row"></div>
+        </div>
+      </div>
+      <div id="battle-log" class="log"></div>
+    </section>
+
+    <!-- RESULT OVERLAY -->
+    <div id="result-overlay" class="overlay hidden">
+      <div class="result-box">
+        <h1 id="result-title"></h1>
+        <p id="result-text"></p>
+        <div id="result-cards" class="row row-result"></div>
+        <button id="btn-continue" class="btn btn-primary">Continue ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/shared/nav.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
