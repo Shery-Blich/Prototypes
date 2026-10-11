@@ -2,137 +2,138 @@ import { defineConfig } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { RESERVED_NAMES } from './scripts/reserved-names.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const prototypesDir = path.resolve(__dirname, 'prototypes');
+
+// Base path: '/' locally, '/<repo>/' on GitHub Pages (set by the deploy workflow)
+const base = process.env.BASE_PATH || '/';
+
+const VIRTUAL_ID = 'virtual:prototypes';
+const RESOLVED_VIRTUAL_ID = '\0' + VIRTUAL_ID;
+
+function toTitle(name) {
+  return name.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Folder names of all valid prototypes (have an index.html and aren't reserved)
+function getPrototypeNames() {
+  if (!fs.existsSync(prototypesDir)) return [];
+  return fs.readdirSync(prototypesDir, { withFileTypes: true })
+    .filter(e => e.isDirectory())
+    .map(e => e.name)
+    .filter(name => {
+      if (RESERVED_NAMES.includes(name)) {
+        console.warn(`[prototypes] Skipping "${name}": reserved name.`);
+        return false;
+      }
+      return fs.existsSync(path.resolve(prototypesDir, name, 'index.html'));
+    });
+}
 
 function getPrototypesList() {
-  const prototypesDir = path.resolve(__dirname, 'prototypes');
-  if (!fs.existsSync(prototypesDir)) return [];
-
-  const entries = fs.readdirSync(prototypesDir, { withFileTypes: true });
-  const prototypes = [];
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const protoName = entry.name;
-    const protoDir = path.resolve(prototypesDir, protoName);
-    const htmlFile = path.resolve(protoDir, 'index.html');
-    if (!fs.existsSync(htmlFile)) continue;
-
-    const metaFile = path.resolve(protoDir, 'meta.json');
-    let meta = {
-      id: protoName,
-      title: protoName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-      description: 'Game prototype',
-      tags: ['prototype'],
-      controls: 'Keyboard & Mouse',
-      date: new Date().toISOString().split('T')[0],
-      isTemplate: protoName === 'template'
-    };
-
+  return getPrototypeNames().map(name => {
+    let meta = {};
+    const metaFile = path.resolve(prototypesDir, name, 'meta.json');
     if (fs.existsSync(metaFile)) {
       try {
-        const customMeta = JSON.parse(fs.readFileSync(metaFile, 'utf-8'));
-        meta = { ...meta, ...customMeta, id: protoName };
+        meta = JSON.parse(fs.readFileSync(metaFile, 'utf-8'));
       } catch (e) {
-        console.error(`Error reading ${metaFile}:`, e);
+        console.warn(`[prototypes] Invalid ${metaFile}: ${e.message}`);
       }
     }
-
-    prototypes.push(meta);
-  }
-
-  return prototypes;
+    return {
+      id: name,
+      title: meta.title || toTitle(name),
+      description: meta.description || '',
+      hidden: !!meta.hidden,
+    };
+  }).sort((a, b) => a.title.localeCompare(b.title));
 }
 
-function prototypeRouterPlugin() {
+function prototypesPlugin() {
   return {
-    name: 'prototype-router',
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        const rawUrl = req.url || '/';
-        const [urlPath, queryString] = rawUrl.split('?');
-        const query = queryString ? `?${queryString}` : '';
+    name: 'prototypes',
+    enforce: 'post',
 
-        // API endpoint to discover all prototypes
-        if (urlPath === '/api/prototypes') {
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify(getPrototypesList()));
+    // Prototype list baked into the bundle (works in dev, build & GitHub Pages)
+    resolveId(id) {
+      if (id === VIRTUAL_ID) return RESOLVED_VIRTUAL_ID;
+    },
+    load(id) {
+      if (id === RESOLVED_VIRTUAL_ID) {
+        return `export default ${JSON.stringify(getPrototypesList())};`;
+      }
+    },
+
+    configureServer(server) {
+      // Refresh the menu when prototypes are added/removed/edited
+      server.watcher.add(prototypesDir);
+      const refresh = (file) => {
+        if (!path.resolve(file).startsWith(prototypesDir)) return;
+        if (!/(meta\.json|index\.html)$/.test(file) && fs.existsSync(file) && !fs.statSync(file).isDirectory()) return;
+        const mod = server.moduleGraph.getModuleById(RESOLVED_VIRTUAL_ID);
+        if (mod) server.moduleGraph.invalidateModule(mod);
+        server.ws.send({ type: 'full-reload' });
+      };
+      ['add', 'unlink', 'addDir', 'unlinkDir', 'change'].forEach(evt => server.watcher.on(evt, refresh));
+
+      // Map /<name>/ to prototypes/<name>/ (same URLs as the build output)
+      server.middlewares.use((req, res, next) => {
+        const [urlPath, queryString] = (req.url || '/').split('?');
+        const query = queryString ? `?${queryString}` : '';
+        const match = urlPath.match(/^\/([a-zA-Z0-9_-]+)(\/.*)?$/);
+        if (!match) return next();
+
+        const name = match[1];
+        const rest = match[2] || '';
+        if (RESERVED_NAMES.includes(name)) return next();
+        const protoDir = path.resolve(prototypesDir, name);
+        if (!fs.existsSync(path.resolve(protoDir, 'index.html'))) return next();
+
+        if (rest === '') {
+          res.statusCode = 302;
+          res.setHeader('Location', `/${name}/${query}`);
+          res.end();
           return;
         }
-
-        // Match direct prototype route: /<prototypename> or /<prototypename>/
-        const singleSegmentMatch = urlPath.match(/^\/([a-zA-Z0-9_-]+)\/?$/);
-        if (singleSegmentMatch) {
-          const protoName = singleSegmentMatch[1];
-          const protoHtml = path.resolve(__dirname, 'prototypes', protoName, 'index.html');
-
-          if (fs.existsSync(protoHtml)) {
-            // If missing trailing slash, redirect with 302 to preserve relative path resolution
-            if (!urlPath.endsWith('/')) {
-              res.statusCode = 302;
-              res.setHeader('Location', `/${protoName}/${query}`);
-              res.end();
-              return;
-            }
-
-            // Rewrite URL to the prototype index.html
-            req.url = `/prototypes/${protoName}/index.html${query}`;
-            return next();
-          }
+        if (rest === '/') {
+          req.url = `/prototypes/${name}/index.html${query}`;
+          return next();
         }
-
-        // Match asset requests under /<prototypename>/<asset-path>
-        const assetMatch = urlPath.match(/^\/([a-zA-Z0-9_-]+)\/(.+)$/);
-        if (assetMatch) {
-          const protoName = assetMatch[1];
-          const relativeAsset = assetMatch[2];
-          const targetAssetPath = path.resolve(__dirname, 'prototypes', protoName, relativeAsset);
-
-          // If the file exists inside that prototype's folder, rewrite the request path
-          if (fs.existsSync(targetAssetPath)) {
-            req.url = `/prototypes/${protoName}/${relativeAsset}${query}`;
-            return next();
-          }
+        if (fs.existsSync(path.resolve(protoDir, '.' + rest))) {
+          req.url = `/prototypes/${name}${rest}${query}`;
         }
-
         next();
       });
-    }
+    },
+
+    // Move built pages from prototypes/<name>/index.html to <name>/index.html
+    generateBundle(_, bundle) {
+      for (const [key, file] of Object.entries(bundle)) {
+        const m = file.fileName.match(/^prototypes\/([^/]+)\/index\.html$/);
+        if (!m) continue;
+        delete bundle[key];
+        this.emitFile({ type: 'asset', fileName: `${m[1]}/index.html`, source: file.source });
+      }
+    },
   };
 }
 
-// Generate rollup entry inputs dynamically for build
 function getRollupInputs() {
-  const inputs = {
-    main: path.resolve(__dirname, 'index.html'),
-  };
-
-  const prototypesDir = path.resolve(__dirname, 'prototypes');
-  if (fs.existsSync(prototypesDir)) {
-    const entries = fs.readdirSync(prototypesDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const htmlPath = path.resolve(prototypesDir, entry.name, 'index.html');
-      if (fs.existsSync(htmlPath)) {
-        inputs[entry.name] = htmlPath;
-      }
-    }
+  const inputs = { main: path.resolve(__dirname, 'index.html') };
+  for (const name of getPrototypeNames()) {
+    inputs[name] = path.resolve(prototypesDir, name, 'index.html');
   }
-
   return inputs;
 }
 
 export default defineConfig({
-  plugins: [prototypeRouterPlugin()],
+  base,
+  plugins: [prototypesPlugin()],
   build: {
-    rollupOptions: {
-      input: getRollupInputs(),
-    },
+    rollupOptions: { input: getRollupInputs() },
   },
-  server: {
-    port: 5173,
-    open: true,
-  },
+  server: { port: 5173, open: true },
 });

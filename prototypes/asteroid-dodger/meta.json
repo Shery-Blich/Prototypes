@@ -1,6 +1,0 @@
-{
-  "title": "Asteroid Dodger",
-  "description": "Inertia and thruster physics prototype. Steer a spacecraft through a hazardous asteroid field with particle trails.",
-  "tags": ["2D", "Physics", "Particles", "Survival"],
-  "controls": "Arrow Left/Right or A/D to rotate • Arrow Up or W for thrusters"
-}

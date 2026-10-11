@@ -1,17 +1,25 @@
 // Shared Navigation HUD overlay for all prototypes
+import prototypes from 'virtual:prototypes';
+
+const BASE = import.meta.env.BASE_URL;
+
 export function initPrototypeNav(customOptions = {}) {
   if (document.getElementById('proto-nav-bar')) return;
 
-  const currentPath = window.location.pathname;
-  const segments = currentPath.split('/').filter(Boolean);
-  const protoId = segments[0] === 'prototypes' ? segments[1] : (segments[0] || 'Game Prototype');
-  const title = customOptions.title || protoId.replace(/[-_]/g, ' ').toUpperCase();
+  // Path relative to the site base, e.g. "/Prototypes/pong/" -> "pong"
+  const relPath = window.location.pathname.startsWith(BASE)
+    ? window.location.pathname.slice(BASE.length)
+    : window.location.pathname;
+  const segments = relPath.split('/').filter(Boolean);
+  const protoId = segments[0] === 'prototypes' ? segments[1] : (segments[0] || 'prototype');
+  const meta = prototypes.find(p => p.id === protoId);
+  const title = customOptions.title || meta?.title || protoId.replace(/[-_]/g, ' ');
 
   const nav = document.createElement('div');
   nav.id = 'proto-nav-bar';
   nav.innerHTML = `
     <div class="p-nav-left">
-      <a href="/" class="p-nav-btn p-nav-home" title="Return to Hub Menu">
+      <a href="${BASE}" class="p-nav-btn p-nav-home" title="Return to Hub Menu">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
           <polyline points="9 22 9 12 15 12 15 22"></polyline>
@@ -138,11 +146,9 @@ export function initPrototypeNav(customOptions = {}) {
   requestAnimationFrame(updateFps);
 }
 
-// Auto-run if loaded directly in a prototype
-if (typeof window !== 'undefined') {
-  window.addEventListener('DOMContentLoaded', () => {
-    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
-      initPrototypeNav();
-    }
-  });
+// Auto-run when loaded in a prototype page
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', () => initPrototypeNav());
+} else {
+  initPrototypeNav();
 }

@@ -28,21 +28,8 @@
       </div>
     </header>
 
-    <div class="hub-toolbar">
-      <div class="search-box">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input type="text" id="search-input" placeholder="Search prototypes or tags..." />
-      </div>
-      <div class="filter-tags" id="tag-filters">
-        <!-- Dynamically populated tags -->
-      </div>
-    </div>
-
     <section class="prototypes-grid" id="prototypes-list">
-      <div class="loading-state">Scanning prototypes...</div>
+      
     </section>
 
     <!-- Modal for new prototype helper -->
@@ -53,14 +40,14 @@
           <button class="modal-close" id="modal-close">&times;</button>
         </div>
         <div class="modal-body">
-          <p>Each prototype lives in its own folder under <code>prototypes/&lt;name&gt;</code> and is automatically mapped to <code>/&lt;name&gt;</code>.</p>
+          <p>Each prototype lives in its own folder under <code>prototypes/&lt;name&gt;</code> and is automatically mapped to <code>/&lt;name&gt;/</code>.</p>
           <div class="code-box">
             <span class="code-comment"># In your terminal, run:</span>
             <code>npm run new my-game-concept</code>
           </div>
           <p>This copies the clean starter template, assigns routing, and updates the hub menu instantly.</p>
           <div class="tip-box">
-            💡 <strong>Endpoint routing:</strong> Any folder placed in <code>prototypes/my-game</code> can be reached directly at <code>http://localhost:5173/my-game</code> or through this menu!
+            💡 <strong>Endpoint routing:</strong> Any folder placed in <code>prototypes/my-game</code> can be reached directly at <code>http://localhost:5173/my-game/</code> or through this menu!
           </div>
         </div>
       </div>
