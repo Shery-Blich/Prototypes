@@ -34,6 +34,9 @@ body {
 .prep-top .panel { flex: 1; min-width: 0; }
 .prep-top .row { flex-wrap: nowrap; }
 .prep-top .card { width: 104px; }
+/* Fixed height so every card in the scaled rows is the same size whatever its ability text */
+.prep-top .card, .arena .card { height: 176px; min-height: 0; }
+.prep-top .card-text, .arena .card-text { flex: 1; min-height: 0; overflow: hidden; }
 .prep-top .card-text { font-size: 9.5px; }
 .prep-top .card.empty { width: 104px; }
 /* Team and opponent always share one line; panel widths follow their slot counts (set in renderPrep) */
@@ -172,10 +175,11 @@ body {
 .side-enemy .card.front { border-color: #f59e0b; }
 .vs { font-weight: 900; color: #475569; font-size: 20px; }
 .arena .card { width: 104px; }
-/* One line per row: cards scale down to fit (set by fitRow) */
+.card.over-slot { display: none; }
+/* One line per row: all rows share one card scale (set by fitRows) */
 .row-team, .row-enemy, #battle-player, #battle-enemy { flex-wrap: nowrap; }
 .row-team > .card, .row-enemy > .card, #battle-player > .card, #battle-enemy > .card { zoom: var(--card-zoom, 1); flex-shrink: 0; }
-.row.compact .card-text { display: none; }
+.compact-cards :is(.row-team, .row-enemy, #battle-player, #battle-enemy) .card-text { display: none; }
 .arena .card-text { font-size: 9.5px; }
 
 .log {

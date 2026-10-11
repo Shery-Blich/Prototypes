@@ -446,7 +446,7 @@ function showAbilityPreview(lineup, key, ui) {
       for (let k = 0; k < shown; k++) {
         arrows.push({ el: addSummonGhost(self, fx.summon), label: `+${d.emoji} ${d.atk}/${d.hp}`, cls: 'help' });
       }
-      if (shown < fx.count) extra += ` Only ${shown} of ${fx.count} fit (team is full).`;
+      if (shown < fx.count) extra += ` Team is full: ${fx.count - shown} at the back wait${fx.count - shown === 1 ? 's' : ''} off-screen until there's room.`;
       anyTarget = anyTarget || shown > 0;
       continue;
     }
@@ -487,6 +487,9 @@ function effectLabel(fx) {
 function drawArrows(source, arrows, trigger, ui) {
   const { svg } = ui;
   svg.innerHTML = '';
+  // Cards past the slot limit are hidden (see view.render): no arrows to or from them
+  if (isOverSlot(source)) return { paths: [], badge: null };
+  arrows = arrows.filter(a => !isOverSlot(a.el));
   if (!source || !arrows.length) return { paths: [], badge: null };
   fitRows(); // card sizes must be final before positions are measured
 
@@ -610,28 +613,39 @@ function swap(i, j, render = true) {
 }
 
 // ---------- Keeping card rows on one line ----------
-// Every card row stays a single line: when its cards don't fit, the whole cards are scaled down
-// (CSS zoom, so stats and emoji shrink with them). Small cards hide their ability text.
+// Every card row stays a single line and all rows share one card scale (CSS zoom, so stats and
+// emoji scale with them), so a card is the same size in prep and in battle. The scale is the
+// largest one at which every row on both screens fits, capped at MAX_ZOOM. Small cards hide their ability text.
 
 const CARD_W = 104;
 const ROW_GAP = 10;
+const MAX_ZOOM = 1.6;
 
-function fitRow(row, minCount = 0) {
+// Zoom at which n cards fill the row, or null if there's nothing to fit
+function rowFit(row, n) {
   const avail = row.clientWidth;
-  if (!avail) return; // hidden
-  const n = Math.max(minCount, row.querySelectorAll(':scope > .card').length);
-  if (!n) return;
-  const zoom = Math.max(0.3, Math.min(1, (avail - ROW_GAP * (n - 1)) / (CARD_W * n)));
-  row.style.setProperty('--card-zoom', zoom.toFixed(3));
-  row.classList.toggle('compact', zoom < 0.8);
+  if (!avail || !n) return null;
+  return (avail - ROW_GAP * (n - 1)) / (CARD_W * n);
 }
 
-// Battle rows reserve room for the side's full slot count, so cards don't resize as units die.
+// Row widths don't depend on their cards, so the hidden screen is briefly un-hidden to measure it
+// (synchronously, so it's never painted).
 function fitRows() {
-  fitRow($('team-slots'));
-  fitRow($('enemy-preview'));
-  fitRow($('battle-player'), teamSlots());
-  fitRow($('battle-enemy'), enemySlots());
+  const screens = [$('prep-screen'), $('battle-screen')];
+  const hidden = screens.filter(el => el.classList.contains('hidden'));
+  hidden.forEach(el => el.classList.remove('hidden'));
+  const fits = [
+    rowFit($('team-slots'), $('team-slots').querySelectorAll(':scope > .card').length),
+    rowFit($('enemy-preview'), $('enemy-preview').querySelectorAll(':scope > .card').length),
+    // Battle rows reserve room for the side's full slot count, so cards don't resize as units die.
+    rowFit($('battle-player'), teamSlots()),
+    rowFit($('battle-enemy'), enemySlots()),
+  ].filter(z => z !== null);
+  hidden.forEach(el => el.classList.add('hidden'));
+  if (!fits.length) return;
+  const zoom = Math.max(0.3, Math.min(MAX_ZOOM, ...fits));
+  $('app').style.setProperty('--card-zoom', zoom.toFixed(3));
+  $('app').classList.toggle('compact-cards', zoom < 0.8);
 }
 
 window.addEventListener('resize', fitRows);
@@ -751,6 +765,8 @@ function setPaused(p) {
   if (!p) { resumeWaiters.forEach(r => r()); resumeWaiters = []; }
 }
 
+const isOverSlot = el => el instanceof Element && el.classList.contains('over-slot');
+
 const view = {
   render(battle) {
     clearBattlePreview();
@@ -777,6 +793,9 @@ const view = {
         el.classList.toggle('shielded', u.shield);
         el.classList.toggle('front', u === battle.teams[side][0]);
         el.classList.toggle('doomed', battle.isLingering(u));
+        // More cards than slots (e.g. summons while a dying card still lingers): the extras at the
+        // back stay hidden until there's room for them again.
+        el.classList.toggle('over-slot', i >= battle.maxTeam[side]);
         if (row.children[i] !== el) row.insertBefore(el, row.children[i] || null);
       });
     }
@@ -820,7 +839,7 @@ const view = {
   async effect(src, items) {
     if (state.speed >= 1000) return; // skipping
     const source = cardMap.get(src.uid) || lastRects.get(src.uid);
-    items = items.filter(it => cardMap.get(it.unit.uid));
+    items = items.filter(it => cardMap.get(it.unit.uid) && !isOverSlot(cardMap.get(it.unit.uid)));
     if (!source || !items.length) return;
 
     const arrows = items.map(it => {

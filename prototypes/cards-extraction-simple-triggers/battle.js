@@ -33,6 +33,9 @@ export class Battle {
     // Dead units whose death ability hasn't finished yet: out of the team (untargetable), but
     // still drawn at the slot they died in until the ability is done. [{ u, index }]
     this.lingering = [];
+    // Units pushed past the team slots (e.g. by summons on a full team): off-screen and out of the
+    // fight, first in line to rejoin at the back when a slot frees up.
+    this.reserve = { player: [], enemy: [] };
     this.api = this.makeApi();
   }
 
@@ -98,9 +101,9 @@ export class Battle {
       // The summoned card appears first, then the arrow leads into it.
       summon: async (side, index, id, src) => {
         const team = b.teams[side];
-        if (team.length >= b.maxTeam[side]) { b.view.log(`No room to summon ${CHARACTERS[id].name}`); return; }
         const u = makeUnit(id, side);
         team.splice(Math.min(index, team.length), 0, u);
+        b.overflow(side);
         b.view.render(b);
         await b.view.effect(src, [{ unit: u, label: `+${u.emoji} ${u.atk}/${u.hp}` }]);
         b.view.render(b);
@@ -147,6 +150,26 @@ export class Battle {
     }
   }
 
+  // Too many units for the slots: the back of the line waits in reserve.
+  overflow(side) {
+    const team = this.teams[side];
+    while (team.length > this.maxTeam[side]) {
+      const u = team.pop();
+      this.reserve[side].unshift(u);
+      this.view.log(`${u.name} (${side}) waits off-screen: no room in the team`);
+    }
+  }
+
+  // Slots freed up: reserve units rejoin at the back.
+  refill(side) {
+    const team = this.teams[side];
+    while (team.length < this.maxTeam[side] && this.reserve[side].length) {
+      const u = this.reserve[side].shift();
+      team.push(u);
+      this.view.log(`${u.name} (${side}) rejoins the fight`);
+    }
+  }
+
   // A lingering unit's death ability is done: play its death and remove its card.
   async despawn(u) {
     if (!this.isLingering(u)) return;
@@ -179,6 +202,7 @@ export class Battle {
       this.view.log(`💀 ${u.name} (${u.side}) dies`);
       this.fire(u, 'death', { index });
     }
+    for (const side of ['player', 'enemy']) this.refill(side);
     this.view.render(this);
   }
 
