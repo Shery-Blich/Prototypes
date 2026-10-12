@@ -36,6 +36,7 @@ const state = {
 const MODIFIER_DEFAULTS = {
   playerStartsPct: 50, // chance (0-100) that the player makes the first attack
   recruitsPerWin: 1,   // 0 = one random character of the defeated team, 1-10 = pick up to that many
+  lossesPerDefeat: 1,  // 0 = one random character that fought, 1-10 = choose that many to lose (>= team size = all)
   playerSlots: 5,      // your team slots (1-10)
   enemySlots: 5,       // enemy team slots (1-10)
   campMax: 10,         // characters in camp (0-20)
@@ -79,6 +80,15 @@ function renderModifiers() {
       : n >= enemySlots() ? 'After a win, you can take the entire defeated team (summons excluded).'
         : `After a win, pick up to ${n} character${n === 1 ? '' : 's'} of the defeated team.`;
   $('mod-recruits-reset').disabled = n === MODIFIER_DEFAULTS.recruitsPerWin;
+
+  const l = state.modifiers.lossesPerDefeat;
+  $('mod-losses').value = l;
+  $('mod-losses-val').textContent = l === 0 ? 'Random' : l;
+  $('mod-losses-desc').textContent =
+    l === 0 ? 'After a defeat, one random character that fought is lost.'
+      : l >= teamSlots() ? 'After a defeat, you lose all characters that fought.'
+        : `After a defeat, choose ${l} character${l === 1 ? '' : 's'} that fought to lose.`;
+  $('mod-losses-reset').disabled = l === MODIFIER_DEFAULTS.lossesPerDefeat;
 
   for (const [key, cfg] of Object.entries(STEPPERS)) {
     const v = state.modifiers[key];
@@ -166,6 +176,17 @@ $('mod-recruits').addEventListener('input', e => {
 });
 $('mod-recruits-reset').addEventListener('click', () => {
   state.modifiers.recruitsPerWin = MODIFIER_DEFAULTS.recruitsPerWin;
+  saveModifiers();
+  renderModifiers();
+});
+
+$('mod-losses').addEventListener('input', e => {
+  state.modifiers.lossesPerDefeat = Number(e.target.value);
+  saveModifiers();
+  renderModifiers();
+});
+$('mod-losses-reset').addEventListener('click', () => {
+  state.modifiers.lossesPerDefeat = MODIFIER_DEFAULTS.lossesPerDefeat;
   saveModifiers();
   renderModifiers();
 });
@@ -979,7 +1000,6 @@ async function startBattle() {
 
 function showResult(result, participants) {
   const title = $('result-title');
-  const text = $('result-text');
   const cards = $('result-cards');
   const btn = $('btn-continue');
   const defeated = state.enemy;
@@ -989,42 +1009,125 @@ function showResult(result, participants) {
   $('btn-skip-recruit').classList.add('hidden');
   $('result-discard-wrap').classList.add('hidden');
 
+  state.battleNum++;
+  state.enemy = generateEnemy(state.battleNum);
+
   if (result === 'win') {
     state.wins++;
     title.textContent = 'Victory!';
     audio.score();
+    showRecruit(defeated);
   } else {
     state.losses++;
-    const lost = new Set(participants.map(p => p.uid));
-    state.roster = state.roster.filter(r => !lost.has(r.uid));
-    state.team = [];
     title.textContent = 'Defeat';
-    text.textContent = `You lost all ${participants.length} characters that fought:`;
+    audio.explosion();
+    showDefeat(participants);
+  }
+  updateHud();
+  $('result-overlay').classList.remove('hidden');
+}
+
+function showDefeat(participants) {
+  const limit = state.modifiers.lossesPerDefeat;
+  const allLost = limit >= participants.length;
+  const random = limit === 0;
+  const count = allLost ? participants.length : (random ? 1 : Math.min(limit, participants.length));
+
+  const title = $('result-title');
+  const text = $('result-text');
+  const cards = $('result-cards');
+  const btn = $('btn-continue');
+  cards.innerHTML = '';
+
+  const finishDefeat = lostUids => {
+    const lostSet = new Set(lostUids);
+    state.roster = state.roster.filter(r => !lostSet.has(r.uid));
+    state.team = state.team.filter(uid => !lostSet.has(uid));
+    updateHud();
+
+    if (state.roster.length === 0) {
+      title.textContent = 'Game Over';
+      title.className = 'lose';
+      text.textContent = `You lost your characters and your roster is now empty. You survived ${state.battleNum - 1} battle${state.battleNum === 2 ? '' : 's'} with ${state.wins} win${state.wins === 1 ? '' : 's'}.`;
+      btn.disabled = false;
+      btn.textContent = 'Restart ⟳';
+      btn.onclick = newRun;
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Continue ▶';
+      btn.onclick = showPrep;
+    }
+  };
+
+  if (allLost) {
+    const lostUids = participants.map(p => p.uid);
+    text.textContent = `You lost all ${participants.length} character${participants.length === 1 ? '' : 's'} that fought:`;
     for (const p of participants) {
       const d = CHARACTERS[p.id];
       cards.appendChild(cardEl(p.id, d.atk, d.hp, { cls: 'lost' }));
     }
-    audio.explosion();
+    finishDefeat(lostUids);
+    return;
   }
 
-  state.battleNum++;
-  state.enemy = generateEnemy(state.battleNum);
-  state.team = state.team.filter(uid => state.roster.some(r => r.uid === uid));
-
-  if (state.roster.length === 0) {
-    title.textContent = 'Game Over';
-    title.className = 'lose';
-    text.textContent = `You lost all ${participants.length} character${participants.length === 1 ? '' : 's'} that fought, and your roster is now empty. You survived ${state.battleNum - 1} battle${state.battleNum === 2 ? '' : 's'} with ${state.wins} win${state.wins === 1 ? '' : 's'}.`;
-    btn.textContent = 'Restart ⟳';
-    btn.onclick = newRun;
-  } else if (result === 'win') {
-    showRecruit(defeated);
-  } else {
-    btn.textContent = 'Continue ▶';
-    btn.onclick = showPrep;
+  if (random) {
+    const pickIndex = Math.floor(Math.random() * participants.length);
+    const lostUnit = participants[pickIndex];
+    text.textContent = `You lost 1 random character that fought (${participants.length - 1} survived):`;
+    for (const p of participants) {
+      const d = CHARACTERS[p.id];
+      const isLost = p.uid === lostUnit.uid;
+      const el = cardEl(p.id, d.atk, d.hp, { cls: isLost ? 'lost discarding' : '' });
+      const tag = frontTag();
+      tag.textContent = isLost ? 'LOST' : 'SURVIVED';
+      tag.style.background = isLost ? '#ef4444' : '#22c55e';
+      tag.style.color = isLost ? '#ffffff' : '#052e16';
+      el.appendChild(tag);
+      cards.appendChild(el);
+    }
+    finishDefeat([lostUnit.uid]);
+    return;
   }
-  updateHud();
-  $('result-overlay').classList.remove('hidden');
+
+  // Interactive pick: choose `count` characters that fought to lose
+  const chosen = [];
+  const draw = () => {
+    text.textContent = `Defeat! Choose ${count} character${count === 1 ? '' : 's'} that fought to lose (${chosen.length}/${count} picked):`;
+    cards.innerHTML = '';
+    participants.forEach(p => {
+      const d = CHARACTERS[p.id];
+      const isChosen = chosen.includes(p.uid);
+      const el = cardEl(p.id, d.atk, d.hp, { cls: 'discard-option' + (isChosen ? ' discarding' : '') });
+      const tag = frontTag();
+      tag.textContent = isChosen ? 'LOSE' : 'KEEP';
+      tag.style.background = isChosen ? '#ef4444' : '#22c55e';
+      tag.style.color = isChosen ? '#ffffff' : '#052e16';
+      el.appendChild(tag);
+      el.addEventListener('click', () => {
+        const i = chosen.indexOf(p.uid);
+        if (i >= 0) chosen.splice(i, 1);
+        else {
+          if (chosen.length >= count) chosen.shift();
+          chosen.push(p.uid);
+        }
+        draw();
+      });
+      cards.appendChild(el);
+    });
+
+    const ready = chosen.length === count;
+    btn.disabled = !ready;
+    btn.textContent = ready ? 'Confirm Loss ▶' : `Choose ${count} to lose`;
+  };
+
+  btn.onclick = () => {
+    finishDefeat(chosen);
+    if (state.roster.length > 0) {
+      showPrep();
+    }
+  };
+
+  draw();
 }
 
 // Victory reward: recruit one character of the defeated team (base stats), or skip.

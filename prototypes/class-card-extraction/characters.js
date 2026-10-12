@@ -88,11 +88,11 @@ export const CHARACTERS = {
   dps_start: {
     class: 'dps', name: 'Claw Strike', emoji: '🐯', atk: 5, hp: 1,
     trigger: 'start',
-    text: 'When 🏁 deal 6 damage to the first enemy.',
-    preview: p => [{ targets: [p.enemies[0]], hp: -6 }],
+    text: 'When 🏁 deal 3 damage to a random enemy.',
+    preview: p => [{ targets: p.enemies, hp: -3, random: true }],
     async run(api, self) {
-      const t = api.enemiesOf(self)[0];
-      if (t) await api.damage(t, 6, self);
+      const t = api.randomOf(api.enemiesOf(self));
+      if (t) await api.damage(t, 3, self);
     },
   },
   dps_attack: {
@@ -270,20 +270,11 @@ export const CHARACTERS = {
   support_death: {
     class: 'support', name: 'Final Gift', emoji: '🐐', atk: 1, hp: 2,
     trigger: 'death',
-    text: 'When 💀 swap ATK and HP of the friend behind (gives whichever stat is lower).',
-    preview: p => {
-      const t = p.behind;
-      if (!t) return [{ targets: [] }];
-      return [{ targets: [t], atk: t.hp - t.atk, hp: t.atk - t.hp }];
-    },
-    async run(api, self, ctx) {
-      const team = api.team(self.side);
-      const t = team[ctx.index]; // friend now at slot (self already removed)
-      if (!t) return;
-      const [newAtk, newHp] = [t.hp, t.atk]; // swap
-      const dAtk = newAtk - t.atk;
-      const dHp  = newHp  - t.hp;
-      await api.buff(t, dAtk, dHp, self);
+    text: 'When 💀 give a random friend +2/+2.',
+    preview: p => [{ targets: p.friends, atk: 2, hp: 2, random: true }],
+    async run(api, self) {
+      const t = api.randomOf(api.friendsOf(self));
+      if (t) await api.buff(t, 2, 2, self);
     },
   },
 
