@@ -88,11 +88,11 @@ export const CHARACTERS = {
   dps_start: {
     class: 'dps', name: 'Claw Strike', emoji: '🐯', atk: 5, hp: 1,
     trigger: 'start',
-    text: 'When 🏁 deal 6 damage to the first enemy.',
-    preview: p => [{ targets: [p.enemies[0]], hp: -6 }],
+    text: 'When 🏁 deal 3 damage to the first enemy.',
+    preview: p => [{ targets: [p.enemies[0]], hp: -3 }],
     async run(api, self) {
       const t = api.enemiesOf(self)[0];
-      if (t) await api.damage(t, 6, self);
+      if (t) await api.damage(t, 3, self);
     },
   },
   dps_attack: {
