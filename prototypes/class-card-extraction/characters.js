@@ -86,7 +86,7 @@ export const CHARACTERS = {
   // ── DPS (tigers) ─────────────────────────────────────────────────────────
   // Theme: pure damage / self-buff / burst.
   dps_start: {
-    class: 'dps', name: 'Claw Strike', emoji: '🐯', atk: 5, hp: 1,
+    class: 'dps', name: 'Claw Strike', emoji: '🐯', atk: 3, hp: 1,
     trigger: 'start',
     text: 'When 🏁 deal 3 damage to a random enemy.',
     preview: p => [{ targets: p.enemies, hp: -3, random: true }],
@@ -98,14 +98,14 @@ export const CHARACTERS = {
   dps_attack: {
     class: 'dps', name: 'Frenzy', emoji: '🐆', atk: 3, hp: 3,
     trigger: 'attack',
-    text: 'When 🗡️ gain +2 ATK.',
-    preview: p => [{ targets: [p.self], atk: 2 }],
+    text: 'When 🗡️ gain +1 ATK.',
+    preview: p => [{ targets: [p.self], atk: 1 }],
     async run(api, self) {
-      await api.buff(self, 2, 0, self);
+      await api.buff(self, 1, 0, self);
     },
   },
   dps_hurt: {
-    class: 'dps', name: 'Retaliate', emoji: '🐅', atk: 4, hp: 2,
+    class: 'dps', name: 'Retaliate', emoji: '🐅', atk: 3, hp: 2,
     trigger: 'hurt',
     text: 'When 💢 deal half the damage taken back to the attacker.',
     preview: p => [{ targets: [p.enemies[0]], hp: -2, random: false }],
@@ -119,11 +119,11 @@ export const CHARACTERS = {
   dps_death: {
     class: 'dps', name: 'Death Roar', emoji: '🦁', atk: 5, hp: 1,
     trigger: 'death',
-    text: 'When 💀 deal its ATK to ALL enemies.',
-    preview: p => [{ targets: p.enemies, hp: -(p.self?.atk ?? 5) }],
+    text: 'When 💀 deal 1 damage to ALL enemies.',
+    preview: p => [{ targets: p.enemies, hp: -1 }],
     async run(api, self) {
       const targets = api.enemiesOf(self);
-      if (targets.length) await api.damageMany(targets, self.atk, self);
+      if (targets.length) await api.damageMany(targets, 1, self);
     },
   },
 
@@ -160,13 +160,11 @@ export const CHARACTERS = {
   warlock_hurt: {
     class: 'warlock', name: 'Hex Scales', emoji: '🐊', atk: 1, hp: 3,
     trigger: 'hurt',
-    text: 'When 💢 set the first enemy\'s ATK to 0 (once per battle).',
-    preview: p => [{ targets: [p.enemies[0]], atk: p.enemies[0] ? -p.enemies[0].atk : 0 }],
+    text: 'When 💢 deal damage equal to this card\'s HP to a random enemy.',
+    preview: p => [{ targets: p.enemies, hp: -(p.self?.hp ?? 3), random: true }],
     async run(api, self) {
-      if (self.usedOnce) return;
-      self.usedOnce = true;
-      const t = api.enemiesOf(self)[0];
-      if (t) await api.setAtk(t, 0, self);
+      const t = api.randomOf(api.enemiesOf(self));
+      if (t && self.hp > 0) await api.damage(t, self.hp, self);
     },
   },
   warlock_death: {
@@ -191,10 +189,10 @@ export const CHARACTERS = {
   summoner_start: {
     class: 'summoner', name: 'Egg Burst', emoji: '🪲', atk: 2, hp: 2,
     trigger: 'start',
-    text: 'When 🏁 summon a 1/1 Bug behind.',
-    preview: () => [{ summon: 'bug', count: 1 }],
+    text: 'When 🏁 summon a 2/2 Beetle behind.',
+    preview: () => [{ summon: 'beetle', count: 1 }],
     async run(api, self, ctx) {
-      await api.summon(self.side, ctx.index + 1, 'bug', self);
+      await api.summon(self.side, ctx.index + 1, 'beetle', self);
     },
   },
   summoner_attack: {
@@ -281,12 +279,13 @@ export const CHARACTERS = {
   // ── TANK (hippo / elephant / camel) ──────────────────────────────────────
   // Theme: absorb damage, protect friends.
   tank_start: {
-    class: 'tank', name: 'Iron Hide', emoji: '🦛', atk: 1, hp: 5,
+    class: 'tank', name: 'Iron Hide', emoji: '🦛', atk: 1, hp: 4,
     trigger: 'start',
-    text: 'When 🏁 gain a Shield (blocks next hit).',
-    preview: p => [{ targets: [p.self], shield: true }],
+    text: 'When 🏁 give the friend behind +2 HP.',
+    preview: p => [{ targets: [p.behind], hp: 2 }],
     async run(api, self) {
-      await api.shield(self, self);
+      const t = api.friendBehind(self);
+      if (t) await api.buff(t, 0, 2, self);
     },
   },
   tank_attack: {
@@ -300,7 +299,7 @@ export const CHARACTERS = {
     },
   },
   tank_hurt: {
-    class: 'tank', name: 'Thick Skin', emoji: '🐪', atk: 1, hp: 5,
+    class: 'tank', name: 'Thick Skin', emoji: '🐪', atk: 1, hp: 3,
     trigger: 'hurt',
     text: 'When 💢 gain +1 HP (unless already at 0 or below).',
     preview: p => [{ targets: [p.self], hp: 1 }],
@@ -322,6 +321,7 @@ export const CHARACTERS = {
 
   // ── Tokens ────────────────────────────────────────────────────────────────
   bug: { name: 'Bug', emoji: '🐛', atk: 1, hp: 1, token: true, class: 'summoner', text: '' },
+  beetle: { name: 'Beetle', emoji: '🪲', atk: 2, hp: 2, token: true, class: 'summoner', text: '' },
 };
 
 export const RECRUITABLE = Object.keys(CHARACTERS).filter(id => !CHARACTERS[id].token);
