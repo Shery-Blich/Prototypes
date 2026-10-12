@@ -301,10 +301,11 @@ export const CHARACTERS = {
   tank_hurt: {
     class: 'tank', name: 'Thick Skin', emoji: '🐪', atk: 1, hp: 3,
     trigger: 'hurt',
-    text: 'When 💢 gain +1 HP (unless already at 0 or below).',
-    preview: p => [{ targets: [p.self], hp: 1 }],
+    text: 'When 💢 give a random friend +1 HP.',
+    preview: p => [{ targets: p.friends, hp: 1, random: true }],
     async run(api, self) {
-      if (self.hp > 0) await api.buff(self, 0, 1, self);
+      const t = api.randomOf(api.friendsOf(self));
+      if (t) await api.buff(t, 0, 1, self);
     },
   },
   tank_death: {
