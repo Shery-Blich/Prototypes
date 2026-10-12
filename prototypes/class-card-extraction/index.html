@@ -22,7 +22,7 @@
       <svg id="preview-arrows" class="preview-arrows"></svg>
       <div class="prep-top">
         <div class="panel panel-team">
-          <h2>Your team <span class="hint">(1-5 characters · front is on the right · each card belongs to a class · click a character to preview its ability · if you lose, all of them are lost)</span></h2>
+          <h2>Your team <span class="hint">(1-5 characters · front is on the right · each card belongs to a class · click a character to preview its ability · cards can be lost on defeat)</span></h2>
           <div id="team-slots" class="row row-team"></div>
           <div class="prep-actions">
             <button id="btn-fight" class="btn btn-primary">⚔ Fight</button>
@@ -66,6 +66,15 @@
           <b id="mod-recruits-val" class="mod-val"></b>
           <button id="mod-recruits-reset" class="btn btn-small">Reset</button>
           <span id="mod-recruits-desc" class="hint"></span>
+        </div>
+        <div class="modifier">
+          <label for="mod-losses" class="mod-name">💀 Losses per defeat</label>
+          <span class="mod-end">Random</span>
+          <input id="mod-losses" type="range" min="0" max="10" step="1" />
+          <span class="mod-end">10</span>
+          <b id="mod-losses-val" class="mod-val"></b>
+          <button id="mod-losses-reset" class="btn btn-small">Reset</button>
+          <span id="mod-losses-desc" class="hint"></span>
         </div>
         <div class="modifier">
           <span class="mod-name">👥 Your team slots</span>
