@@ -1,0 +1,361 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0f172a;
+  color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
+
+#app { padding: 16px; }
+
+.hidden { display: none !important; }
+
+.hud {
+  display: flex; flex-wrap: wrap; gap: 18px; align-items: center;
+  padding: 10px 14px; margin-bottom: 14px;
+  background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+  font-size: 14px; color: #94a3b8;
+}
+.hud b { color: #f8fafc; font-size: 16px; }
+
+.panel {
+  background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 14px;
+}
+.panel h2 { font-size: 15px; margin-bottom: 10px; }
+.hint { font-size: 12px; font-weight: 400; color: #94a3b8; }
+
+.row { display: flex; gap: 10px; flex-wrap: wrap; min-height: 150px; align-items: flex-start; }
+/* Player rows: index 0 (front) is shown on the right, facing the enemy */
+.row-team, #battle-player { flex-direction: row-reverse; justify-content: flex-start; }
+
+.prep-top { display: flex; gap: 14px; align-items: stretch; }
+.prep-top .panel { flex: 1; min-width: 0; }
+.prep-top .row { flex-wrap: nowrap; }
+.prep-top .card { width: 104px; }
+/* Fixed height so every card in the scaled rows is the same size whatever its ability text */
+.prep-top .card, .arena .card { height: 176px; min-height: 0; }
+.prep-top .card-text, .arena .card-text { flex: 1; min-height: 0; overflow: hidden; }
+.prep-top .card-text { font-size: 9.5px; }
+.prep-top .card.empty { width: 104px; }
+/* Team and opponent always share one line; panel widths follow their slot counts (set in renderPrep) */
+.prep-top .panel-team { flex: var(--slots, 5) 1 0; }
+.prep-top .panel-enemy { flex: var(--slots, 5) 1 0; }
+
+.prep-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.prep-actions-right { justify-content: flex-end; }
+#btn-preview-battle.active { border-color: #a855f7; color: #e9d5ff; }
+
+.btn {
+  background: #334155; color: #f8fafc; border: 1px solid #475569; border-radius: 8px;
+  padding: 7px 14px; font-size: 14px; cursor: pointer;
+}
+.btn:hover:not(:disabled) { background: #475569; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary { background: #4f46e5; border-color: #6366f1; font-weight: 600; padding: 9px 22px; }
+.btn-primary:hover:not(:disabled) { background: #6366f1; }
+.btn.active { background: #4f46e5; border-color: #818cf8; }
+
+/* ---------- Cards ---------- */
+.card {
+  position: relative;
+  width: 128px; min-height: 150px;
+  background: linear-gradient(180deg, #334155, #1e293b);
+  border: 2px solid #475569; border-radius: 10px;
+  padding: 8px 8px 30px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  user-select: none;
+}
+
+/* ── Class background panels ─────────────────────────────────────────────── */
+/* Each class has a translucent tinted background and a coloured bottom-border accent. */
+
+.card::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: 9px;
+  pointer-events: none; opacity: 0.13;
+}
+/* Class badge in the top-right corner */
+.class-badge {
+  position: absolute; top: 4px; right: 6px;
+  font-size: 8px; font-weight: 800; letter-spacing: 0.06em;
+  padding: 2px 5px; border-radius: 4px; text-transform: uppercase;
+  line-height: 1.2;
+}
+
+/* Rotator – sky-blue */
+.card.class-rotator { border-color: #0ea5e9; }
+.card.class-rotator::before { background: #0ea5e9; }
+.card.class-rotator .class-badge { background: #0c4a6e; color: #7dd3fc; }
+
+/* DPS – red */
+.card.class-dps { border-color: #ef4444; }
+.card.class-dps::before { background: #ef4444; }
+.card.class-dps .class-badge { background: #450a0a; color: #fca5a5; }
+
+/* Warlock – purple */
+.card.class-warlock { border-color: #a855f7; }
+.card.class-warlock::before { background: #a855f7; }
+.card.class-warlock .class-badge { background: #3b0764; color: #d8b4fe; }
+
+/* Summoner – green */
+.card.class-summoner { border-color: #22c55e; }
+.card.class-summoner::before { background: #22c55e; }
+.card.class-summoner .class-badge { background: #052e16; color: #86efac; }
+
+/* Support – amber */
+.card.class-support { border-color: #f59e0b; }
+.card.class-support::before { background: #f59e0b; }
+.card.class-support .class-badge { background: #451a03; color: #fcd34d; }
+
+/* Tank – slate-grey */
+.card.class-tank { border-color: #94a3b8; }
+.card.class-tank::before { background: #94a3b8; }
+.card.class-tank .class-badge { background: #1e293b; color: #cbd5e1; }
+
+/* Token bug inherits summoner colour but dashed border */
+.card.token { border-style: dashed; }
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.card-emoji { font-size: 34px; line-height: 1.1; }
+.card-name { font-weight: 700; font-size: 13px; }
+.card-text { font-size: 10.5px; color: #cbd5e1; text-align: center; line-height: 1.25; }
+.card-stats {
+  position: absolute; left: 6px; right: 6px; bottom: 6px;
+  display: flex; justify-content: space-between; align-items: center; font-size: 13px;
+}
+.stat { padding: 1px 6px; border-radius: 6px; }
+.stat.atk { background: #78350f; color: #fde68a; }
+.stat.hp { background: #7f1d1d; color: #fecaca; }
+.shield-icon { visibility: hidden; font-size: 14px; }
+.card.shielded .shield-icon { visibility: visible; }
+.card.shielded { box-shadow: 0 0 0 2px #38bdf8, 0 0 14px rgba(56, 189, 248, 0.6); }
+
+.card.empty {
+  border-style: dashed; background: transparent; color: #475569;
+  justify-content: center; font-size: 13px; padding: 8px;
+}
+.card.clickable { cursor: pointer; transition: transform 0.12s, border-color 0.12s; }
+.card.clickable:hover { transform: translateY(-3px); }
+.card[draggable="true"] { cursor: grab; }
+.card.dragging { opacity: 0.35; }
+.drop-ok { outline: 2px dashed #22c55e; outline-offset: 3px; }
+.card.in-team { opacity: 0.35; }
+.card.front { border-color: #f59e0b; }
+.card.reward { border-color: #22c55e; box-shadow: 0 0 18px rgba(34, 197, 94, 0.5); }
+.card.lost { filter: grayscale(1); opacity: 0.7; }
+
+.front-tag {
+  position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+  background: #f59e0b; color: #1c1917; font-size: 9px; font-weight: 800;
+  padding: 1px 6px; border-radius: 4px; letter-spacing: 0.05em;
+}
+
+.card-ctrls { display: flex; gap: 4px; margin-top: 4px; }
+.card-ctrls button {
+  background: #0f172a; color: #e2e8f0; border: 1px solid #475569; border-radius: 4px;
+  width: 26px; height: 22px; cursor: pointer; font-size: 11px;
+}
+.card-ctrls button:disabled { opacity: 0.3; cursor: default; }
+.card-ctrls button:hover:not(:disabled) { border-color: #818cf8; }
+
+/* Ability preview */
+.card.selectable { cursor: pointer; }
+.card.selectable:hover { border-color: #818cf8; }
+.card.preview-source { border-color: #a855f7 !important; box-shadow: 0 0 0 2px #a855f7, 0 0 16px rgba(168, 85, 247, 0.6); }
+.card.preview-help { border-color: #22c55e !important; box-shadow: 0 0 12px rgba(34, 197, 94, 0.55); }
+.card.preview-harm { border-color: #ef4444 !important; box-shadow: 0 0 12px rgba(239, 68, 68, 0.55); }
+.stat.stat-up { background: #14532d; color: #4ade80; outline: 1px solid #4ade80; }
+.stat.stat-down { background: #450a0a; color: #f87171; outline: 1px solid #f87171; }
+.pv-rand { color: #fbbf24; font-weight: 800; }
+.card.preview-summon {
+  border: 2px dashed #22c55e; background: rgba(20, 83, 45, 0.35); opacity: 0.85;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.45);
+}
+.summon-tag {
+  position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+  background: #22c55e; color: #052e16; font-size: 9px; font-weight: 800;
+  padding: 1px 6px; border-radius: 4px; letter-spacing: 0.05em; white-space: nowrap;
+}
+.card.preview-faints .card-emoji { opacity: 0.4; }
+.pv-badge {
+  position: absolute; top: 4px; right: 6px; font-size: 16px;
+  background: #422006; border: 1px solid #fbbf24; border-radius: 50%;
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+}
+/* Class badge sits left of the pv-badge so they don't overlap */
+.card.preview-source .class-badge,
+.card.preview-help .class-badge,
+.card.preview-harm .class-badge { right: 32px; }
+
+#prep-screen, #battle-screen { position: relative; }
+.prep-top .row { padding-top: 34px; }
+.preview-arrows { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 20; overflow: visible; }
+.arrow { fill: none; stroke-width: 2.5; stroke-dasharray: 7 4; animation: arrow-flow 0.8s linear infinite; }
+.arrow.help { stroke: #4ade80; }
+.arrow.harm { stroke: #f87171; }
+.arrowhead.help { fill: #4ade80; }
+.arrowhead.harm { fill: #f87171; }
+@keyframes arrow-flow { to { stroke-dashoffset: -11; } }
+.arrow-label {
+  font-size: 13px; font-weight: 800; paint-order: stroke;
+  stroke: #0f172a; stroke-width: 4px; stroke-linejoin: round;
+}
+.arrow-label.help { fill: #4ade80; }
+.arrow-label.harm { fill: #f87171; }
+.trigger-badge { fill: #1e1b4b; stroke: #a5b4fc; stroke-width: 2; }
+.trigger-emoji { font-size: 16px; }
+
+.preview-info {
+  background: #1e1b4b; border: 1px solid #6366f1; border-radius: 10px;
+  padding: 10px 14px; margin-bottom: 14px; font-size: 14px; line-height: 1.5;
+}
+
+/* ---------- Battle ---------- */
+.battle-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; font-size: 14px; }
+.turn-label { margin-left: auto; font-weight: 600; color: #fbbf24; }
+
+.arena {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+  padding: 26px 12px; min-height: 230px;
+}
+.side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.side .row { width: 100%; }
+.side-player { align-items: flex-end; }
+.side-label { font-size: 12px; font-weight: 700; color: #64748b; letter-spacing: 0.1em; }
+.side .row { flex-wrap: nowrap; min-height: 150px; }
+.side-enemy .card { border-color: #7f1d1d; }
+/* Enemy class borders override the red fallback */
+.side-enemy .card.class-rotator { border-color: #0ea5e9; }
+.side-enemy .card.class-dps     { border-color: #ef4444; }
+.side-enemy .card.class-warlock { border-color: #a855f7; }
+.side-enemy .card.class-summoner{ border-color: #22c55e; }
+.side-enemy .card.class-support { border-color: #f59e0b; }
+.side-enemy .card.class-tank    { border-color: #94a3b8; }
+.side-enemy .card.front { border-color: #f59e0b; }
+.vs { font-weight: 900; color: #475569; font-size: 20px; }
+.arena .card { width: 104px; }
+.card.over-slot { display: none; }
+/* One line per row: all rows share one card scale (set by fitRows) */
+.row-team, .row-enemy, #battle-player, #battle-enemy { flex-wrap: nowrap; }
+.row-team > .card, .row-enemy > .card, #battle-player > .card, #battle-enemy > .card { zoom: var(--card-zoom, 1); flex-shrink: 0; }
+.compact-cards :is(.row-team, .row-enemy, #battle-player, #battle-enemy) .card-text { display: none; }
+.arena .card-text { font-size: 9.5px; }
+
+.log {
+  margin-top: 12px; height: 180px; overflow-y: auto;
+  background: #020617; border: 1px solid #334155; border-radius: 10px;
+  padding: 8px 12px; font-family: monospace; font-size: 12px; color: #94a3b8; line-height: 1.5;
+}
+
+/* Animations */
+.card.lunge-right { animation: lunge-right 0.45s ease; }
+.card.lunge-left { animation: lunge-left 0.45s ease; }
+@keyframes lunge-right { 40% { transform: translateX(26px) scale(1.06); } }
+@keyframes lunge-left { 40% { transform: translateX(-26px) scale(1.06); } }
+
+.card.hit { animation: hit 0.35s ease; }
+@keyframes hit { 25% { transform: translateX(-5px); filter: brightness(1.8) saturate(2) hue-rotate(-30deg); } 60% { transform: translateX(5px); } }
+
+.card.ability { animation: ability 0.55s ease; }
+@keyframes ability { 40% { box-shadow: 0 0 0 3px #a855f7, 0 0 22px rgba(168, 85, 247, 0.8); transform: scale(1.08); } }
+
+.card.summoned { animation: summoned 0.45s ease; }
+@keyframes summoned { from { transform: scale(0.2); opacity: 0; } }
+
+.card.dying { animation: dying 0.4s ease forwards; }
+/* Dead, but its death ability is still playing */
+.card.doomed { filter: grayscale(0.85); opacity: 0.75; }
+.card.doomed::after {
+  content: '💀'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%);
+  font-size: 44px; opacity: 0.85; pointer-events: none;
+}
+@keyframes dying { to { transform: scale(0.6) rotate(-12deg); opacity: 0; } }
+
+.float {
+  position: absolute; top: 30%; left: 50%; transform: translateX(-50%);
+  font-weight: 900; font-size: 20px; pointer-events: none; white-space: nowrap;
+  animation: float-up 1.1s ease-out forwards; text-shadow: 0 2px 4px #000; z-index: 5;
+}
+.float.dmg { color: #f87171; }
+.float.buff { color: #4ade80; font-size: 16px; }
+.float.blocked { color: #38bdf8; font-size: 15px; }
+.float.ability { top: -6px; font-size: 18px; }
+@keyframes float-up { to { transform: translate(-50%, -40px); opacity: 0; } }
+
+/* ---------- Result overlay ---------- */
+.overlay {
+  position: fixed; inset: 0; background: rgba(2, 6, 23, 0.8);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+}
+.result-box {
+  background: #1e293b; border: 1px solid #475569; border-radius: 14px;
+  padding: 26px 30px; max-width: 1000px; max-height: 94vh; overflow-y: auto; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.result-box h1 { font-size: 34px; }
+.result-box h1.win { color: #4ade80; }
+.result-box h1.lose { color: #f87171; }
+.result-box p { color: #cbd5e1; }
+.row-result { justify-content: center; min-height: 0; }
+.result-actions { display: flex; gap: 12px; }
+.result-discard-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.card.recruit-option, .card.discard-option { cursor: pointer; }
+.card.recruit-option:hover, .card.discard-option:hover { border-color: #818cf8; }
+.card.recruit-option.picked { border-color: #22c55e; box-shadow: 0 0 18px rgba(34, 197, 94, 0.5); }
+.card.discard-option.discarding { border-color: #ef4444; box-shadow: 0 0 14px rgba(239, 68, 68, 0.5); filter: grayscale(0.7); }
+
+/* Gameplay modifiers */
+.modifier { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; }
+.modifier + .modifier { margin-top: 10px; }
+.mod-name { font-weight: 600; min-width: 170px; }
+.mod-end { font-size: 12px; color: #94a3b8; }
+.modifier input[type="range"] { width: 220px; accent-color: #6366f1; }
+.mod-val { min-width: 40px; color: #f8fafc; }
+.mod-step-val { min-width: 24px; text-align: center; }
+.btn-small { padding: 3px 10px; font-size: 12px; }
+
+/* Who attacks first */
+.first-banner {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 10px;
+  font-weight: 900; letter-spacing: 0.06em;
+}
+.first-banner.player { justify-content: flex-start; padding-left: 8%; color: #4ade80; }
+.first-banner.enemy { justify-content: flex-end; padding-right: 8%; color: #f87171; }
+.fb-text { font-size: 26px; text-shadow: 0 0 18px currentColor; }
+.fb-arrow { font-size: 64px; line-height: 1; text-shadow: 0 0 22px currentColor; }
+.first-banner.player .fb-arrow { animation: fb-nudge-right 1.2s ease-in-out infinite; }
+.first-banner.enemy .fb-arrow { animation: fb-nudge-left 1.2s ease-in-out infinite; }
+.first-banner.pop { animation: fb-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes fb-pop { from { transform: scale(0.4); opacity: 0; } }
+@keyframes fb-nudge-right { 50% { transform: translateX(12px); } }
+@keyframes fb-nudge-left { 50% { transform: translateX(-12px); } }
+
+/* Battle preview */
+.arena .side .row { padding-top: 56px; }
+.battle-preview-info { margin: 12px 0 0; }
+.arrow-ref { fill: none; stroke: none; }
+.shield-icon.trig { cursor: help; }
+.pause-label { font-weight: 700; color: #a855f7; }
+
+/* Trigger emojis: legend + hover tooltip */
+.trigger-legend { margin-left: auto; display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; }
+.legend-item { cursor: help; color: #cbd5e1; }
+.trig { cursor: help; }
+.trigger-badge, .trigger-emoji { pointer-events: auto; cursor: help; }
+.trigger-tip {
+  position: fixed; z-index: 1000000; pointer-events: none; max-width: 260px;
+  background: #1e1b4b; border: 1px solid #a5b4fc; border-radius: 8px;
+  padding: 6px 10px; font-size: 13px; line-height: 1.4; color: #e2e8f0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Class legend strip in HUD ─────────────────────────────────────────────── */
+.class-legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; }
+.class-legend-item {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 4px; font-weight: 600;
+}
