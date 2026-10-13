@@ -9,16 +9,49 @@
 <body>
   <div id="app">
     <header class="hud">
-      <div class="hud-stat">Battle <b id="hud-battle">1</b></div>
-      <div class="hud-stat">Wins <b id="hud-wins">0</b></div>
-      <div class="hud-stat">Losses <b id="hud-losses">0</b></div>
-      <div class="hud-stat">Camp <b id="hud-roster">0</b></div>
+      <div class="hud-stat" id="hud-battle-stat">Battle <b id="hud-battle">1</b></div>
+      <div class="hud-stat" id="hud-wins-stat">Wins <b id="hud-wins">0</b></div>
+      <div class="hud-stat" id="hud-losses-stat">Losses <b id="hud-losses">0</b></div>
+      <div class="hud-stat" id="hud-camp-stat">Camp <b id="hud-roster">0</b></div>
+      <div class="hud-stat" id="hud-extract-wrap">Extraction <b id="hud-extract-status">At Base</b></div>
+      <div class="hud-stat" id="hud-stash-wrap">Stash <b id="hud-stash-count">20</b></div>
       <div id="trigger-legend" class="trigger-legend"></div>
       <div id="class-legend" class="class-legend"></div>
+      <button id="btn-evac-base" class="btn btn-small hidden" title="Return to Home Stash with surviving cards">🏠 Evac to Base</button>
     </header>
 
+    <!-- HOME SCREEN (BASE & STASH) -->
+    <section id="home-screen" class="screen">
+      <div class="home-header panel">
+        <div class="home-title-row">
+          <div>
+            <h1>🏕️ Base Camp & Stash</h1>
+            <p class="hint">Select cards from your stash to take on the next expedition. Survive battles, call for extraction, and bring your loot back!</p>
+          </div>
+          <div class="home-actions">
+            <button id="btn-auto-loadout" class="btn">Auto-pick</button>
+            <button id="btn-clear-loadout" class="btn">Clear</button>
+            <button id="btn-restock-stash" class="btn btn-small" title="Generate 20 fresh random cards">Restock +20</button>
+            <button id="btn-go-expedition" class="btn btn-primary">⚔️ Go Expedition</button>
+          </div>
+        </div>
+        <div class="loadout-summary">
+          <span class="loadout-pill">Expedition Loadout: <b id="loadout-count">0</b> / <b id="loadout-max">15</b> cards</span>
+          <span class="hint" id="loadout-formula">(Team slots: 5 + Camp size: 10)</span>
+          <span class="loadout-pill stash-pill">In Stash: <b id="stash-count">20</b> cards</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Card Stash <span class="hint">(click cards to toggle selection for your expedition loadout)</span></h2>
+        <div id="stash-cards" class="row row-stash"></div>
+      </div>
+
+      <div id="home-modifiers-slot"></div>
+    </section>
+
     <!-- PREP SCREEN -->
-    <section id="prep-screen" class="screen">
+    <section id="prep-screen" class="screen hidden">
       <svg id="preview-arrows" class="preview-arrows"></svg>
       <div class="prep-top">
         <div class="panel panel-team">
@@ -47,58 +80,60 @@
         <div id="roster" class="row row-roster"></div>
       </div>
 
-      <div class="panel">
-        <h2>Gameplay modifiers <span class="hint">(apply from the next battle)</span></h2>
-        <div class="modifier">
-          <label for="mod-start-pct" class="mod-name">🎲 Who attacks first</label>
-          <span class="mod-end">Enemy</span>
-          <input id="mod-start-pct" type="range" min="0" max="100" step="5" />
-          <span class="mod-end">You</span>
-          <b id="mod-start-val" class="mod-val"></b>
-          <button id="mod-start-reset" class="btn btn-small">Reset</button>
-          <span id="mod-start-desc" class="hint"></span>
-        </div>
-        <div class="modifier">
-          <label for="mod-recruits" class="mod-name">🤝 Recruits per victory</label>
-          <span class="mod-end">Random</span>
-          <input id="mod-recruits" type="range" min="0" max="10" step="1" />
-          <span class="mod-end">10</span>
-          <b id="mod-recruits-val" class="mod-val"></b>
-          <button id="mod-recruits-reset" class="btn btn-small">Reset</button>
-          <span id="mod-recruits-desc" class="hint"></span>
-        </div>
-        <div class="modifier">
-          <label for="mod-losses" class="mod-name">💀 Losses per defeat</label>
-          <span class="mod-end">Random</span>
-          <input id="mod-losses" type="range" min="0" max="10" step="1" />
-          <span class="mod-end">10</span>
-          <b id="mod-losses-val" class="mod-val"></b>
-          <button id="mod-losses-reset" class="btn btn-small">Reset</button>
-          <span id="mod-losses-desc" class="hint"></span>
-        </div>
-        <div class="modifier">
-          <span class="mod-name">👥 Your team slots</span>
-          <button class="btn btn-small" data-step="playerSlots" data-dir="-1">−</button>
-          <b id="mod-playerSlots-val" class="mod-val mod-step-val"></b>
-          <button class="btn btn-small" data-step="playerSlots" data-dir="1">+</button>
-          <button class="btn btn-small" data-reset="playerSlots">Reset</button>
-          <span id="mod-playerSlots-desc" class="hint"></span>
-        </div>
-        <div class="modifier">
-          <span class="mod-name">👹 Enemy team slots</span>
-          <button class="btn btn-small" data-step="enemySlots" data-dir="-1">−</button>
-          <b id="mod-enemySlots-val" class="mod-val mod-step-val"></b>
-          <button class="btn btn-small" data-step="enemySlots" data-dir="1">+</button>
-          <button class="btn btn-small" data-reset="enemySlots">Reset</button>
-          <span id="mod-enemySlots-desc" class="hint"></span>
-        </div>
-        <div class="modifier">
-          <span class="mod-name">⛺ Camp size</span>
-          <button class="btn btn-small" data-step="campMax" data-dir="-1">−</button>
-          <b id="mod-campMax-val" class="mod-val mod-step-val"></b>
-          <button class="btn btn-small" data-step="campMax" data-dir="1">+</button>
-          <button class="btn btn-small" data-reset="campMax">Reset</button>
-          <span id="mod-campMax-desc" class="hint"></span>
+      <div id="prep-modifiers-slot">
+        <div id="modifiers-panel" class="panel">
+          <h2>Gameplay modifiers <span class="hint">(apply from the next battle)</span></h2>
+          <div class="modifier">
+            <label for="mod-start-pct" class="mod-name">🎲 Who attacks first</label>
+            <span class="mod-end">Enemy</span>
+            <input id="mod-start-pct" type="range" min="0" max="100" step="5" />
+            <span class="mod-end">You</span>
+            <b id="mod-start-val" class="mod-val"></b>
+            <button id="mod-start-reset" class="btn btn-small">Reset</button>
+            <span id="mod-start-desc" class="hint"></span>
+          </div>
+          <div class="modifier">
+            <label for="mod-recruits" class="mod-name">🤝 Recruits per victory</label>
+            <span class="mod-end">Random</span>
+            <input id="mod-recruits" type="range" min="0" max="10" step="1" />
+            <span class="mod-end">10</span>
+            <b id="mod-recruits-val" class="mod-val"></b>
+            <button id="mod-recruits-reset" class="btn btn-small">Reset</button>
+            <span id="mod-recruits-desc" class="hint"></span>
+          </div>
+          <div class="modifier">
+            <label for="mod-losses" class="mod-name">💀 Losses per defeat</label>
+            <span class="mod-end">Random</span>
+            <input id="mod-losses" type="range" min="0" max="10" step="1" />
+            <span class="mod-end">10</span>
+            <b id="mod-losses-val" class="mod-val"></b>
+            <button id="mod-losses-reset" class="btn btn-small">Reset</button>
+            <span id="mod-losses-desc" class="hint"></span>
+          </div>
+          <div class="modifier">
+            <span class="mod-name">👥 Your team slots</span>
+            <button class="btn btn-small" data-step="playerSlots" data-dir="-1">−</button>
+            <b id="mod-playerSlots-val" class="mod-val mod-step-val"></b>
+            <button class="btn btn-small" data-step="playerSlots" data-dir="1">+</button>
+            <button class="btn btn-small" data-reset="playerSlots">Reset</button>
+            <span id="mod-playerSlots-desc" class="hint"></span>
+          </div>
+          <div class="modifier">
+            <span class="mod-name">👹 Enemy team slots</span>
+            <button class="btn btn-small" data-step="enemySlots" data-dir="-1">−</button>
+            <b id="mod-enemySlots-val" class="mod-val mod-step-val"></b>
+            <button class="btn btn-small" data-step="enemySlots" data-dir="1">+</button>
+            <button class="btn btn-small" data-reset="enemySlots">Reset</button>
+            <span id="mod-enemySlots-desc" class="hint"></span>
+          </div>
+          <div class="modifier">
+            <span class="mod-name">⛺ Camp size</span>
+            <button class="btn btn-small" data-step="campMax" data-dir="-1">−</button>
+            <b id="mod-campMax-val" class="mod-val mod-step-val"></b>
+            <button class="btn btn-small" data-step="campMax" data-dir="1">+</button>
+            <button class="btn btn-small" data-reset="campMax">Reset</button>
+            <span id="mod-campMax-desc" class="hint"></span>
+          </div>
         </div>
       </div>
     </section>
@@ -159,6 +194,8 @@
         <div class="result-actions">
           <button id="btn-skip-recruit" class="btn hidden">Skip ⏭</button>
           <button id="btn-continue" class="btn btn-primary">Continue ▶</button>
+          <button id="btn-extract" class="btn btn-extract hidden">🚁 Extract in 2 battles</button>
+          <button id="btn-return-home" class="btn btn-primary hidden">Return to Home Stash 🏠</button>
         </div>
       </div>
     </div>

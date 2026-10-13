@@ -333,6 +333,10 @@ export function makeCharacter(id) {
   return { uid: nextUid++, id };
 }
 
+export function ensureNextUid(n) {
+  if (n >= nextUid) nextUid = n + 1;
+}
+
 export function randomCharacterId() {
   return RECRUITABLE[Math.floor(Math.random() * RECRUITABLE.length)];
 }

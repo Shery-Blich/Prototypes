@@ -1,4 +1,4 @@
-import { CHARACTERS, CLASSES, TRIGGERS, makeCharacter, randomCharacterId } from './characters.js';
+import { CHARACTERS, CLASSES, TRIGGERS, ensureNextUid, makeCharacter, randomCharacterId } from './characters.js';
 import { Battle } from './battle.js';
 import { SimpleAudio } from '/src/shared/utils.js';
 
@@ -10,6 +10,7 @@ const teamSlots = () => state.modifiers.playerSlots;
 const enemySlots = () => state.modifiers.enemySlots;
 const slotsFor = side => (side === 'player' ? teamSlots() : enemySlots());
 const campMax = () => state.modifiers.campMax; // characters not in the team, at all times
+const maxExpeditionLoadout = () => teamSlots() + campMax();
 
 const campCount = () => state.roster.length - state.team.length;
 
@@ -17,14 +18,18 @@ const $ = id => document.getElementById(id);
 const audio = new SimpleAudio();
 
 const state = {
-  roster: [],        // [{uid, id}]
+  stash: [],         // [{uid, id}] home stash cards
+  roster: [],        // [{uid, id}] expedition loadout (team + camp)
   team: [],          // roster uids, index 0 = front
+  selectedStashUids: new Set(), // selected cards on home screen
   battleNum: 1,
   wins: 0,
   losses: 0,
   enemy: [],         // [{id, atkBonus, hpBonus}]
   speed: 1,
   inBattle: false,
+  screen: 'home',    // 'home' | 'prep' | 'battle'
+  extractCountdown: null, // null = inactive, 2 = 2 battles left, 1 = 1 battle left
   previewKey: null,  // selected prep card: 'p<rosterUid>' or 'e<index>'
   modifiers: null,   // gameplay modifiers, see MODIFIER_DEFAULTS
   battlePreviewKey: null, // selected battle card: 'b<battle unit uid>'
@@ -115,8 +120,20 @@ function setLimit(key, value) {
     fitEnemyToSlots();
     teamChanged();
     renderModifiers();
-    renderPrep();
+    if (state.screen === 'home') renderHome();
+    else renderPrep();
   };
+
+  if (state.screen === 'home') {
+    const maxLoadout = maxExpeditionLoadout();
+    if (state.selectedStashUids && state.selectedStashUids.size > maxLoadout) {
+      const arr = [...state.selectedStashUids];
+      state.selectedStashUids = new Set(arr.slice(0, maxLoadout));
+    }
+    commit();
+    return;
+  }
+
   const over = campCount() - campMax();
   if (over <= 0) { commit(); return; }
   pickDiscards(over, uids => {
@@ -206,6 +223,176 @@ state.modifiers = loadModifiers();
 
 function rollFirstSide() {
   return Math.random() * 100 < state.modifiers.playerStartsPct ? 'player' : 'enemy';
+}
+
+// ---------- Stash & Base Management ----------
+
+function generateRandomStash(count = 20) {
+  return Array.from({ length: count }, () => makeCharacter(randomCharacterId()));
+}
+
+function loadStash() {
+  try {
+    const raw = localStorage.getItem('cce-stash');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        let maxUid = 0;
+        for (const c of parsed) {
+          if (c && typeof c.uid === 'number' && c.uid > maxUid) maxUid = c.uid;
+        }
+        ensureNextUid(maxUid + 1);
+        return parsed.filter(c => c && CHARACTERS[c.id]);
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load stash:', err);
+  }
+  return generateRandomStash(20);
+}
+
+function saveStash() {
+  try {
+    localStorage.setItem('cce-stash', JSON.stringify(state.stash));
+  } catch (err) {
+    console.warn('Failed to save stash:', err);
+  }
+}
+
+function returnAllToStash() {
+  if (state.roster && state.roster.length) {
+    state.stash.push(...state.roster);
+    state.roster = [];
+    state.team = [];
+  }
+  state.extractCountdown = null;
+  saveStash();
+}
+
+function moveModifiersPanel(targetSlotId) {
+  const panel = $('modifiers-panel');
+  const target = $(targetSlotId);
+  if (panel && target && panel.parentElement !== target) {
+    target.appendChild(panel);
+  }
+}
+
+// ---------- Home Screen ----------
+
+function showHome() {
+  state.screen = 'home';
+  state.inBattle = false;
+  state.previewKey = null;
+  state.extractCountdown = null;
+  stopIdleCycle();
+
+  $('home-screen').classList.remove('hidden');
+  $('prep-screen').classList.add('hidden');
+  $('battle-screen').classList.add('hidden');
+  $('result-overlay').classList.add('hidden');
+  $('discard-overlay').classList.add('hidden');
+
+  moveModifiersPanel('home-modifiers-slot');
+
+  if (!state.selectedStashUids) {
+    state.selectedStashUids = new Set();
+  }
+  // Remove uids no longer in stash
+  const stashUids = new Set(state.stash.map(c => c.uid));
+  for (const uid of state.selectedStashUids) {
+    if (!stashUids.has(uid)) state.selectedStashUids.delete(uid);
+  }
+
+  // If no cards selected yet and stash has cards, auto-select up to loadout limit
+  if (state.selectedStashUids.size === 0 && state.stash.length > 0) {
+    const max = maxExpeditionLoadout();
+    for (let i = 0; i < Math.min(state.stash.length, max); i++) {
+      state.selectedStashUids.add(state.stash[i].uid);
+    }
+  }
+
+  updateHud();
+  renderModifiers();
+  renderHome();
+}
+
+function renderHome() {
+  updateHud();
+  const max = maxExpeditionLoadout();
+  const currentCount = state.selectedStashUids ? state.selectedStashUids.size : 0;
+
+  $('loadout-count').textContent = currentCount;
+  $('loadout-max').textContent = max;
+  $('loadout-formula').textContent = `(Team slots: ${teamSlots()} + Camp size: ${campMax()})`;
+  $('stash-count').textContent = state.stash.length;
+
+  const btnGo = $('btn-go-expedition');
+  btnGo.disabled = currentCount < MIN_TEAM;
+  btnGo.textContent = currentCount < MIN_TEAM
+    ? `Select at least ${MIN_TEAM} card`
+    : `⚔️ Go Expedition (${currentCount} cards)`;
+
+  const container = $('stash-cards');
+  container.innerHTML = '';
+
+  if (state.stash.length === 0) {
+    container.innerHTML = '<div class="hint" style="padding:20px;font-size:15px;">Your stash is empty! Click "Restock +20" above to generate cards.</div>';
+    return;
+  }
+
+  for (const c of state.stash) {
+    const d = CHARACTERS[c.id];
+    const isSelected = state.selectedStashUids.has(c.uid);
+    const el = cardEl(c.id, d.atk, d.hp, {
+      cls: 'stash-card clickable' + (isSelected ? ' selected' : ''),
+    });
+
+    if (isSelected) {
+      const tag = document.createElement('div');
+      tag.className = 'stash-loadout-tag';
+      tag.textContent = '✓ LOADOUT';
+      el.appendChild(tag);
+    }
+
+    el.addEventListener('click', () => {
+      if (state.selectedStashUids.has(c.uid)) {
+        state.selectedStashUids.delete(c.uid);
+        audio.beep(400);
+      } else {
+        if (state.selectedStashUids.size >= maxExpeditionLoadout()) {
+          audio.beep(250);
+          return;
+        }
+        state.selectedStashUids.add(c.uid);
+        audio.beep(550);
+      }
+      renderHome();
+    });
+
+    container.appendChild(el);
+  }
+}
+
+function startExpedition() {
+  const selectedUids = state.selectedStashUids;
+  if (!selectedUids || selectedUids.size < MIN_TEAM) return;
+
+  const selectedCards = state.stash.filter(c => selectedUids.has(c.uid));
+  state.stash = state.stash.filter(c => !selectedUids.has(c.uid));
+  saveStash();
+  state.selectedStashUids.clear();
+
+  state.roster = selectedCards;
+  const initialTeamSize = Math.min(teamSlots(), state.roster.length);
+  state.team = state.roster.slice(0, initialTeamSize).map(c => c.uid);
+
+  state.battleNum = 1;
+  state.wins = 0;
+  state.losses = 0;
+  state.extractCountdown = null;
+  state.enemy = generateEnemy(1);
+
+  showPrep();
 }
 
 // ---------- Run setup ----------
@@ -323,19 +510,50 @@ function cardEl(id, atk, hp, opts = {}) {
 }
 
 function updateHud() {
+  if (state.screen === 'home') {
+    $('hud-battle').textContent = 'Base';
+    $('hud-wins').textContent = '0';
+    $('hud-losses').textContent = '0';
+    $('hud-roster').textContent = '--';
+    $('hud-extract-status').textContent = 'At Base';
+    $('hud-extract-status').className = '';
+    $('hud-stash-count').textContent = state.stash ? state.stash.length : 0;
+    $('btn-evac-base').classList.add('hidden');
+    return;
+  }
+
   $('hud-battle').textContent = state.battleNum;
   $('hud-wins').textContent = state.wins;
   $('hud-losses').textContent = state.losses;
   $('hud-roster').textContent = `${campCount()}/${campMax()}`;
+  $('hud-stash-count').textContent = state.stash ? state.stash.length : 0;
+  $('btn-evac-base').classList.toggle('hidden', state.inBattle);
+
+  const extractEl = $('hud-extract-status');
+  if (state.extractCountdown === null) {
+    extractEl.textContent = 'Not active';
+    extractEl.className = '';
+  } else if (state.extractCountdown === 2) {
+    extractEl.textContent = 'In 2 battles';
+    extractEl.className = 'hud-extract-active';
+  } else if (state.extractCountdown === 1) {
+    extractEl.textContent = 'In 1 battle!';
+    extractEl.className = 'hud-extract-urgent';
+  }
 }
 
 // ---------- Prep screen ----------
 
 function showPrep() {
+  state.screen = 'prep';
   state.inBattle = false;
+  $('home-screen').classList.add('hidden');
   $('prep-screen').classList.remove('hidden');
   $('battle-screen').classList.add('hidden');
   $('result-overlay').classList.add('hidden');
+  $('discard-overlay').classList.add('hidden');
+  moveModifiersPanel('prep-modifiers-slot');
+  renderModifiers();
   renderPrep();
   resetIdle();
 }
@@ -1007,6 +1225,8 @@ function showResult(result, participants) {
   title.className = result;
   btn.disabled = false;
   $('btn-skip-recruit').classList.add('hidden');
+  $('btn-extract').classList.add('hidden');
+  $('btn-return-home').classList.add('hidden');
   $('result-discard-wrap').classList.add('hidden');
 
   state.battleNum++;
@@ -1044,19 +1264,6 @@ function showDefeat(participants) {
     state.roster = state.roster.filter(r => !lostSet.has(r.uid));
     state.team = state.team.filter(uid => !lostSet.has(uid));
     updateHud();
-
-    if (state.roster.length === 0) {
-      title.textContent = 'Game Over';
-      title.className = 'lose';
-      text.textContent = `You lost your characters and your roster is now empty. You survived ${state.battleNum - 1} battle${state.battleNum === 2 ? '' : 's'} with ${state.wins} win${state.wins === 1 ? '' : 's'}.`;
-      btn.disabled = false;
-      btn.textContent = 'Restart ⟳';
-      btn.onclick = newRun;
-    } else {
-      btn.disabled = false;
-      btn.textContent = 'Continue ▶';
-      btn.onclick = showPrep;
-    }
   };
 
   if (allLost) {
@@ -1066,7 +1273,12 @@ function showDefeat(participants) {
       const d = CHARACTERS[p.id];
       cards.appendChild(cardEl(p.id, d.atk, d.hp, { cls: 'lost' }));
     }
-    finishDefeat(lostUids);
+    btn.disabled = false;
+    btn.textContent = 'Confirm Loss ▶';
+    btn.onclick = () => {
+      finishDefeat(lostUids);
+      onPostCardChoice('lose');
+    };
     return;
   }
 
@@ -1085,7 +1297,12 @@ function showDefeat(participants) {
       el.appendChild(tag);
       cards.appendChild(el);
     }
-    finishDefeat([lostUnit.uid]);
+    btn.disabled = false;
+    btn.textContent = 'Confirm Loss ▶';
+    btn.onclick = () => {
+      finishDefeat([lostUnit.uid]);
+      onPostCardChoice('lose');
+    };
     return;
   }
 
@@ -1122,15 +1339,12 @@ function showDefeat(participants) {
 
   btn.onclick = () => {
     finishDefeat(chosen);
-    if (state.roster.length > 0) {
-      showPrep();
-    }
+    onPostCardChoice('lose');
   };
 
   draw();
 }
 
-// Victory reward: recruit one character of the defeated team (base stats), or skip.
 // Victory reward: recruit up to `recruitsPerWin` characters of the defeated team (base stats,
 // never summons), or skip. 0 = one random character of the defeated team, take it or skip.
 // Recruits fill the camp first, then free team slots. If there isn't room for all of them,
@@ -1218,11 +1432,173 @@ function showRecruit(defeated) {
       state.roster.push(recruit);
     }
     state.team = state.team.filter(u => u !== null);
-    showPrep();
+    onPostCardChoice('win');
   };
-  skip.onclick = showPrep;
+  skip.onclick = () => onPostCardChoice('win');
   skip.classList.remove('hidden');
   draw();
+}
+
+function onPostCardChoice(lastResult) {
+  updateHud();
+
+  const title = $('result-title');
+  const text = $('result-text');
+  const cards = $('result-cards');
+  const btnContinue = $('btn-continue');
+  const btnExtract = $('btn-extract');
+  const btnReturnHome = $('btn-return-home');
+  const btnSkip = $('btn-skip-recruit');
+  const discardWrap = $('result-discard-wrap');
+
+  btnSkip.classList.add('hidden');
+  discardWrap.classList.add('hidden');
+  cards.innerHTML = '';
+
+  // 1. Forced Evacuation Check: <= 2 cards left in camp + slots
+  if (state.roster.length <= 2) {
+    const survivingCount = state.roster.length;
+    if (survivingCount > 0) {
+      state.stash.push(...state.roster);
+      saveStash();
+    }
+    const savedRoster = [...state.roster];
+    state.roster = [];
+    state.team = [];
+    state.extractCountdown = null;
+    updateHud();
+
+    title.textContent = survivingCount === 0 ? 'Squad Wiped Out 💀' : 'Emergency Evacuation 🚨';
+    title.className = 'lose';
+    text.textContent = survivingCount === 0
+      ? `All characters were lost in battle. The expedition ended. You survived ${state.battleNum - 1} battle${state.battleNum === 2 ? '' : 's'}.`
+      : `Critical squad loss! You have only ${survivingCount} card${survivingCount === 1 ? '' : 's'} remaining (≤ 2). You and your surviving cards have been returned to Base Stash immediately!`;
+
+    for (const c of savedRoster) {
+      const d = CHARACTERS[c.id];
+      const el = cardEl(c.id, d.atk, d.hp);
+      const tag = frontTag();
+      tag.textContent = 'SAVED TO STASH';
+      tag.style.background = '#22c55e';
+      tag.style.color = '#052e16';
+      el.appendChild(tag);
+      cards.appendChild(el);
+    }
+
+    btnContinue.classList.add('hidden');
+    btnExtract.classList.add('hidden');
+    btnReturnHome.classList.remove('hidden');
+    btnReturnHome.textContent = 'Return to Home Stash 🏠';
+    btnReturnHome.onclick = () => {
+      showHome();
+    };
+    return;
+  }
+
+  // 2. Extraction Completion: countdown reaches 0 (was 1 last battle)
+  if (state.extractCountdown === 1) {
+    const extractedCount = state.roster.length;
+    state.stash.push(...state.roster);
+    saveStash();
+    const savedRoster = [...state.roster];
+    state.roster = [];
+    state.team = [];
+    state.extractCountdown = null;
+    updateHud();
+
+    title.textContent = 'Extraction Successful! 🚁';
+    title.className = 'win';
+    text.textContent = `Extraction chopper arrived! All ${extractedCount} cards from your squad were safely deposited into your Base Stash.`;
+
+    for (const c of savedRoster) {
+      const d = CHARACTERS[c.id];
+      const el = cardEl(c.id, d.atk, d.hp);
+      const tag = frontTag();
+      tag.textContent = 'EXTRACTED';
+      tag.style.background = '#38bdf8';
+      tag.style.color = '#082f49';
+      el.appendChild(tag);
+      cards.appendChild(el);
+    }
+
+    btnContinue.classList.add('hidden');
+    btnExtract.classList.add('hidden');
+    btnReturnHome.classList.remove('hidden');
+    btnReturnHome.textContent = 'Return to Home Stash 🏠';
+    btnReturnHome.onclick = () => {
+      showHome();
+    };
+    return;
+  }
+
+  // 3. Extraction in progress: countdown was 2, now 1 battle left
+  if (state.extractCountdown === 2) {
+    state.extractCountdown = 1;
+    updateHud();
+
+    title.textContent = 'Extraction Inbound 🚁';
+    title.className = 'win';
+    text.textContent = 'Extraction beacon active! Survive 1 more battle to extract all squad cards to Base Stash.';
+
+    for (const c of state.roster) {
+      const d = CHARACTERS[c.id];
+      const el = cardEl(c.id, d.atk, d.hp);
+      if (state.team.includes(c.uid)) {
+        const tag = frontTag();
+        tag.textContent = 'TEAM';
+        el.appendChild(tag);
+      }
+      cards.appendChild(el);
+    }
+
+    btnReturnHome.classList.add('hidden');
+
+    btnContinue.classList.remove('hidden');
+    btnContinue.disabled = false;
+    btnContinue.textContent = 'Continue to Final Battle ▶';
+    btnContinue.onclick = () => {
+      showPrep();
+    };
+
+    btnExtract.classList.remove('hidden');
+    btnExtract.disabled = true;
+    btnExtract.textContent = '⏳ Extract in 1 battle';
+    return;
+  }
+
+  // 4. Extraction not active: offer Continue or Extract in 2 battles
+  title.textContent = lastResult === 'win' ? 'Victory Secured' : 'Regroup';
+  title.className = lastResult;
+  text.textContent = `Your squad has ${state.roster.length} cards (team: ${state.team.length}, camp: ${campCount()}). Push deeper or call extraction in 2 battles:`;
+
+  for (const c of state.roster) {
+    const d = CHARACTERS[c.id];
+    const el = cardEl(c.id, d.atk, d.hp);
+    if (state.team.includes(c.uid)) {
+      const tag = frontTag();
+      tag.textContent = 'TEAM';
+      el.appendChild(tag);
+    }
+    cards.appendChild(el);
+  }
+
+  btnReturnHome.classList.add('hidden');
+
+  btnContinue.classList.remove('hidden');
+  btnContinue.disabled = false;
+  btnContinue.textContent = 'Continue Expedition ▶';
+  btnContinue.onclick = () => {
+    showPrep();
+  };
+
+  btnExtract.classList.remove('hidden');
+  btnExtract.disabled = false;
+  btnExtract.textContent = '🚁 Extract in 2 battles';
+  btnExtract.onclick = () => {
+    state.extractCountdown = 2;
+    updateHud();
+    showPrep();
+  };
 }
 
 // ---------- Idle preview cycle ----------
@@ -1310,8 +1686,44 @@ $('btn-fight').addEventListener('click', startBattle);
 $('btn-skip').addEventListener('click', () => { closeBattlePreview(); setSpeed(1000); });
 document.querySelectorAll('.speed').forEach(b => b.addEventListener('click', () => setSpeed(Number(b.dataset.speed))));
 
+$('btn-go-expedition').addEventListener('click', startExpedition);
+
+$('btn-auto-loadout').addEventListener('click', () => {
+  if (!state.selectedStashUids) state.selectedStashUids = new Set();
+  state.selectedStashUids.clear();
+  const max = maxExpeditionLoadout();
+  for (let i = 0; i < Math.min(state.stash.length, max); i++) {
+    state.selectedStashUids.add(state.stash[i].uid);
+  }
+  audio.beep(550);
+  renderHome();
+});
+
+$('btn-clear-loadout').addEventListener('click', () => {
+  if (state.selectedStashUids) state.selectedStashUids.clear();
+  audio.beep(400);
+  renderHome();
+});
+
+$('btn-restock-stash').addEventListener('click', () => {
+  const fresh = generateRandomStash(20);
+  state.stash.push(...fresh);
+  saveStash();
+  audio.beep(650);
+  renderHome();
+});
+
+$('btn-evac-base').addEventListener('click', () => {
+  if (state.screen !== 'prep') return;
+  if (confirm(`Evacuate now? Return all ${state.roster.length} squad cards to base stash?`)) {
+    returnAllToStash();
+    showHome();
+  }
+});
+
 renderTriggerLegend();
 renderClassLegend();
 initTriggerTips();
-renderModifiers();
-newRun();
+state.modifiers = loadModifiers();
+state.stash = loadStash();
+showHome();
