@@ -1,0 +1,5 @@
+{
+  "title": "Class Card Extraction (Simultaneous Attack)",
+  "description": "Fork of Class Card Extraction where opposing front cards attack each other simultaneously. Priority modifier determines which side's abilities trigger first. Attack triggers apply right before the cards clash, followed by hurt triggers, death checks, and stepping forward.",
+  "created": "2026-10-13T12:45:00+03:00"
+}

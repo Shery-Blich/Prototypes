@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Class Card Extraction (Simultaneous Attack)</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="hud">
+      <div class="hud-stat" id="hud-battle-stat">Battle <b id="hud-battle">1</b></div>
+      <div class="hud-stat" id="hud-wins-stat">Wins <b id="hud-wins">0</b></div>
+      <div class="hud-stat" id="hud-losses-stat">Losses <b id="hud-losses">0</b></div>
+      <div class="hud-stat" id="hud-camp-stat">Camp <b id="hud-roster">0</b></div>
+      <div class="hud-stat" id="hud-extract-wrap">Extraction <b id="hud-extract-status">At Base</b></div>
+      <div class="hud-stat" id="hud-stash-wrap">Stash <b id="hud-stash-count">20</b></div>
+      <div id="trigger-legend" class="trigger-legend"></div>
+      <div id="class-legend" class="class-legend"></div>
+      <button id="btn-evac-base" class="btn btn-small hidden" title="Return to Home Stash with surviving cards">🏠 Evac to Base</button>
+    </header>
+
+    <!-- HOME SCREEN (BASE & STASH) -->
+    <section id="home-screen" class="screen">
+      <div class="home-header panel">
+        <div class="home-title-row">
+          <div>
+            <h1>🏕️ Base Camp & Stash</h1>
+            <p class="hint">Select cards from your stash to take on the next expedition. Front cards attack simultaneously — survive battles, extract, and bring your loot back!</p>
+          </div>
+          <div class="home-actions">
+            <button id="btn-auto-loadout" class="btn">Auto-pick</button>
+            <button id="btn-clear-loadout" class="btn">Clear</button>
+            <button id="btn-restock-stash" class="btn btn-small" title="Generate 20 fresh random cards">Restock +20</button>
+            <button id="btn-go-expedition" class="btn btn-primary">⚔️ Go Expedition</button>
+          </div>
+        </div>
+        <div class="loadout-summary">
+          <span class="loadout-pill">Expedition Loadout: <b id="loadout-count">0</b> / <b id="loadout-max">15</b> cards</span>
+          <span class="hint" id="loadout-formula">(Team slots: 5 + Camp size: 10)</span>
+          <span class="loadout-pill stash-pill">In Stash: <b id="stash-count">20</b> cards</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Card Stash <span class="hint">(click cards to toggle selection for your expedition loadout)</span></h2>
+        <div id="stash-cards" class="row row-stash"></div>
+      </div>
+
+      <div id="home-modifiers-slot"></div>
+    </section>
+
+    <!-- PREP SCREEN -->
+    <section id="prep-screen" class="screen hidden">
+      <svg id="preview-arrows" class="preview-arrows"></svg>
+      <div class="prep-top">
+        <div class="panel panel-team">
+          <h2>Your team <span class="hint">(1-5 characters · opposing front cards attack at the same time · initiative modifier decides whose abilities trigger first)</span></h2>
+          <div id="team-slots" class="row row-team"></div>
+          <div class="prep-actions">
+            <button id="btn-fight" class="btn btn-primary">⚔ Fight</button>
+            <span id="fight-hint" class="hint"></span>
+          </div>
+        </div>
+
+        <div class="panel panel-enemy">
+          <h2>Next opponent <span class="hint">(front is on the left)</span></h2>
+          <div id="enemy-preview" class="row row-enemy"></div>
+          <div class="prep-actions prep-actions-right">
+            <span class="hint">Steps through every ability preview in acting order</span>
+            <button id="btn-preview-battle" class="btn">▶ Preview battle</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="preview-info" class="preview-info hidden"></div>
+
+      <div id="camp-panel" class="panel">
+        <h2>Camp <b id="camp-count"></b> <span class="hint">(characters not in your team · click or drag to add to team · drag onto a team character to swap them · when the camp is full the team can't shrink)</span></h2>
+        <div id="roster" class="row row-roster"></div>
+      </div>
+
+      <div id="prep-modifiers-slot">
+        <div id="modifiers-panel" class="panel">
+          <h2>Gameplay modifiers <span class="hint">(apply from the next battle)</span></h2>
+          <div class="modifier">
+            <label for="mod-start-pct" class="mod-name">🎲 Who triggers first</label>
+            <span class="mod-end">Enemy</span>
+            <input id="mod-start-pct" type="range" min="0" max="100" step="5" />
+            <span class="mod-end">You</span>
+            <b id="mod-start-val" class="mod-val"></b>
+            <button id="mod-start-reset" class="btn btn-small">Reset</button>
+            <span id="mod-start-desc" class="hint"></span>
+          </div>
+          <div class="modifier">
+            <label for="mod-recruits" class="mod-name">🤝 Recruits per victory</label>
+            <span class="mod-end">Random</span>
+            <input id="mod-recruits" type="range" min="0" max="10" step="1" />
+            <span class="mod-end">10</span>
+            <b id="mod-recruits-val" class="mod-val"></b>
+            <button id="mod-recruits-reset" class="btn btn-small">Reset</button>
+            <span id="mod-recruits-desc" class="hint"></span>
+          </div>
+          <div class="modifier">
+            <label for="mod-losses" class="mod-name">💀 Losses per defeat</label>
+            <span class="mod-end">Random</span>
+            <input id="mod-losses" type="range" min="0" max="10" step="1" />
+            <span class="mod-end">10</span>
+            <b id="mod-losses-val" class="mod-val"></b>
+            <button id="mod-losses-reset" class="btn btn-small">Reset</button>
+            <span id="mod-losses-desc" class="hint"></span>
+          </div>
+          <div class="modifier">
+            <span class="mod-name">👥 Your team slots</span>
+            <button class="btn btn-small" data-step="playerSlots" data-dir="-1">−</button>
+            <b id="mod-playerSlots-val" class="mod-val mod-step-val"></b>
+            <button class="btn btn-small" data-step="playerSlots" data-dir="1">+</button>
+            <button class="btn btn-small" data-reset="playerSlots">Reset</button>
+            <span id="mod-playerSlots-desc" class="hint"></span>
+          </div>
+          <div class="modifier">
+            <span class="mod-name">👹 Enemy team slots</span>
+            <button class="btn btn-small" data-step="enemySlots" data-dir="-1">−</button>
+            <b id="mod-enemySlots-val" class="mod-val mod-step-val"></b>
+            <button class="btn btn-small" data-step="enemySlots" data-dir="1">+</button>
+            <button class="btn btn-small" data-reset="enemySlots">Reset</button>
+            <span id="mod-enemySlots-desc" class="hint"></span>
+          </div>
+          <div class="modifier">
+            <span class="mod-name">⛺ Camp size</span>
+            <button class="btn btn-small" data-step="campMax" data-dir="-1">−</button>
+            <b id="mod-campMax-val" class="mod-val mod-step-val"></b>
+            <button class="btn btn-small" data-step="campMax" data-dir="1">+</button>
+            <button class="btn btn-small" data-reset="campMax">Reset</button>
+            <span id="mod-campMax-desc" class="hint"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BATTLE SCREEN -->
+    <section id="battle-screen" class="screen hidden">
+      <svg id="battle-arrows" class="preview-arrows"></svg>
+      <svg id="effect-arrows" class="preview-arrows"></svg>
+      <div class="battle-controls">
+        <span>Speed:</span>
+        <button class="btn speed" data-speed="1">1x</button>
+        <button class="btn speed" data-speed="2">2x</button>
+        <button class="btn speed" data-speed="4">4x</button>
+        <button class="btn" id="btn-skip">Skip ⏭</button>
+        <span class="hint">Click a character to preview its ability</span>
+        <span id="pause-label" class="pause-label hidden">⏸ Paused · click it again to resume</span>
+        <span id="turn-label" class="turn-label"></span>
+      </div>
+      <div id="first-banner" class="first-banner"></div>
+      <div class="arena">
+        <div class="side side-player">
+          <div class="side-label">YOU</div>
+          <div id="battle-player" class="row"></div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="side side-enemy">
+          <div class="side-label">ENEMY</div>
+          <div id="battle-enemy" class="row"></div>
+        </div>
+      </div>
+      <div id="battle-preview-info" class="preview-info battle-preview-info hidden"></div>
+      <div id="battle-log" class="log"></div>
+    </section>
+
+    <!-- CAMP OVERFLOW (modifier change) -->
+    <div id="discard-overlay" class="overlay hidden">
+      <div class="result-box">
+        <h1 class="lose">Camp overflow</h1>
+        <p id="discard-text"></p>
+        <div id="discard-cards" class="row row-result"></div>
+        <div class="result-actions">
+          <button id="discard-cancel" class="btn">Cancel</button>
+          <button id="discard-confirm" class="btn btn-primary">Discard</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULT OVERLAY -->
+    <div id="result-overlay" class="overlay hidden">
+      <div class="result-box">
+        <h1 id="result-title"></h1>
+        <p id="result-text"></p>
+        <div id="result-cards" class="row row-result"></div>
+
+        <!-- SQUAD PREVIEW (when picking up cards after battle) -->
+        <div id="result-squad-preview" class="result-squad-preview hidden">
+          <div class="squad-preview-header">
+            <span class="squad-preview-label">Your Squad Overview</span>
+            <span class="squad-preview-meta">
+              <span class="squad-pill">Team: <b id="preview-team-count">0</b>/<b id="preview-team-max">5</b></span>
+              <span class="squad-pill">Camp: <b id="preview-camp-count">0</b>/<b id="preview-camp-max">10</b></span>
+            </span>
+          </div>
+          <div class="squad-preview-sections">
+            <div class="squad-section">
+              <div class="squad-section-title">
+                <span>👥 Team Slots</span>
+                <span class="hint">(Front is on the right)</span>
+              </div>
+              <div id="preview-team-slots" class="row row-squad-preview row-team-preview"></div>
+            </div>
+            <div class="squad-section">
+              <div class="squad-section-title">
+                <span>⛺ Camp</span>
+              </div>
+              <div id="preview-camp-slots" class="row row-squad-preview row-camp-preview"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="result-discard-wrap" class="result-discard-wrap hidden">
+          <p id="result-discard-label"></p>
+          <div id="result-discard" class="row row-result"></div>
+        </div>
+        <div class="result-actions">
+          <button id="btn-skip-recruit" class="btn hidden">Skip ⏭</button>
+          <button id="btn-continue" class="btn btn-primary">Continue ▶</button>
+          <button id="btn-extract" class="btn btn-extract hidden">🚁 Extract in 2 battles</button>
+          <button id="btn-return-home" class="btn btn-primary hidden">Return to Home Stash 🏠</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="trigger-tip" class="trigger-tip hidden"></div>
+
+  <script type="module" src="/src/shared/nav.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
