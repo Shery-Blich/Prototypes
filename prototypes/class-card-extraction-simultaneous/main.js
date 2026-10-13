@@ -1,6 +1,7 @@
 import { CHARACTERS, CLASSES, TRIGGERS, ensureNextUid, makeCharacter, randomCharacterId } from './characters.js';
 import { Battle } from './battle.js';
 import { SimpleAudio } from '/src/shared/utils.js';
+import { initEditor } from './editor.js';
 
 const MIN_TEAM = 1;
 const STARTING_ROSTER = 6;
@@ -1784,6 +1785,37 @@ $('btn-evac-base').addEventListener('click', () => {
     showHome();
   }
 });
+
+// ---------- Visual Character Editor Modal ----------
+function openEditorModal() {
+  const modal = $('editor-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  const container = $('editor-modal-content');
+  if (container) {
+    container.innerHTML = '';
+    initEditor(container, {
+      inModal: true,
+      onClose: closeEditorModal,
+      onSave: () => {
+        updateHud();
+        if (state.screen === 'home') renderHome();
+        else if (state.screen === 'prep') renderPrep();
+      },
+    });
+  }
+}
+
+function closeEditorModal() {
+  const modal = $('editor-modal');
+  if (modal) modal.classList.add('hidden');
+  updateHud();
+  if (state.screen === 'home') renderHome();
+  else if (state.screen === 'prep') renderPrep();
+}
+
+$('btn-open-editor')?.addEventListener('click', openEditorModal);
+$('btn-close-editor')?.addEventListener('click', closeEditorModal);
 
 renderTriggerLegend();
 renderClassLegend();

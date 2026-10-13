@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Class Card Extraction (Simultaneous Attack)</title>
   <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./editor.css" />
 </head>
 <body>
   <div id="app">
@@ -18,6 +19,7 @@
       <div id="trigger-legend" class="trigger-legend"></div>
       <div id="class-legend" class="class-legend"></div>
       <button id="btn-evac-base" class="btn btn-small hidden" title="Return to Home Stash with surviving cards">🏠 Evac to Base</button>
+      <button id="btn-open-editor" class="btn btn-small" title="Visually edit characters, stats, and abilities">🎨 Card Editor</button>
     </header>
 
     <!-- HOME SCREEN (BASE & STASH) -->
@@ -225,6 +227,20 @@
           <button id="btn-return-home" class="btn btn-primary hidden">Return to Home Stash 🏠</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- VISUAL CHARACTER EDITOR MODAL -->
+  <div id="editor-modal" class="editor-modal-backdrop hidden">
+    <div class="editor-modal-dialog">
+      <div class="editor-modal-header">
+        <h2>🎨 Visual Character Editor</h2>
+        <div class="editor-modal-actions">
+          <a href="./editor.html" target="_blank" class="btn btn-small" title="Open editor in a dedicated tab">↗ Open Standalone Tab</a>
+          <button id="btn-close-editor" class="btn btn-small">✕ Close</button>
+        </div>
+      </div>
+      <div id="editor-modal-content" class="editor-wrapper" style="overflow:hidden;flex:1;"></div>
     </div>
   </div>
 
