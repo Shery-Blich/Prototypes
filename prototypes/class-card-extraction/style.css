@@ -308,6 +308,103 @@ body {
 .card.recruit-option.picked { border-color: #22c55e; box-shadow: 0 0 18px rgba(34, 197, 94, 0.5); }
 .card.discard-option.discarding { border-color: #ef4444; box-shadow: 0 0 14px rgba(239, 68, 68, 0.5); filter: grayscale(0.7); }
 
+/* ── Post-battle Squad Preview (Card Slots & Camp) ────────────────────────── */
+.result-squad-preview {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+.squad-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 8px;
+}
+.squad-preview-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 0.04em;
+}
+.squad-preview-meta {
+  display: flex;
+  gap: 10px;
+}
+.squad-pill {
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+.squad-pill b {
+  color: #f8fafc;
+}
+.squad-preview-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.squad-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.squad-section-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+.row-squad-preview {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  min-height: 0;
+}
+.row-team-preview {
+  flex-direction: row-reverse;
+}
+.row-squad-preview .card {
+  zoom: 0.88;
+  flex-shrink: 0;
+}
+.preview-empty-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 2px dashed #475569 !important;
+  background: rgba(30, 41, 59, 0.4) !important;
+  color: #94a3b8 !important;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  min-width: 104px;
+  height: 176px;
+}
+.squad-empty-hint {
+  padding: 10px 0;
+  width: 100%;
+  text-align: center;
+  color: #64748b;
+  font-style: italic;
+}
+
 /* Gameplay modifiers */
 .modifier { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; }
 .modifier + .modifier { margin-top: 10px; }

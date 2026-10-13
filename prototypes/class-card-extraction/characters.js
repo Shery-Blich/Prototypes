@@ -145,7 +145,7 @@ export const CHARACTERS = {
     },
   },
   warlock_attack: {
-    class: 'warlock', name: 'Curse Bite', emoji: '🦂', atk: 3, hp: 1,
+    class: 'warlock', name: 'Curse Bite', emoji: '🦂', atk: 2, hp: 1,
     trigger: 'attack',
     text: 'When 🗡️ set the first enemy\'s ATK equal to its current HP.',
     preview: p => {

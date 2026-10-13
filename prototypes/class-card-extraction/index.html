@@ -187,6 +187,33 @@
         <h1 id="result-title"></h1>
         <p id="result-text"></p>
         <div id="result-cards" class="row row-result"></div>
+
+        <!-- SQUAD PREVIEW (when picking up cards after battle) -->
+        <div id="result-squad-preview" class="result-squad-preview hidden">
+          <div class="squad-preview-header">
+            <span class="squad-preview-label">Your Squad Overview</span>
+            <span class="squad-preview-meta">
+              <span class="squad-pill">Team: <b id="preview-team-count">0</b>/<b id="preview-team-max">5</b></span>
+              <span class="squad-pill">Camp: <b id="preview-camp-count">0</b>/<b id="preview-camp-max">10</b></span>
+            </span>
+          </div>
+          <div class="squad-preview-sections">
+            <div class="squad-section">
+              <div class="squad-section-title">
+                <span>👥 Team Slots</span>
+                <span class="hint">(Front is on the right)</span>
+              </div>
+              <div id="preview-team-slots" class="row row-squad-preview row-team-preview"></div>
+            </div>
+            <div class="squad-section">
+              <div class="squad-section-title">
+                <span>⛺ Camp</span>
+              </div>
+              <div id="preview-camp-slots" class="row row-squad-preview row-camp-preview"></div>
+            </div>
+          </div>
+        </div>
+
         <div id="result-discard-wrap" class="result-discard-wrap hidden">
           <p id="result-discard-label"></p>
           <div id="result-discard" class="row row-result"></div>

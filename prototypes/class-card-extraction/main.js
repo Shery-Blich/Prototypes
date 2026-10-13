@@ -410,18 +410,12 @@ function newRun() {
   showPrep();
 }
 
-// Enemy teams grow from 3 characters (one more every 2 battles) up to the enemy team slots,
-// then gain extra stats each battle.
+// Enemy teams grow from 3 characters (one more every 2 battles) up to the enemy team slots.
+// Card stats always stay at base values as battles go on (no stat improvement over time).
 const enemySize = n => Math.min(enemySlots(), 3 + Math.floor((n - 1) / 2));
 
 function generateEnemy(n) {
-  const team = Array.from({ length: enemySize(n) }, () => ({ id: randomCharacterId(), atkBonus: 0, hpBonus: 0 }));
-  let bonus = Math.max(0, n - 3) * 2;
-  while (bonus-- > 0) {
-    const e = team[Math.floor(Math.random() * team.length)];
-    if (Math.random() < 0.5) e.atkBonus++; else e.hpBonus++;
-  }
-  return team;
+  return Array.from({ length: enemySize(n) }, () => ({ id: randomCharacterId(), atkBonus: 0, hpBonus: 0 }));
 }
 
 // The enemy slots modifier changed: trim the next opponent, or top it up with new characters.
@@ -1228,6 +1222,7 @@ function showResult(result, participants) {
   $('btn-extract').classList.add('hidden');
   $('btn-return-home').classList.add('hidden');
   $('result-discard-wrap').classList.add('hidden');
+  $('result-squad-preview').classList.add('hidden');
 
   state.battleNum++;
   state.enemy = generateEnemy(state.battleNum);
@@ -1248,6 +1243,7 @@ function showResult(result, participants) {
 }
 
 function showDefeat(participants) {
+  $('result-squad-preview').classList.add('hidden');
   const limit = state.modifiers.lossesPerDefeat;
   const allLost = limit >= participants.length;
   const random = limit === 0;
@@ -1345,6 +1341,65 @@ function showDefeat(participants) {
   draw();
 }
 
+// Preview player's current squad (team slots and camp) during card recruit selection
+function renderSquadPreview() {
+  const previewWrap = $('result-squad-preview');
+  if (!previewWrap) return;
+
+  $('preview-team-count').textContent = state.team.length;
+  $('preview-team-max').textContent = teamSlots();
+  $('preview-camp-count').textContent = campCount();
+  $('preview-camp-max').textContent = campMax();
+
+  // Team slots preview (slot 0 is front, displayed on right)
+  const teamRow = $('preview-team-slots');
+  teamRow.innerHTML = '';
+  for (let i = 0; i < teamSlots(); i++) {
+    const uid = state.team[i];
+    if (uid === undefined) {
+      const empty = document.createElement('div');
+      empty.className = 'card empty preview-empty-slot';
+      empty.innerHTML = `<span>${i === 0 ? 'Front' : `Slot ${i + 1}`}</span><span class="hint">Open</span>`;
+      teamRow.appendChild(empty);
+      continue;
+    }
+    const c = state.roster.find(r => r.uid === uid);
+    if (!c) continue;
+    const d = CHARACTERS[c.id];
+    const el = cardEl(c.id, d.atk, d.hp);
+    const tag = frontTag();
+    tag.textContent = i === 0 ? 'FRONT (1)' : `SLOT ${i + 1}`;
+    if (i !== 0) {
+      tag.style.background = '#475569';
+      tag.style.color = '#f1f5f9';
+    }
+    el.appendChild(tag);
+    teamRow.appendChild(el);
+  }
+
+  // Camp preview
+  const campRow = $('preview-camp-slots');
+  campRow.innerHTML = '';
+  const campCards = state.roster.filter(r => !state.team.includes(r.uid));
+  if (campCards.length === 0) {
+    campRow.innerHTML = '<span class="hint squad-empty-hint">Camp is empty. Recruited cards will wait here if team is full.</span>';
+  } else {
+    for (const c of campCards) {
+      const d = CHARACTERS[c.id];
+      const el = cardEl(c.id, d.atk, d.hp);
+      const tag = document.createElement('div');
+      tag.className = 'front-tag';
+      tag.textContent = 'CAMP';
+      tag.style.background = '#334155';
+      tag.style.color = '#cbd5e1';
+      el.appendChild(tag);
+      campRow.appendChild(el);
+    }
+  }
+
+  previewWrap.classList.remove('hidden');
+}
+
 // Victory reward: recruit up to `recruitsPerWin` characters of the defeated team (base stats,
 // never summons), or skip. 0 = one random character of the defeated team, take it or skip.
 // Recruits fill the camp first, then free team slots. If there isn't room for all of them,
@@ -1386,6 +1441,9 @@ function showRecruit(defeated) {
       if (!random) el.addEventListener('click', () => { toggle(picks, i, maxPicks); draw(); });
       cards.appendChild(el);
     });
+
+    // Render team slots & camp preview below the available cards
+    renderSquadPreview();
 
     $('result-discard-wrap').classList.toggle('hidden', !needDiscard);
     $('result-discard-label').textContent = `Discard ${needDiscard} of yours (${discards.length}/${needDiscard} picked):`;
@@ -1453,6 +1511,7 @@ function onPostCardChoice(lastResult) {
 
   btnSkip.classList.add('hidden');
   discardWrap.classList.add('hidden');
+  $('result-squad-preview').classList.add('hidden');
   cards.innerHTML = '';
 
   // 1. Forced Evacuation Check: <= 2 cards left in camp + slots
