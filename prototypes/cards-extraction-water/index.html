@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cards Extraction: Water Rush</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="hud">
+      <div class="hud-stat">🏝️ Oasis water: <b id="hud-bank">0</b>💧</div>
+      <div id="trigger-legend" class="trigger-legend"></div>
+      <div id="class-legend" class="trigger-legend"></div>
+    </header>
+
+    <!-- PREP SCREEN -->
+    <section id="prep-screen" class="screen">
+      <svg id="preview-arrows" class="preview-arrows"></svg>
+
+      <!-- Oasis: camp, passing travelers, set out | leaderboard on the side -->
+      <div id="oasis-panel" class="oasis-layout">
+        <div class="oasis-main">
+          <div id="camp-section" class="panel oasis-section collapsible" role="button" tabindex="0">
+            <div class="section-head">
+              <h2>⛺ Camp <span id="oasis-camp-count" class="hint"></span></h2>
+              <div class="camp-stats">
+                <span>🥤 <b id="camp-drink"></b></span>
+                <span id="camp-days"></span>
+              </div>
+              <span id="camp-toggle" class="row-toggle"></span>
+            </div>
+            <div id="oasis-roster" class="camp-groups"></div>
+          </div>
+
+          <div id="travelers-section" class="panel oasis-section collapsible" role="button" tabindex="0">
+            <div class="section-head">
+              <h2>🧳 Passing travelers <span id="travelers-count" class="hint"></span></h2>
+              <span class="hint">new ones every time you return</span>
+              <span id="travelers-toggle" class="row-toggle"></span>
+            </div>
+            <div id="shop" class="camp-groups"></div>
+          </div>
+
+        </div>
+
+        <!-- Expedition card + a narrow leaderboard beside it -->
+        <div class="setout-row">
+          <div class="panel oasis-section setout-section">
+            <h2>🐪 Go out for expedition</h2>
+            <p class="hint">Bring more water and your travelers find water more often on the way. <span id="setout-floor"></span></p>
+            <div class="setout-body">
+              <div id="tank" class="tank" title="Drag (or scroll) to choose how much water to bring">
+                <div id="tank-fill" class="tank-fill"></div>
+                <span id="tank-label" class="tank-label"></span>
+              </div>
+              <div class="setout-controls">
+                <div class="stake-inputs">
+                  <label>💧 <input id="stake-num" type="number" step="1" /> water</label>
+                  <span class="hint">or</span>
+                  <label><input id="stake-pct" type="number" min="0" max="100" step="1" /> % of your water</label>
+                </div>
+                <div id="setout-hint" class="hint setout-hint"></div>
+              </div>
+              <button id="btn-setout" class="btn btn-primary btn-go"></button>
+            </div>
+          </div>
+
+          <aside class="oasis-side panel">
+            <h2>🏆 Leaderboard</h2>
+            <div id="leaderboard" class="leaderboard"></div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- Encounter: an enemy blocks the path -->
+      <div id="encounter-bar" class="panel encounter-bar">
+        <div class="enc-text">⚔ <b>An enemy caravan blocks the path!</b></div>
+        <button id="btn-enc-cashout" class="btn btn-flee">🏃 Flee home (lose 75% of your water)</button>
+      </div>
+
+      <div class="prep-top">
+        <div class="panel panel-team">
+          <h2>Your team <span class="hint">(1-5 characters · front is on the right · click a character to preview its ability · if you lose, all of them are lost)</span></h2>
+          <div id="team-slots" class="row row-team"></div>
+          <div id="synergy-line" class="synergy-line"></div>
+          <div class="prep-actions">
+            <button id="btn-fight" class="btn btn-primary">⚔ Fight</button>
+            <span id="fight-hint" class="hint"></span>
+          </div>
+        </div>
+
+        <div class="panel panel-enemy">
+          <h2>Next opponent <span class="hint">(front is on the left)</span></h2>
+          <div id="enemy-preview" class="row row-enemy"></div>
+          <div class="prep-actions prep-actions-right">
+            <span class="hint">Steps through every ability preview in acting order</span>
+            <button id="btn-preview-battle" class="btn">▶ Preview battle</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="preview-info" class="preview-info hidden"></div>
+
+      <div id="camp-panel" class="panel">
+        <h2>Camp <b id="camp-count"></b> <span class="hint">(characters not in your team · click or drag to add to team · drag onto a team character to swap them · when the camp is full the team can't shrink)</span></h2>
+        <div id="roster" class="row row-roster"></div>
+      </div>
+
+    </section>
+
+    <!-- TREK SCREEN -->
+    <section id="trek-screen" class="screen hidden">
+      <div class="trek-top">
+        <div class="water-big">💧 <b id="t-water">0</b></div>
+        <button id="btn-cashout" class="btn btn-cash btn-cash-big">🏁 CASH OUT</button>
+      </div>
+      <div id="toasts" class="toasts"></div>
+      <div class="graph-wrap">
+        <svg id="graph" class="graph" viewBox="0 0 900 300" preserveAspectRatio="none"></svg>
+        <div id="graph-labels" class="graph-labels"></div>
+      </div>
+      <div class="desert">
+        <div id="desert-track" class="desert-track"></div>
+      </div>
+      <div class="trek-controls">
+        <span>Pace:</span>
+        <button class="btn pace" data-pace="1">1x</button>
+        <button class="btn pace" data-pace="2">2x</button>
+        <button id="btn-trek-pause" class="btn">⏸ Pause</button>
+      </div>
+      <div id="trek-log" class="hidden"></div>
+    </section>
+
+    <!-- BATTLE SCREEN -->
+    <section id="battle-screen" class="screen hidden">
+      <svg id="battle-arrows" class="preview-arrows"></svg>
+      <svg id="effect-arrows" class="preview-arrows"></svg>
+      <div class="battle-controls">
+        <span>Speed:</span>
+        <button class="btn speed" data-speed="1">1x</button>
+        <button class="btn speed" data-speed="2">2x</button>
+        <button class="btn speed" data-speed="4">4x</button>
+        <button class="btn" id="btn-skip">Skip ⏭</button>
+        <span class="hint">Click a character to preview its ability</span>
+        <span id="pause-label" class="pause-label hidden">⏸ Paused · click it again to resume</span>
+        <span id="turn-label" class="turn-label"></span>
+      </div>
+      <div id="first-banner" class="first-banner"></div>
+      <div class="arena">
+        <div class="side side-player">
+          <div class="side-label">YOU</div>
+          <div id="battle-player" class="row"></div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="side side-enemy">
+          <div class="side-label">ENEMY</div>
+          <div id="battle-enemy" class="row"></div>
+        </div>
+      </div>
+      <div id="battle-preview-info" class="preview-info battle-preview-info hidden"></div>
+      <div id="battle-log" class="log"></div>
+    </section>
+
+    <!-- Gameplay modifiers: on every screen -->
+    <details id="modifiers-panel" class="panel modifiers-panel">
+      <summary>⚙️ Gameplay modifiers</summary>
+      <div class="modifier">
+        <label for="mod-eventTreasure" class="mod-name">🎁 Treasure chance</label>
+        <span class="mod-end">0</span>
+        <input id="mod-eventTreasure" type="range" min="0" max="100" step="5" />
+        <span class="mod-end">100</span>
+        <b id="mod-eventTreasure-val" class="mod-val"></b>
+      </div>
+      <div class="modifier">
+        <label for="mod-eventSpike" class="mod-name">💥 Water spike chance</label>
+        <span class="mod-end">0</span>
+        <input id="mod-eventSpike" type="range" min="0" max="100" step="5" />
+        <span class="mod-end">100</span>
+        <b id="mod-eventSpike-val" class="mod-val"></b>
+      </div>
+      <div class="modifier">
+        <label for="mod-eventLoss" class="mod-name">💔 Water loss chance</label>
+        <span class="mod-end">0</span>
+        <input id="mod-eventLoss" type="range" min="0" max="100" step="5" />
+        <span class="mod-end">100</span>
+        <b id="mod-eventLoss-val" class="mod-val"></b>
+      </div>
+      <div class="modifier">
+        <span class="mod-name"></span>
+        <button id="mod-events-reset" class="btn btn-small">Reset chances</button>
+        <span id="mod-events-desc" class="hint"></span>
+      </div>
+      <div class="modifier">
+        <span class="mod-name">💧 Water find rate</span>
+        <span id="mod-find-rate" class="hint"></span>
+      </div>
+      <div class="modifier">
+        <span class="mod-name">⚔️ Battle rate</span>
+        <span id="mod-battle-rate" class="hint"></span>
+      </div>
+      <hr class="mod-sep" />
+      <div class="modifier">
+        <label for="mod-start-pct" class="mod-name">🎲 Who attacks first</label>
+        <span class="mod-end">Enemy</span>
+        <input id="mod-start-pct" type="range" min="0" max="100" step="5" />
+        <span class="mod-end">You</span>
+        <b id="mod-start-val" class="mod-val"></b>
+        <button id="mod-start-reset" class="btn btn-small">Reset</button>
+        <span id="mod-start-desc" class="hint"></span>
+      </div>
+      <div class="modifier">
+        <label for="mod-recruits" class="mod-name">🤝 Recruits per victory</label>
+        <span class="mod-end">Random</span>
+        <input id="mod-recruits" type="range" min="0" max="10" step="1" />
+        <span class="mod-end">10</span>
+        <b id="mod-recruits-val" class="mod-val"></b>
+        <button id="mod-recruits-reset" class="btn btn-small">Reset</button>
+        <span id="mod-recruits-desc" class="hint"></span>
+      </div>
+      <div class="modifier">
+        <span class="mod-name">👥 Your team slots</span>
+        <button class="btn btn-small" data-step="playerSlots" data-dir="-1">−</button>
+        <b id="mod-playerSlots-val" class="mod-val mod-step-val"></b>
+        <button class="btn btn-small" data-step="playerSlots" data-dir="1">+</button>
+        <button class="btn btn-small" data-reset="playerSlots">Reset</button>
+        <span id="mod-playerSlots-desc" class="hint"></span>
+      </div>
+      <div class="modifier">
+        <span class="mod-name">👹 Enemy team slots</span>
+        <button class="btn btn-small" data-step="enemySlots" data-dir="-1">−</button>
+        <b id="mod-enemySlots-val" class="mod-val mod-step-val"></b>
+        <button class="btn btn-small" data-step="enemySlots" data-dir="1">+</button>
+        <button class="btn btn-small" data-reset="enemySlots">Reset</button>
+        <span id="mod-enemySlots-desc" class="hint"></span>
+      </div>
+      <div class="modifier">
+        <span class="mod-name">⛺ Camp size</span>
+        <button class="btn btn-small" data-step="campMax" data-dir="-1">−</button>
+        <b id="mod-campMax-val" class="mod-val mod-step-val"></b>
+        <button class="btn btn-small" data-step="campMax" data-dir="1">+</button>
+        <button class="btn btn-small" data-reset="campMax">Reset</button>
+        <span id="mod-campMax-desc" class="hint"></span>
+      </div>
+      <div class="modifier">
+        <span class="mod-name">🏜️ Lost per defeat</span>
+        <button class="btn btn-small" data-step="lossLeaveBehind" data-dir="-1">−</button>
+        <b id="mod-lossLeaveBehind-val" class="mod-val mod-step-val"></b>
+        <button class="btn btn-small" data-step="lossLeaveBehind" data-dir="1">+</button>
+        <button class="btn btn-small" data-reset="lossLeaveBehind">Reset</button>
+        <span id="mod-lossLeaveBehind-desc" class="hint"></span>
+      </div>
+    </details>
+
+    <!-- CAMP OVERFLOW (modifier change) -->
+    <div id="discard-overlay" class="overlay hidden">
+      <div class="result-box">
+        <h1 class="lose">Camp overflow</h1>
+        <p id="discard-text"></p>
+        <div id="discard-cards" class="row row-result"></div>
+        <div class="result-actions">
+          <button id="discard-cancel" class="btn">Cancel</button>
+          <button id="discard-confirm" class="btn btn-primary">Discard</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROBBERS: fight or flight -->
+    <div id="robbers-overlay" class="overlay hidden">
+      <div class="result-box robbers-box">
+        <h1 class="lose">🏴‍☠️ Robbers are trying to steal your water!</h1>
+        <p>⚔️ Fight: keep your water, but you risk losing your characters.<br />🏃 Flee: they take some water, everyone stays safe.</p>
+        <div class="result-actions">
+          <button id="btn-rob-flee" class="btn btn-flee">🏃 Flee</button>
+          <button id="btn-rob-fight" class="btn btn-primary">⚔️ Fight</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TREASURE -->
+    <div id="treasure-overlay" class="overlay hidden">
+      <div class="result-box">
+        <h1 class="win">🎁 Treasure!</h1>
+        <p id="treasure-text"></p>
+        <div id="treasure-cards" class="row row-result"></div>
+        <div class="result-actions">
+          <button id="btn-treasure" class="btn btn-primary">Take it ▶</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPEDITION END -->
+    <div id="end-overlay" class="overlay hidden">
+      <div class="result-box end-box">
+        <h1 id="end-title"></h1>
+        <p id="end-text"></p>
+        <div class="graph-wrap end-graph-wrap">
+          <svg id="end-graph" class="graph" viewBox="0 0 900 300" preserveAspectRatio="none"></svg>
+          <div id="end-graph-labels" class="graph-labels"></div>
+        </div>
+        <div class="result-actions">
+          <button id="btn-end-continue" class="btn btn-primary">Back to the oasis ▶</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULT OVERLAY -->
+    <div id="result-overlay" class="overlay hidden">
+      <div class="result-box">
+        <h1 id="result-title"></h1>
+        <p id="result-text"></p>
+        <div id="result-cards" class="row row-result"></div>
+        <div id="result-discard-wrap" class="result-discard-wrap hidden">
+          <p id="result-discard-label"></p>
+          <div id="result-discard" class="row row-result"></div>
+        </div>
+        <div class="result-actions">
+          <button id="btn-skip-recruit" class="btn hidden">Skip ⏭</button>
+          <button id="btn-continue" class="btn btn-primary">Continue ▶</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="trigger-tip" class="trigger-tip hidden"></div>
+  <div id="card-pop" class="card-pop hidden"></div>
+
+  <script type="module" src="/src/shared/nav.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
