@@ -74,6 +74,7 @@ const state = {
 const MODIFIER_DEFAULTS = {
   playerStartsPct: 50,    // chance (0-100) that the player makes the first attack
   rewardFromEnemy: false, // boolean: true = from defeated enemy team that had lost, false = random cards
+  keepEnemyBuffs: false,  // boolean: true = recruited cards keep enemy stat buffs (+ATK/+HP)
   playerSlots: 5,         // your team slots (1-10)
   enemySlots: 5,          // enemy team slots (1-10)
   campMax: 10,            // characters in camp (0-20)
@@ -124,6 +125,23 @@ function renderModifiers() {
   }
   if (rewardReset) {
     rewardReset.disabled = (fromEnemy === MODIFIER_DEFAULTS.rewardFromEnemy);
+  }
+
+  const keepBuffs = Boolean(state.modifiers.keepEnemyBuffs);
+  const keepBuffsBtn = $('mod-keep-buffs-toggle');
+  const keepBuffsDesc = $('mod-keep-buffs-desc');
+  const keepBuffsReset = $('mod-keep-buffs-reset');
+  if (keepBuffsBtn) {
+    keepBuffsBtn.textContent = keepBuffs ? 'Keep Buffs Permanently ⭐' : 'Reset to Base Stats 🔄';
+    keepBuffsBtn.className = `btn btn-small mod-toggle-btn ${keepBuffs ? 'keep-buffs' : 'base-stats'}`;
+  }
+  if (keepBuffsDesc) {
+    keepBuffsDesc.textContent = keepBuffs
+      ? 'When winning against buffed enemies, recruited cards retain their ATK & HP stat buffs permanently.'
+      : 'Recruited cards revert to standard base stats (buffs reset).';
+  }
+  if (keepBuffsReset) {
+    keepBuffsReset.disabled = (keepBuffs === MODIFIER_DEFAULTS.keepEnemyBuffs);
   }
 
   for (const [key, cfg] of Object.entries(STEPPERS)) {
@@ -204,6 +222,19 @@ $('mod-reward-reset')?.addEventListener('click', () => {
   audio.beep(400);
 });
 
+$('mod-keep-buffs-toggle')?.addEventListener('click', () => {
+  state.modifiers.keepEnemyBuffs = !state.modifiers.keepEnemyBuffs;
+  saveModifiers();
+  renderModifiers();
+  audio.beep(state.modifiers.keepEnemyBuffs ? 640 : 440);
+});
+$('mod-keep-buffs-reset')?.addEventListener('click', () => {
+  state.modifiers.keepEnemyBuffs = MODIFIER_DEFAULTS.keepEnemyBuffs;
+  saveModifiers();
+  renderModifiers();
+  audio.beep(400);
+});
+
 // Camp overflow: choose exactly `count` camp characters to discard.
 function pickDiscards(count, onConfirm, onCancel) {
   const chosen = [];
@@ -216,7 +247,13 @@ function pickDiscards(count, onConfirm, onCancel) {
     row.innerHTML = '';
     for (const c of camp) {
       const d = CHARACTERS[c.id];
-      const el = cardEl(c.id, d.atk, d.hp, { cls: 'discard-option' + (chosen.includes(c.uid) ? ' discarding' : '') });
+      const atkBonus = c.atkBonus || 0;
+      const hpBonus = c.hpBonus || 0;
+      const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, {
+        cls: 'discard-option' + (chosen.includes(c.uid) ? ' discarding' : ''),
+        atkBonus,
+        hpBonus,
+      });
       el.addEventListener('click', () => {
         const i = chosen.indexOf(c.uid);
         if (i >= 0) chosen.splice(i, 1);
@@ -383,8 +420,12 @@ function renderHome() {
     const d = CHARACTERS[c.id];
     if (!d) continue;
     const isSelected = state.selectedStashUids.has(c.uid);
-    const el = cardEl(c.id, d.atk, d.hp, {
+    const atkBonus = c.atkBonus || 0;
+    const hpBonus = c.hpBonus || 0;
+    const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, {
       cls: 'stash-card clickable' + (isSelected ? ' selected' : ''),
+      atkBonus,
+      hpBonus,
     });
 
     if (isSelected) {
@@ -428,6 +469,7 @@ function startExpedition() {
 
   state.battleNum = 1;
   state.wins = 0;
+  state.ties = 0;
   state.losses = 0;
   state.difficulty = 'easy';
   state.nextDifficulty = 'easy';
@@ -447,6 +489,7 @@ function newRun() {
   state.team = state.roster.slice(0, teamSize).map(c => c.uid);
   state.battleNum = 1;
   state.wins = 0;
+  state.ties = 0;
   state.losses = 0;
   state.difficulty = 'easy';
   state.nextDifficulty = 'easy';
@@ -584,6 +627,7 @@ function updateHud() {
   if (state.screen === 'home') {
     $('hud-battle').textContent = 'Base';
     $('hud-wins').textContent = '0';
+    $('hud-ties').textContent = '0';
     $('hud-losses').textContent = '0';
     $('hud-roster').textContent = '--';
     $('hud-extract-status').textContent = 'At Base';
@@ -595,8 +639,9 @@ function updateHud() {
 
   const diffInfo = DIFFICULTIES[state.difficulty || 'easy'];
   $('hud-battle').textContent = `${state.battleNum} (${diffInfo.badge})`;
-  $('hud-wins').textContent = state.wins;
-  $('hud-losses').textContent = state.losses;
+  $('hud-wins').textContent = state.wins || 0;
+  $('hud-ties').textContent = state.ties || 0;
+  $('hud-losses').textContent = state.losses || 0;
   $('hud-roster').textContent = `${campCount()}/${campMax()}`;
   $('hud-stash-count').textContent = state.stash ? state.stash.length : 0;
   $('btn-evac-base').classList.toggle('hidden', state.inBattle);
@@ -690,7 +735,9 @@ function renderPrep() {
     }
     const c = state.roster.find(r => r.uid === uid);
     const d = CHARACTERS[c.id];
-    const el = cardEl(c.id, d.atk, d.hp);
+    const atkBonus = c.atkBonus || 0;
+    const hpBonus = c.hpBonus || 0;
+    const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, { atkBonus, hpBonus });
     if (i === 0) el.appendChild(frontTag());
     const ctrls = document.createElement('div');
     ctrls.className = 'card-ctrls';
@@ -711,7 +758,7 @@ function renderPrep() {
       if (d.from === 'camp') state.team[i] = d.uid;
       else swap(state.team.indexOf(d.uid), i, false);
     });
-    lineup.player.push(previewable(el, `p${uid}`, 'player', c.id, d.atk, d.hp));
+    lineup.player.push(previewable(el, `p${uid}`, 'player', c.id, d.atk + atkBonus, d.hp + hpBonus));
     teamRow.appendChild(el);
   }
 
@@ -720,7 +767,9 @@ function renderPrep() {
   campRow.innerHTML = '';
   for (const c of state.roster.filter(r => !state.team.includes(r.uid))) {
     const d = CHARACTERS[c.id];
-    const el = cardEl(c.id, d.atk, d.hp, { cls: 'clickable' });
+    const atkBonus = c.atkBonus || 0;
+    const hpBonus = c.hpBonus || 0;
+    const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, { cls: 'clickable', atkBonus, hpBonus });
     el.addEventListener('click', () => {
       if (isCageCard(c.id)) return;
       if (state.team.length >= teamSlots()) return;
@@ -1143,7 +1192,7 @@ const view = {
       units.forEach((u, i) => {
         let el = cardMap.get(u.uid);
         if (!el) {
-          el = cardEl(u.id, u.atk, u.hp, { cls: 'selectable' });
+          el = cardEl(u.id, u.atk, u.hp, { cls: 'selectable', atkBonus: u.atkBonus || 0, hpBonus: u.hpBonus || 0 });
           el.addEventListener('click', () => toggleBattlePreview(`b${u.uid}`));
           cardMap.set(u.uid, el);
         }
@@ -1346,6 +1395,10 @@ function showResult(result, participants, defeatedEnemy, battleDifficulty) {
     title.textContent = 'Victory!';
     audio.score();
     showVictoryRewards(defeatedEnemy, battleDifficulty);
+  } else if (result === 'tie') {
+    state.ties = (state.ties || 0) + 1;
+    audio.beep(480, 250);
+    onPostCardChoice('tie', 'The battle ended in a tie — no cards won.');
   } else {
     state.losses++;
     title.textContent = 'Defeat · Squad Wiped';
@@ -1381,7 +1434,9 @@ function showTotalDefeat(participants) {
 
   for (const p of lostRoster) {
     const d = CHARACTERS[p.id];
-    const el = cardEl(p.id, d.atk, d.hp, { cls: 'lost discarding' });
+    const atkBonus = p.atkBonus || 0;
+    const hpBonus = p.hpBonus || 0;
+    const el = cardEl(p.id, d.atk + atkBonus, d.hp + hpBonus, { cls: 'lost discarding', atkBonus, hpBonus });
     const tag = frontTag();
     tag.textContent = 'LOST 💀';
     tag.style.background = '#ef4444';
@@ -1425,7 +1480,9 @@ function renderSquadPreview() {
     const c = state.roster.find(r => r.uid === uid);
     if (!c) continue;
     const d = CHARACTERS[c.id];
-    const el = cardEl(c.id, d.atk, d.hp);
+    const atkBonus = c.atkBonus || 0;
+    const hpBonus = c.hpBonus || 0;
+    const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, { atkBonus, hpBonus });
     const tag = frontTag();
     tag.textContent = i === 0 ? 'FRONT (1)' : `SLOT ${i + 1}`;
     if (i !== 0) {
@@ -1445,7 +1502,9 @@ function renderSquadPreview() {
   } else {
     for (const c of campCards) {
       const d = CHARACTERS[c.id];
-      const el = cardEl(c.id, d.atk, d.hp);
+      const atkBonus = c.atkBonus || 0;
+      const hpBonus = c.hpBonus || 0;
+      const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, { atkBonus, hpBonus });
       const tag = document.createElement('div');
       tag.className = 'front-tag';
       tag.textContent = 'CAMP';
@@ -1468,6 +1527,7 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
   const diff = DIFFICULTIES[battleDifficulty] || DIFFICULTIES.easy;
   const pickCount = diff.pickCount || 1;
   const fromEnemy = Boolean(state.modifiers.rewardFromEnemy);
+  const keepBuffs = Boolean(state.modifiers.keepEnemyBuffs);
 
   const title = $('result-title');
   const text = $('result-text');
@@ -1481,21 +1541,59 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
 
   let candidates = [];
   if (fromEnemy) {
-    // Cards from the enemy team that had lost (base characters)
+    // Cards from the enemy team that had lost
     candidates = (defeatedEnemy && defeatedEnemy.length > 0)
-      ? defeatedEnemy.map(e => ({ id: e.id, source: 'enemy' }))
-      : Array.from({ length: pickCount }, () => ({ id: randomCharacterId(), source: 'enemy' }));
+      ? defeatedEnemy.map(e => ({
+          id: e.id,
+          source: 'enemy',
+          atkBonus: keepBuffs ? (e.atkBonus || 0) : 0,
+          hpBonus: keepBuffs ? (e.hpBonus || 0) : 0,
+        }))
+      : Array.from({ length: pickCount }, () => ({
+          id: randomCharacterId(),
+          source: 'enemy',
+          atkBonus: 0,
+          hpBonus: 0,
+        }));
   } else {
     // Random cards from recruitable pool (offer a selection pool of at least 3 cards)
     const poolCount = Math.max(3, pickCount + 1);
-    candidates = Array.from({ length: poolCount }, () => ({ id: randomCharacterId(), source: 'random' }));
+    const buffedEnemies = (defeatedEnemy || []).filter(e => (e.atkBonus || 0) > 0 || (e.hpBonus || 0) > 0);
+    candidates = Array.from({ length: poolCount }, () => {
+      let atkBonus = 0;
+      let hpBonus = 0;
+      if (keepBuffs && buffedEnemies.length > 0) {
+        const sample = buffedEnemies[Math.floor(Math.random() * buffedEnemies.length)];
+        atkBonus = sample.atkBonus || 0;
+        hpBonus = sample.hpBonus || 0;
+      }
+      return {
+        id: randomCharacterId(),
+        source: 'random',
+        atkBonus,
+        hpBonus,
+      };
+    });
   }
 
   const maxPicks = Math.min(pickCount, candidates.length);
   const picks = [];
   const discards = [];
   const room = (campMax() - campCount()) + (teamSlots() - state.team.length);
-  const nameOf = id => `${CHARACTERS[id].emoji} ${CHARACTERS[id].name}`;
+  const nameOf = cand => {
+    const d = CHARACTERS[cand.id];
+    const bonus = ((cand.atkBonus || 0) > 0 || (cand.hpBonus || 0) > 0)
+      ? ` (+${cand.atkBonus || 0}/+${cand.hpBonus || 0})`
+      : '';
+    return `${d.emoji} ${d.name}${bonus}`;
+  };
+  const ownNameOf = c => {
+    const d = CHARACTERS[c.id];
+    const bonus = ((c.atkBonus || 0) > 0 || (c.hpBonus || 0) > 0)
+      ? ` (+${c.atkBonus || 0}/+${c.hpBonus || 0})`
+      : '';
+    return `${d.emoji} ${d.name}${bonus}`;
+  };
 
   const toggle = (list, v, max) => {
     const i = list.indexOf(v);
@@ -1516,17 +1614,28 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
     const roomText = `Room: ${room} (camp ${campCount()}/${campMax()}, team ${state.team.length}/${teamSlots()}).`;
 
     const sourceLabel = fromEnemy ? 'from defeated enemy team' : 'random recruitable pool';
-    text.textContent = `Difficulty reward: pick up to ${maxPicks} card${maxPicks === 1 ? '' : 's'} (${sourceLabel}). Currently ${picks.length}/${maxPicks} selected. ${roomText}`
+    const buffInfo = keepBuffs ? ' · Enemy buffs kept ⭐' : '';
+    text.textContent = `Difficulty reward: pick up to ${maxPicks} card${maxPicks === 1 ? '' : 's'} (${sourceLabel}${buffInfo}). Currently ${picks.length}/${maxPicks} selected. ${roomText}`
       + (needDiscard ? ` Discard ${needDiscard} of yours to make room.` : '');
 
     cards.innerHTML = '';
     candidates.forEach((cand, i) => {
       const d = CHARACTERS[cand.id];
       const isPicked = picks.includes(i);
-      const el = cardEl(cand.id, d.atk, d.hp, { cls: 'reward-option' + (isPicked ? ' picked' : '') });
+      const atkBonus = cand.atkBonus || 0;
+      const hpBonus = cand.hpBonus || 0;
+      const el = cardEl(cand.id, d.atk + atkBonus, d.hp + hpBonus, {
+        cls: 'reward-option' + (isPicked ? ' picked' : ''),
+        atkBonus,
+        hpBonus,
+      });
       const tag = document.createElement('div');
       tag.className = 'front-tag';
-      tag.textContent = isPicked ? 'PICKED ✔' : (fromEnemy ? 'DEFEATED ENEMY' : 'RANDOM REWARD');
+      let tagLabel = fromEnemy ? 'DEFEATED ENEMY' : 'RANDOM REWARD';
+      if (atkBonus > 0 || hpBonus > 0) {
+        tagLabel += ' ⭐';
+      }
+      tag.textContent = isPicked ? 'PICKED ✔' : tagLabel;
       tag.style.background = isPicked ? '#22c55e' : (fromEnemy ? '#f97316' : '#8b5cf6');
       tag.style.color = isPicked ? '#052e16' : '#ffffff';
       el.appendChild(tag);
@@ -1546,7 +1655,13 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
       own.innerHTML = '';
       for (const c of state.roster) {
         const d = CHARACTERS[c.id];
-        const el = cardEl(c.id, d.atk, d.hp, { cls: 'discard-option' + (discards.includes(c.uid) ? ' discarding' : '') });
+        const atkBonus = c.atkBonus || 0;
+        const hpBonus = c.hpBonus || 0;
+        const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, {
+          cls: 'discard-option' + (discards.includes(c.uid) ? ' discarding' : ''),
+          atkBonus,
+          hpBonus,
+        });
         if (state.team.includes(c.uid)) {
           const tag = frontTag();
           tag.textContent = 'TEAM';
@@ -1557,9 +1672,9 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
       }
     }
 
-    const rewardText = picks.length === 1 ? nameOf(candidates[picks[0]].id) : `${picks.length} cards`;
+    const rewardText = picks.length === 1 ? nameOf(candidates[picks[0]]) : `${picks.length} cards`;
     const discardText = discards.length === 1
-      ? nameOf(state.roster.find(r => r.uid === discards[0]).id)
+      ? ownNameOf(state.roster.find(r => r.uid === discards[0]))
       : `${discards.length} cards`;
 
     if (!picks.length) {
@@ -1587,7 +1702,8 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
     }
     const teamSize = () => state.team.filter(u => u !== null).length;
     for (const i of picks) {
-      const recruit = makeCharacter(candidates[i].id);
+      const cand = candidates[i];
+      const recruit = makeCharacter(cand.id, cand.atkBonus || 0, cand.hpBonus || 0);
       const inCamp = state.roster.length - teamSize();
       if (inCamp < campMax()) { /* goes to camp */ }
       else if (freed.length) state.team[freed.shift()] = recruit.uid;
@@ -1644,7 +1760,9 @@ function onPostCardChoice(lastResult, customMessage = null) {
 
     for (const c of savedRoster) {
       const d = CHARACTERS[c.id];
-      const el = cardEl(c.id, d.atk, d.hp);
+      const atkBonus = c.atkBonus || 0;
+      const hpBonus = c.hpBonus || 0;
+      const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, { atkBonus, hpBonus });
       const tag = frontTag();
       tag.textContent = 'SAVED TO STASH';
       tag.style.background = '#22c55e';
@@ -1681,7 +1799,9 @@ function onPostCardChoice(lastResult, customMessage = null) {
 
     for (const c of savedRoster) {
       const d = CHARACTERS[c.id];
-      const el = cardEl(c.id, d.atk, d.hp);
+      const atkBonus = c.atkBonus || 0;
+      const hpBonus = c.hpBonus || 0;
+      const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, { atkBonus, hpBonus });
       const tag = frontTag();
       tag.textContent = 'EXTRACTED';
       tag.style.background = '#38bdf8';
@@ -1706,12 +1826,15 @@ function onPostCardChoice(lastResult, customMessage = null) {
     updateHud();
 
     title.textContent = 'Extraction Inbound 🚁';
-    title.className = 'win';
-    text.textContent = 'Extraction beacon active! Survive 1 more battle to extract all squad cards to Base Stash.';
+    title.className = lastResult === 'tie' ? 'tie' : 'win';
+    text.textContent = (lastResult === 'tie' ? 'The battle ended in a tie — no cards won. ' : '')
+      + 'Extraction beacon active! Survive 1 more battle to extract all squad cards to Base Stash.';
 
     for (const c of state.roster) {
       const d = CHARACTERS[c.id];
-      const el = cardEl(c.id, d.atk, d.hp);
+      const atkBonus = c.atkBonus || 0;
+      const hpBonus = c.hpBonus || 0;
+      const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, { atkBonus, hpBonus });
       if (state.team.includes(c.uid)) {
         const tag = frontTag();
         tag.textContent = 'TEAM';
@@ -1747,15 +1870,21 @@ function onPostCardChoice(lastResult, customMessage = null) {
   }
 
   // 4. Extraction not active: offer Continue or Extract in 2 battles
-  title.textContent = lastResult === 'win' ? 'Victory Secured' : 'Regroup';
+  title.textContent = lastResult === 'win'
+    ? 'Victory Secured'
+    : (lastResult === 'tie' ? 'Draw · Battle Tied ⚖️' : 'Regroup');
   title.className = lastResult;
   text.textContent = customMessage
     ? `${customMessage} Your squad has ${state.roster.length} cards (team: ${state.team.length}, camp: ${campCount()}). Push deeper or call extraction in 2 battles:`
-    : `Your squad has ${state.roster.length} cards (team: ${state.team.length}, camp: ${campCount()}). Push deeper or call extraction in 2 battles:`;
+    : (lastResult === 'tie'
+      ? `The battle ended in a tie — no cards won. Your squad has ${state.roster.length} cards (team: ${state.team.length}, camp: ${campCount()}). Push deeper or call extraction in 2 battles:`
+      : `Your squad has ${state.roster.length} cards (team: ${state.team.length}, camp: ${campCount()}). Push deeper or call extraction in 2 battles:`);
 
   for (const c of state.roster) {
     const d = CHARACTERS[c.id];
-    const el = cardEl(c.id, d.atk, d.hp);
+    const atkBonus = c.atkBonus || 0;
+    const hpBonus = c.hpBonus || 0;
+    const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, { atkBonus, hpBonus });
     if (state.team.includes(c.uid)) {
       const tag = frontTag();
       tag.textContent = 'TEAM';
@@ -1897,7 +2026,7 @@ function startIdleCycle(manual) {
   const sides = firstSide === 'player' ? ['player', 'enemy'] : ['enemy', 'player'];
   const player = state.team.map(uid => {
     const c = state.roster.find(r => r.uid === uid);
-    return { key: `p${uid}`, id: c.id, atk: CHARACTERS[c.id].atk };
+    return { key: `p${uid}`, id: c.id, atk: CHARACTERS[c.id].atk + (c.atkBonus || 0) };
   });
   const enemy = state.enemy.map((e, i) => ({ key: `e${i}`, id: e.id, atk: CHARACTERS[e.id].atk + e.atkBonus }));
   const isStart = u => CHARACTERS[u.id].trigger === 'start';

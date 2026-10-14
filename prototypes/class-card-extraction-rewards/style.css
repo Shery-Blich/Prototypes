@@ -308,6 +308,7 @@ body {
 }
 .result-box h1 { font-size: 34px; }
 .result-box h1.win { color: #4ade80; }
+.result-box h1.tie { color: #f59e0b; }
 .result-box h1.lose { color: #f87171; }
 .result-box p { color: #cbd5e1; }
 .row-result { justify-content: center; min-height: 0; }
@@ -708,4 +709,21 @@ body {
 }
 .mod-toggle-btn.random:hover {
   background: rgba(168, 85, 247, 0.25);
+}
+.mod-toggle-btn.keep-buffs {
+  border-color: #eab308;
+  color: #fde047;
+  background: rgba(234, 179, 8, 0.14);
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.25);
+}
+.mod-toggle-btn.keep-buffs:hover {
+  background: rgba(234, 179, 8, 0.25);
+}
+.mod-toggle-btn.base-stats {
+  border-color: #64748b;
+  color: #94a3b8;
+  background: rgba(100, 116, 139, 0.12);
+}
+.mod-toggle-btn.base-stats:hover {
+  background: rgba(100, 116, 139, 0.22);
 }

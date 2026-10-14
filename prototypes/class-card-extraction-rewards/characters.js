@@ -543,8 +543,11 @@ export const RECRUITABLE = Object.keys(BASE_CHARACTERS).filter(
 
 let nextUid = 1;
 
-export function makeCharacter(id) {
-  return { uid: nextUid++, id };
+export function makeCharacter(id, atkBonus = 0, hpBonus = 0) {
+  const c = { uid: nextUid++, id };
+  if (atkBonus) c.atkBonus = atkBonus;
+  if (hpBonus) c.hpBonus = hpBonus;
+  return c;
 }
 
 export function ensureNextUid(n) {
@@ -674,7 +677,7 @@ export function exportCharactersJs(chars = CHARACTERS) {
   lines.push(`export const RECRUITABLE = Object.keys(CHARACTERS).filter(id => !CHARACTERS[id].token && !CHARACTERS[id].isCage && id !== 'cage' && CHARACTERS[id].class !== 'cage');`);
   lines.push(``);
   lines.push(`let nextUid = 1;`);
-  lines.push(`export function makeCharacter(id) { return { uid: nextUid++, id }; }`);
+  lines.push(`export function makeCharacter(id, atkBonus = 0, hpBonus = 0) { const c = { uid: nextUid++, id }; if (atkBonus) c.atkBonus = atkBonus; if (hpBonus) c.hpBonus = hpBonus; return c; }`);
   lines.push(`export function ensureNextUid(n) { if (n >= nextUid) nextUid = n + 1; }`);
   lines.push(`export function randomCharacterId() { return RECRUITABLE[Math.floor(Math.random() * RECRUITABLE.length)]; }`);
   lines.push(``);

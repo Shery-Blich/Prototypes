@@ -12,6 +12,7 @@
     <header class="hud">
       <div class="hud-stat" id="hud-battle-stat">Battle <b id="hud-battle">1</b></div>
       <div class="hud-stat" id="hud-wins-stat">Wins <b id="hud-wins">0</b></div>
+      <div class="hud-stat" id="hud-ties-stat">Ties <b id="hud-ties">0</b></div>
       <div class="hud-stat" id="hud-losses-stat">Losses <b id="hud-losses">0</b></div>
       <div class="hud-stat" id="hud-camp-stat">Camp <b id="hud-roster">0</b></div>
       <div class="hud-stat" id="hud-extract-wrap">Extraction <b id="hud-extract-status">At Base</b></div>
@@ -104,6 +105,12 @@
             <button type="button" id="mod-reward-toggle" class="btn btn-small mod-toggle-btn">Random Cards 🎲</button>
             <button type="button" id="mod-reward-reset" class="btn btn-small">Reset</button>
             <span id="mod-reward-desc" class="hint"></span>
+          </div>
+          <div class="modifier modifier-bool">
+            <span class="mod-name">⭐ Keep enemy buffs</span>
+            <button type="button" id="mod-keep-buffs-toggle" class="btn btn-small mod-toggle-btn">Reset to Base 🔄</button>
+            <button type="button" id="mod-keep-buffs-reset" class="btn btn-small">Reset</button>
+            <span id="mod-keep-buffs-desc" class="hint"></span>
           </div>
           <div class="modifier">
             <span class="mod-name">👥 Your team slots</span>

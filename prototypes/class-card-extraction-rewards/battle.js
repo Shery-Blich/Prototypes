@@ -10,6 +10,7 @@ function makeUnit(id, side, atkBonus = 0, hpBonus = 0, rosterUid = null) {
     uid: battleUid++, rosterUid, id, def, side,
     name: def.name, emoji: def.emoji,
     atk: def.atk + atkBonus, hp: def.hp + hpBonus,
+    atkBonus, hpBonus,
     shield: false, usedOnce: false,
   };
 }
@@ -28,7 +29,7 @@ export class Battle {
     this.firstSide = opts.firstSide || 'player';
     this.maxTeam = opts.maxTeam || { player: 5, enemy: 5 };
     this.teams = {
-      player: playerChars.map(c => makeUnit(c.id, 'player', 0, 0, c.uid)),
+      player: playerChars.map(c => makeUnit(c.id, 'player', c.atkBonus || 0, c.hpBonus || 0, c.uid)),
       enemy: enemyDefs.map(e => makeUnit(e.id, 'enemy', e.atkBonus || 0, e.hpBonus || 0)),
     };
     this.pendingFloats = [];
@@ -312,8 +313,17 @@ export class Battle {
       await this.clash(sidesInOrder);
     }
 
-    // No ties: if both sides are wiped (or the turn cap is hit), the player wins.
-    const outcome = this.teams.enemy.length && !this.teams.player.length ? 'lose' : 'win';
+    let outcome;
+    if (this.teams.player.length && !this.teams.enemy.length) {
+      outcome = 'win';
+      this.view.turn('🏆 Victory!');
+    } else if (this.teams.enemy.length && !this.teams.player.length) {
+      outcome = 'lose';
+      this.view.turn('💀 Defeat!');
+    } else {
+      outcome = 'tie';
+      this.view.turn('⚖️ Battle Tied!');
+    }
     return { outcome };
   }
 
