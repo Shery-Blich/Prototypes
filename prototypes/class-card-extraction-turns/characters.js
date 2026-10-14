@@ -500,7 +500,7 @@ export const BASE_CHARACTERS = {
     preset: { type: 'buff', target: 'friend_behind', atk: 0, hp: 2 },
   },
   tank_attack: {
-    class: 'tank', name: 'Trample Share', emoji: '🐘', atk: 1, hp: 7,
+    class: 'tank', name: 'Elephant', emoji: '🐘', atk: 1, hp: 7,
     trigger: 'attack',
     text: 'When 🗡️ give HP to the friend behind equal to this ATK.',
     preset: { type: 'buff', target: 'friend_behind', dynamic: 'equal_this_atk', atk: 0, hp: 0 },
