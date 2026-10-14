@@ -1,0 +1,5 @@
+{
+  "title": "Class Card Extraction (Difficulty Rewards)",
+  "description": "Fork where cage cards are removed from the board. At the end of battle, the player gets to pick X cards as allowed by the battle difficulty (Easy: 1, Medium: 2, Hard: 3). Includes a gameplay modifier toggle: cards gained are either rolled randomly or chosen from the defeated enemy team.",
+  "created": "2026-10-14T14:45:00+03:00"
+}
