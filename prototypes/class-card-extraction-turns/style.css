@@ -791,3 +791,12 @@ body {
 .battle-aside .log { height: calc(100vh - 90px); }
 /* Room to scroll the battle controls to the top of the window */
 #battle-screen { min-height: 100vh; }
+
+/* ---------- Prep screen in the same ring as the battle ---------- */
+.panel-ring { flex: 1; }
+.ring-head { display: flex; justify-content: space-between; gap: 24px; }
+.ring-head h2:last-child { text-align: right; }
+.ring-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+.ring-actions .prep-actions { margin-top: 0; }
+#prep-arena { background: #0f172a; }
+#team-slots.ring-side > .card, #enemy-preview.ring-side > .card { position: absolute; zoom: 1; margin: 0; }

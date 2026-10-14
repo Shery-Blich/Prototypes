@@ -714,9 +714,6 @@ function renderPrep() {
 
   const teamRow = $('team-slots');
   teamRow.innerHTML = '';
-  // Panel widths follow card counts (at least 2 so headers and buttons keep some room).
-  document.querySelector('.panel-team').style.setProperty('--slots', Math.max(2, teamSlots()));
-  document.querySelector('.panel-enemy').style.setProperty('--slots', Math.max(2, state.enemy.length));
   for (let i = 0; i < teamSlots(); i++) {
     const uid = state.team[i];
     if (uid === undefined) {
@@ -742,10 +739,10 @@ function renderPrep() {
     const ctrls = document.createElement('div');
     ctrls.className = 'card-ctrls';
     ctrls.append(
-      ctrlBtn('◀', 'Move back', i < state.team.length - 1, () => swap(i, i + 1)),
+      ctrlBtn('▲', 'Move forward', i > 0, () => swap(i, i - 1)),
       ctrlBtn('✕', campCount() >= campMax() ? 'Camp is full' : 'Back to camp', campCount() < campMax(),
         () => { state.team.splice(i, 1); teamChanged(); renderPrep(); }),
-      ctrlBtn('▶', 'Move forward', i > 0, () => swap(i, i - 1)),
+      ctrlBtn('▼', 'Move back', i < state.team.length - 1, () => swap(i, i + 1)),
     );
     el.appendChild(ctrls);
     makeDraggable(el, 'team', uid);
@@ -1043,9 +1040,8 @@ function fitRows() {
   const hidden = screens.filter(el => el.classList.contains('hidden'));
   hidden.forEach(el => el.classList.remove('hidden'));
   const fits = [
-    rowFit($('team-slots'), $('team-slots').querySelectorAll(':scope > .card').length),
-    rowFit($('enemy-preview'), $('enemy-preview').querySelectorAll(':scope > .card').length),
   ].filter(z => z !== null);
+  fitPrepRing();
   fitBattleColumns();
   hidden.forEach(el => el.classList.add('hidden'));
   if (!fits.length) return;
@@ -1054,9 +1050,9 @@ function fitRows() {
   $('app').classList.toggle('compact-cards', zoom < 0.8);
 }
 
-// Battle sides are laid out on a ring: slot 1 at the top near the middle, the middle slots bulge
-// outward and the last slots come back in at the bottom. Opposing slots are mirrored at the same
-// height, so each clashing pair faces each other across the slot numbers in the centre.
+// Battle and prep sides are laid out on a ring: slot 1 at the top near the middle, the middle slots
+// bulge outward and the last slots come back in at the bottom. Opposing slots are mirrored at the
+// same height, so each clashing pair faces each other across the slot numbers in the centre.
 const CARD_H = 176;
 const RING_GAP_X = 16;   // between cards of neighbouring offsets
 const RING_GAP_Y = 10;   // between stacked cards at the same offset
@@ -1064,6 +1060,7 @@ const RING_STEP = 0.1;   // vertical step between consecutive slots, in card hei
 const RING_CENTER = 70;  // px between the two sides (slot numbers live here)
 const RING_TOP = 30;     // px reserved for the side labels
 const RING_MAX_ZOOM = 2.6;
+const PREP_MAX_ZOOM = 1.8;
 
 function ringGeometry(n) {
   const dx = CARD_W + RING_GAP_X;
@@ -1079,67 +1076,91 @@ function ringGeometry(n) {
   return { slots, height, halfWidth, dx };
 }
 
-let ring = null; // { geo, z, cx } for the current arena size
-
-function fitBattleColumns() {
-  const arena = $('battle-arena');
-  if (!arena.clientWidth) return;
-  const slots = currentBattle ? Math.max(currentBattle.maxTeam.player, currentBattle.maxTeam.enemy)
-    : Math.max(teamSlots(), enemySlots());
-  const geo = ringGeometry(Math.max(slots, 1));
-  // The battle view scrolls the controls bar to the top of the window, so the arena gets the
-  // whole viewport below it.
-  const above = arena.getBoundingClientRect().top - $('battle-controls').getBoundingClientRect().top;
-  const availH = Math.max(360, window.innerHeight - above - 24) - RING_TOP - 16;
+// Sizes a ring arena for n slots within availH px of card area; returns { geo, z, cx }.
+function fitRing(arena, n, availH, maxZoom) {
+  const geo = ringGeometry(Math.max(n, 1));
   const availW = arena.clientWidth - RING_CENTER - 24;
-  const z = Math.max(0.5, Math.min(RING_MAX_ZOOM, availH / geo.height, availW / (2 * geo.halfWidth)));
+  const z = Math.max(0.5, Math.min(maxZoom, availH / geo.height, availW / (2 * geo.halfWidth)));
   arena.style.height = `${Math.ceil(geo.height * z + RING_TOP + 16)}px`;
-  ring = { geo, z, cx: arena.clientWidth / 2 };
-  for (const id of ['battle-player', 'battle-enemy']) $(id).style.zoom = z.toFixed(3);
-  if (currentBattle) layoutRing(currentBattle);
+  return { geo, z, cx: arena.clientWidth / 2 };
 }
 
 // Position (arena px) of a slot's card on a side
-function ringSlotRect(side, i) {
-  const { geo, z, cx } = ring;
+function ringSlotRect(r, side, i) {
+  const { geo, z, cx } = r;
   const s = geo.slots[i];
   const inner = RING_CENTER / 2 + s.off * geo.dx * z;
   const w = CARD_W * z;
   return { left: side === 'player' ? cx - inner - w : cx + inner, top: RING_TOP + s.y * z, w, h: CARD_H * z };
 }
 
-function layoutRing(battle) {
-  if (!ring) return;
-  const n = ring.geo.slots.length;
-  for (const side of ['player', 'enemy']) {
-    const row = $(side === 'player' ? 'battle-player' : 'battle-enemy');
+// Places the cards of both side containers by child index, plus the slot numbers and the faint
+// lines joining each facing pair (the active pair is highlighted).
+function placeRing(r, { player, enemy, lanes, lines }, shown, activeIndex) {
+  const n = r.geo.slots.length;
+  for (const [side, row] of [['player', player], ['enemy', enemy]]) {
+    // The side containers are zoomed, so positions are given in unzoomed units
+    row.style.zoom = r.z.toFixed(3);
     [...row.children].forEach((el, i) => {
       if (i >= n) return;
-      const r = ringSlotRect(side, i);
-      // The side containers are zoomed, so positions are given in unzoomed units
-      el.style.left = `${r.left / ring.z}px`;
-      el.style.top = `${r.top / ring.z}px`;
+      const p = ringSlotRect(r, side, i);
+      el.style.left = `${p.left / r.z}px`;
+      el.style.top = `${p.top / r.z}px`;
     });
   }
-  // Slot numbers in the centre and faint lines joining each facing pair
-  const lanes = $('battle-lanes');
-  const shown = Math.min(n, Math.max(battle.display('player').length, battle.display('enemy').length));
   lanes.innerHTML = '';
-  let lines = '';
-  for (let i = 0; i < shown; i++) {
-    const p = ringSlotRect('player', i);
-    const e = ringSlotRect('enemy', i);
+  let svg = '';
+  for (let i = 0; i < Math.min(n, shown); i++) {
+    const p = ringSlotRect(r, 'player', i);
+    const e = ringSlotRect(r, 'enemy', i);
     const y = p.top + p.h / 2;
-    const active = i === battle.activeIndex;
+    const active = i === activeIndex;
     const el = document.createElement('div');
     el.className = `lane-num${active ? ' active' : ''}`;
     el.textContent = i + 1;
-    el.style.left = `${ring.cx}px`;
+    el.style.left = `${r.cx}px`;
     el.style.top = `${y}px`;
     lanes.appendChild(el);
-    lines += `<line x1="${p.left + p.w}" y1="${y}" x2="${e.left}" y2="${y}"${active ? ' class="active"' : ''}/>`;
+    svg += `<line x1="${p.left + p.w}" y1="${y}" x2="${e.left}" y2="${y}"${active ? ' class="active"' : ''}/>`;
   }
-  $('lane-lines').innerHTML = lines;
+  lines.innerHTML = svg;
+}
+
+let ring = null; // battle arena geometry for the current size
+
+function fitBattleColumns() {
+  const arena = $('battle-arena');
+  if (!arena.clientWidth) return;
+  const slots = currentBattle ? Math.max(currentBattle.maxTeam.player, currentBattle.maxTeam.enemy)
+    : Math.max(teamSlots(), enemySlots());
+  // The battle view scrolls the controls bar to the top of the window, so the arena gets the
+  // whole viewport below it.
+  const above = arena.getBoundingClientRect().top - $('battle-controls').getBoundingClientRect().top;
+  const availH = Math.max(360, window.innerHeight - above - 24) - RING_TOP - 16;
+  ring = fitRing(arena, slots, availH, RING_MAX_ZOOM);
+  if (currentBattle) layoutRing(currentBattle);
+}
+
+function layoutRing(battle) {
+  if (!ring) return;
+  const shown = Math.max(battle.display('player').length, battle.display('enemy').length);
+  placeRing(ring, {
+    player: $('battle-player'), enemy: $('battle-enemy'), lanes: $('battle-lanes'), lines: $('lane-lines'),
+  }, shown, battle.activeIndex);
+}
+
+// Prep: your team and the next opponent in the same ring as the battle. Slot count covers
+// empty team slots and a previewed summon ghost.
+function fitPrepRing() {
+  const arena = $('prep-arena');
+  if (!arena.clientWidth) return;
+  const player = $('team-slots');
+  const enemy = $('enemy-preview');
+  const shown = Math.max(player.children.length, enemy.children.length);
+  const n = Math.max(teamSlots(), state.enemy.length, shown);
+  const availH = Math.max(320, window.innerHeight * 0.7) - RING_TOP - 16;
+  const r = fitRing(arena, n, availH, PREP_MAX_ZOOM);
+  placeRing(r, { player, enemy, lanes: $('prep-lanes'), lines: $('prep-lane-lines') }, shown, -1);
 }
 
 window.addEventListener('resize', fitRows);
