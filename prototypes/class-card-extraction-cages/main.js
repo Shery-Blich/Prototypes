@@ -18,6 +18,33 @@ const campCount = () => state.roster.length - state.team.length;
 const $ = id => document.getElementById(id);
 const audio = new SimpleAudio();
 
+export const DIFFICULTIES = {
+  easy: {
+    id: 'easy',
+    name: 'Easy',
+    emoji: '🟢',
+    badge: 'Easy',
+    color: '#22c55e',
+    desc: '1–2 enemy cards · ~35% chance for 1 cage · Standard stats',
+  },
+  medium: {
+    id: 'medium',
+    name: 'Medium',
+    emoji: '🟡',
+    badge: 'Medium',
+    color: '#eab308',
+    desc: '2–3 enemy cards · ~50% chance for 2 cages · Standard stats',
+  },
+  hard: {
+    id: 'hard',
+    name: 'Hard',
+    emoji: '🔴',
+    badge: 'Hard',
+    color: '#ef4444',
+    desc: '3 buffed cards (+1 to +2 ATK/HP) · 3 cages',
+  },
+};
+
 const state = {
   stash: [],         // [{uid, id}] home stash cards
   roster: [],        // [{uid, id}] expedition loadout (team + camp)
@@ -26,6 +53,8 @@ const state = {
   battleNum: 1,
   wins: 0,
   losses: 0,
+  difficulty: 'easy',     // current battle difficulty: 'easy' | 'medium' | 'hard'
+  nextDifficulty: 'easy', // difficulty selected for next battle
   enemy: [],         // [{id, atkBonus, hpBonus}]
   speed: 1,
   inBattle: false,
@@ -380,8 +409,10 @@ function startExpedition() {
   state.battleNum = 1;
   state.wins = 0;
   state.losses = 0;
+  state.difficulty = 'easy';
+  state.nextDifficulty = 'easy';
   state.extractCountdown = null;
-  state.enemy = generateEnemy(1);
+  state.enemy = generateEnemy(1, 'easy');
 
   showPrep();
 }
@@ -397,28 +428,66 @@ function newRun() {
   state.battleNum = 1;
   state.wins = 0;
   state.losses = 0;
-  state.enemy = generateEnemy(1);
+  state.difficulty = 'easy';
+  state.nextDifficulty = 'easy';
+  state.enemy = generateEnemy(1, 'easy');
   showPrep();
 }
 
-// Enemy teams grow from 4 characters up to the enemy team slots.
-// Card stats always stay at base values as battles go on (no stat improvement over time).
-const enemySize = n => Math.min(enemySlots(), Math.max(4, 3 + Math.floor((n - 1) / 2)));
+function generateEnemy(n, difficulty = state.difficulty || 'easy') {
+  // First battle is always easy
+  if (n === 1) difficulty = 'easy';
 
-function generateEnemy(n) {
-  const size = enemySize(n);
-  const setting = state.modifiers?.cagesPerBattle ?? -1;
-  // -1 means 0-3 cages chosen randomly each battle
-  const desiredCages = setting === -1 ? Math.floor(Math.random() * 4) : Number(setting);
-  // Guarantee at least 1 combat fighter on enemy team
-  const cageCount = Math.max(0, Math.min(desiredCages, Math.max(0, size - 1)));
-  const fighterCount = size - cageCount;
+  let fighterCount = 1;
+  let cageCount = 0;
+  let getFighterStats = () => ({ atkBonus: 0, hpBonus: 0 });
 
-  const fighters = Array.from({ length: fighterCount }, () => ({
-    id: randomCharacterId(),
-    atkBonus: 0,
-    hpBonus: 0,
-  }));
+  if (difficulty === 'easy') {
+    // Easy: 1-2 enemy cards, x chance to have 1 cage (most of the time only 1 slot is occupied)
+    fighterCount = 1;
+    // ~35% chance for 1 cage, 65% chance for 0 cages
+    cageCount = Math.random() < 0.35 ? 1 : 0;
+    getFighterStats = () => ({ atkBonus: 0, hpBonus: 0 });
+  } else if (difficulty === 'medium') {
+    // Medium: 2-3 cards, x chance to have 2 chests/cages
+    // 50% chance: 2 cages + 1 fighter = 3 cards
+    // 30% chance: 1 cage + 2 fighters = 3 cards
+    // 20% chance: 0 cages + 2 fighters = 2 cards
+    const roll = Math.random();
+    if (roll < 0.50) {
+      cageCount = 2;
+      fighterCount = 1;
+    } else if (roll < 0.80) {
+      cageCount = 1;
+      fighterCount = 2;
+    } else {
+      cageCount = 0;
+      fighterCount = 2;
+    }
+    getFighterStats = () => ({ atkBonus: 0, hpBonus: 0 });
+  } else if (difficulty === 'hard') {
+    // Hard: 3 cards, and +1 or +2 to attack and defense (randomly) to the enemy cards, and 3 cages
+    fighterCount = 3;
+    cageCount = 3;
+    getFighterStats = () => ({
+      atkBonus: 1 + Math.floor(Math.random() * 2), // +1 or +2
+      hpBonus: 1 + Math.floor(Math.random() * 2),  // +1 or +2
+    });
+  }
+
+  // If a manual cage override is set in debug modifiers (and >= 0), honor it
+  if (state.modifiers?.cagesPerBattle !== undefined && state.modifiers.cagesPerBattle >= 0) {
+    cageCount = state.modifiers.cagesPerBattle;
+  }
+
+  const fighters = Array.from({ length: fighterCount }, () => {
+    const stats = getFighterStats();
+    return {
+      id: randomCharacterId(),
+      atkBonus: stats.atkBonus,
+      hpBonus: stats.hpBonus,
+    };
+  });
 
   const cages = Array.from({ length: cageCount }, () => ({
     id: 'cage',
@@ -426,18 +495,13 @@ function generateEnemy(n) {
     hpBonus: 0,
   }));
 
-  // Distribute cages into the lineup (not in the very first slot so there is a combatant up front)
-  const enemy = [...fighters];
-  for (const c of cages) {
-    const idx = enemy.length > 1 ? 1 + Math.floor(Math.random() * enemy.length) : enemy.length;
-    enemy.splice(Math.min(idx, enemy.length), 0, c);
-  }
-  return enemy;
+  // Fighters occupy the front positions, cages are placed behind them
+  return [...fighters, ...cages];
 }
 
 // The enemy slots modifier changed: refresh opponent with matching size and cages.
 function fitEnemyToSlots() {
-  state.enemy = generateEnemy(state.battleNum);
+  state.enemy = generateEnemy(state.battleNum, state.difficulty);
 }
 
 // ---------- Trigger emojis ----------
@@ -505,15 +569,22 @@ function cardEl(id, atk, hp, opts = {}) {
     + (def.token ? ' token' : '')
     + (cls ? ` class-${cls}` : '')
     + (opts.cls ? ' ' + opts.cls : '');
+
+  const hasBuff = ((opts.atkBonus || 0) > 0 || (opts.hpBonus || 0) > 0);
+  const buffBadge = hasBuff
+    ? `<div class="hard-buff-badge">+${opts.atkBonus || 0}⚔/+${opts.hpBonus || 0}❤</div>`
+    : '';
+
   el.innerHTML = `
     ${clsDef ? `<div class="class-badge" style="background:${clsDef.color}22;color:${clsDef.color};border:1px solid ${clsDef.color}55">${clsDef.label}</div>` : ''}
+    ${buffBadge}
     <div class="card-emoji">${def.emoji}</div>
     <div class="card-name">${def.name}</div>
     <div class="card-text">${def.text ? withTriggerTips(def.text) : '<i>Summoned token</i>'}</div>
     <div class="card-stats">
-      <span class="stat atk">⚔ <b class="atk-val">${atk}</b></span>
+      <span class="stat atk${(opts.atkBonus || 0) > 0 ? ' stat-up' : ''}">⚔ <b class="atk-val">${atk}</b></span>
       <span class="shield-icon trig" data-tip="shield">🛡</span>
-      <span class="stat hp">❤ <b class="hp-val">${hp}</b></span>
+      <span class="stat hp${(opts.hpBonus || 0) > 0 ? ' stat-up' : ''}">❤ <b class="hp-val">${hp}</b></span>
     </div>`;
   // On the character emoji only, so it doesn't stack with the trigger emoji tooltip.
   el.querySelector('.card-emoji').title = def.text;
@@ -533,7 +604,8 @@ function updateHud() {
     return;
   }
 
-  $('hud-battle').textContent = state.battleNum;
+  const diffInfo = DIFFICULTIES[state.difficulty || 'easy'];
+  $('hud-battle').textContent = `${state.battleNum} (${diffInfo.badge})`;
   $('hud-wins').textContent = state.wins;
   $('hud-losses').textContent = state.losses;
   $('hud-roster').textContent = `${campCount()}/${campMax()}`;
@@ -572,13 +644,35 @@ function showPrep() {
 function renderPrep() {
   updateHud();
 
+  const diffInfo = DIFFICULTIES[state.difficulty || 'easy'];
+  const badgeEl = $('prep-difficulty-badge');
+  if (badgeEl) {
+    badgeEl.textContent = `${diffInfo.emoji} ${diffInfo.badge}`;
+    badgeEl.className = `diff-badge badge-${diffInfo.id}`;
+  }
+
+  // Update prep difficulty picker buttons
+  document.querySelectorAll('#prep-difficulty-picker .diff-pill').forEach(btn => {
+    const diff = btn.dataset.diff;
+    btn.classList.toggle('active', diff === state.difficulty);
+    btn.disabled = state.battleNum === 1;
+    if (state.battleNum === 1 && diff !== 'easy') {
+      btn.title = 'Battle 1 is always Easy';
+    } else {
+      btn.title = `Switch to ${DIFFICULTIES[diff].name}`;
+    }
+  });
+
   const lineup = { player: [], enemy: [] };
 
   const enemyRow = $('enemy-preview');
   enemyRow.innerHTML = '';
   state.enemy.forEach((e, i) => {
     const d = CHARACTERS[e.id];
-    const el = cardEl(e.id, d.atk + e.atkBonus, d.hp + e.hpBonus);
+    const el = cardEl(e.id, d.atk + e.atkBonus, d.hp + e.hpBonus, {
+      atkBonus: e.atkBonus,
+      hpBonus: e.hpBonus,
+    });
     if (i === 0) el.appendChild(frontTag());
     lineup.enemy.push(previewable(el, `e${i}`, 'enemy', e.id, d.atk + e.atkBonus, d.hp + e.hpBonus));
     enemyRow.appendChild(el);
@@ -1223,7 +1317,7 @@ async function startBattle() {
   showFirstBanner(firstSide);
   view.log(`🎲 ${firstSide === 'player' ? 'Your abilities' : 'Enemy abilities'} trigger first (${state.modifiers.playerStartsPct}% chance you start)`);
   const battle = new Battle(participants, state.enemy, view, {
-    firstSide, maxTeam: { player: teamSlots(), enemy: enemySlots() },
+    firstSide, maxTeam: { player: teamSlots(), enemy: Math.max(enemySlots(), state.enemy.length) },
   });
   currentBattle = battle;
   const result = await battle.run();
@@ -1243,21 +1337,28 @@ function showResult(result, participants, cagesKilled = 0) {
   const btn = $('btn-continue');
   cards.innerHTML = '';
   title.className = result;
+  btn.classList.remove('hidden');
   btn.disabled = false;
   $('btn-skip-recruit').classList.add('hidden');
   $('btn-extract').classList.add('hidden');
   $('btn-return-home').classList.add('hidden');
   $('result-discard-wrap').classList.add('hidden');
   $('result-squad-preview').classList.add('hidden');
+  $('result-difficulty-wrap')?.classList.add('hidden');
 
   state.battleNum++;
-  state.enemy = generateEnemy(state.battleNum);
+  state.difficulty = state.nextDifficulty || 'easy';
+  state.enemy = generateEnemy(state.battleNum, state.difficulty);
 
   if (result === 'win') {
     state.wins++;
     title.textContent = 'Victory!';
     audio.score();
-    showRescueReward(cagesKilled);
+    if (cagesKilled > 0) {
+      showRescueReward(cagesKilled);
+    } else {
+      onPostCardChoice('win', 'Victory! All enemy forces defeated (no cages were destroyed this combat).');
+    }
   } else {
     state.losses++;
     title.textContent = 'Defeat · Squad Wiped';
@@ -1270,7 +1371,8 @@ function showResult(result, participants, cagesKilled = 0) {
 
 // Defeat: Player loses EVERY card carried in the expedition and is returned to home screen.
 function showTotalDefeat(participants) {
-  $('result-squad-preview').classList.add('hidden');
+  $('result-squad-preview')?.classList.add('hidden');
+  $('result-difficulty-wrap')?.classList.add('hidden');
   const title = $('result-title');
   const text = $('result-text');
   const cards = $('result-cards');
@@ -1380,16 +1482,12 @@ function showRescueReward(cagesKilled) {
   const btn = $('btn-continue');
   const skip = $('btn-skip-recruit');
 
+  btn.classList.remove('hidden');
+  btn.disabled = false;
+  $('result-difficulty-wrap')?.classList.add('hidden');
+
   if (cagesKilled <= 0) {
-    title.textContent = 'Victory!';
-    title.className = 'win';
-    text.textContent = 'Victory! You defeated the enemy forces, but no cages were destroyed during this combat, so no captive cards were rescued.';
-    cards.innerHTML = '';
-    btn.disabled = false;
-    btn.textContent = 'Continue ▶';
-    btn.onclick = () => {
-      onPostCardChoice('win');
-    };
+    onPostCardChoice('win', 'Victory! All enemy forces defeated (no cages were destroyed this combat).');
     return;
   }
 
@@ -1418,6 +1516,8 @@ function showRescueReward(cagesKilled) {
   title.className = 'win';
 
   const draw = () => {
+    btn.classList.remove('hidden');
+    skip.classList.remove('hidden');
     const needDiscard = Math.max(0, picks.length - room);
     if (discards.length > needDiscard) discards.length = needDiscard;
     const roomText = `Room: ${room} (camp ${campCount()}/${campMax()}, team ${state.team.length}/${teamSlots()}).`;
@@ -1468,12 +1568,23 @@ function showRescueReward(cagesKilled) {
       ? nameOf(state.roster.find(r => r.uid === discards[0]).id)
       : `${discards.length} cards`;
 
-    btn.textContent = !picks.length ? 'Select Cards to Add'
-      : `Add ${rescueText}` + (needDiscard && discards.length === needDiscard ? `, discard ${discardText}` : '');
-    btn.disabled = !picks.length || discards.length !== needDiscard;
+    if (!picks.length) {
+      btn.disabled = false;
+      btn.textContent = 'Continue without adding ▶';
+    } else if (needDiscard && discards.length !== needDiscard) {
+      btn.disabled = true;
+      btn.textContent = `Discard ${needDiscard - discards.length} to Continue ▶`;
+    } else {
+      btn.disabled = false;
+      btn.textContent = `Add ${rescueText} & Continue ▶` + (needDiscard ? ` (discarding ${discardText})` : '');
+    }
   };
 
   btn.onclick = () => {
+    if (!picks.length) {
+      onPostCardChoice('win');
+      return;
+    }
     // Discarded team members leave hole for recruit to fill
     const freed = [];
     for (const uid of discards) {
@@ -1494,12 +1605,13 @@ function showRescueReward(cagesKilled) {
     onPostCardChoice('win');
   };
 
+  skip.textContent = 'Skip ⏭';
   skip.onclick = () => onPostCardChoice('win');
   skip.classList.remove('hidden');
   draw();
 }
 
-function onPostCardChoice(lastResult) {
+function onPostCardChoice(lastResult, customMessage = null) {
   updateHud();
 
   const title = $('result-title');
@@ -1510,6 +1622,7 @@ function onPostCardChoice(lastResult) {
   const btnReturnHome = $('btn-return-home');
   const btnSkip = $('btn-skip-recruit');
   const discardWrap = $('result-discard-wrap');
+  const diffWrap = $('result-difficulty-wrap');
 
   btnSkip.classList.add('hidden');
   discardWrap.classList.add('hidden');
@@ -1518,6 +1631,7 @@ function onPostCardChoice(lastResult) {
 
   // 1. Forced Evacuation Check: <= 2 cards left in camp + slots
   if (state.roster.length <= 2) {
+    diffWrap?.classList.add('hidden');
     const survivingCount = state.roster.length;
     if (survivingCount > 0) {
       state.stash.push(...state.roster);
@@ -1558,6 +1672,7 @@ function onPostCardChoice(lastResult) {
 
   // 2. Extraction Completion: countdown reaches 0 (was 1 last battle)
   if (state.extractCountdown === 1) {
+    diffWrap?.classList.add('hidden');
     const extractedCount = state.roster.length;
     state.stash.push(...state.roster);
     saveStash();
@@ -1614,10 +1729,21 @@ function onPostCardChoice(lastResult) {
 
     btnReturnHome.classList.add('hidden');
 
+    if (diffWrap) {
+      diffWrap.classList.remove('hidden');
+      const nextNum = $('next-battle-num');
+      if (nextNum) nextNum.textContent = state.battleNum;
+      renderDifficultyOptions();
+    }
+
     btnContinue.classList.remove('hidden');
     btnContinue.disabled = false;
-    btnContinue.textContent = 'Continue to Final Battle ▶';
+    updateContinueBtnText('final');
     btnContinue.onclick = () => {
+      state.difficulty = state.nextDifficulty || 'easy';
+      if (!state.enemy || !state.enemy.length) {
+        state.enemy = generateEnemy(state.battleNum, state.difficulty);
+      }
       showPrep();
     };
 
@@ -1630,7 +1756,9 @@ function onPostCardChoice(lastResult) {
   // 4. Extraction not active: offer Continue or Extract in 2 battles
   title.textContent = lastResult === 'win' ? 'Victory Secured' : 'Regroup';
   title.className = lastResult;
-  text.textContent = `Your squad has ${state.roster.length} cards (team: ${state.team.length}, camp: ${campCount()}). Push deeper or call extraction in 2 battles:`;
+  text.textContent = customMessage
+    ? `${customMessage} Your squad has ${state.roster.length} cards (team: ${state.team.length}, camp: ${campCount()}). Push deeper or call extraction in 2 battles:`
+    : `Your squad has ${state.roster.length} cards (team: ${state.team.length}, camp: ${campCount()}). Push deeper or call extraction in 2 battles:`;
 
   for (const c of state.roster) {
     const d = CHARACTERS[c.id];
@@ -1645,10 +1773,21 @@ function onPostCardChoice(lastResult) {
 
   btnReturnHome.classList.add('hidden');
 
+  if (diffWrap) {
+    diffWrap.classList.remove('hidden');
+    const nextNum = $('next-battle-num');
+    if (nextNum) nextNum.textContent = state.battleNum;
+    renderDifficultyOptions();
+  }
+
   btnContinue.classList.remove('hidden');
   btnContinue.disabled = false;
-  btnContinue.textContent = 'Continue Expedition ▶';
+  updateContinueBtnText('normal');
   btnContinue.onclick = () => {
+    state.difficulty = state.nextDifficulty || 'easy';
+    if (!state.enemy || !state.enemy.length) {
+      state.enemy = generateEnemy(state.battleNum, state.difficulty);
+    }
     showPrep();
   };
 
@@ -1656,10 +1795,78 @@ function onPostCardChoice(lastResult) {
   btnExtract.disabled = false;
   btnExtract.textContent = '🚁 Extract in 2 battles';
   btnExtract.onclick = () => {
+    state.difficulty = state.nextDifficulty || 'easy';
+    if (!state.enemy || !state.enemy.length) {
+      state.enemy = generateEnemy(state.battleNum, state.difficulty);
+    }
     state.extractCountdown = 2;
     updateHud();
     showPrep();
   };
+}
+
+function renderDifficultyOptions() {
+  const container = $('difficulty-options');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const currentSelected = state.nextDifficulty || state.difficulty || 'easy';
+
+  const diffDetails = {
+    easy: {
+      spec: '1–2 Enemy Cards',
+      cage: '~35% chance 1 Cage (0 ATK / 2 HP)',
+      sub: 'Standard stats · Mostly 1 slot occupied',
+    },
+    medium: {
+      spec: '2–3 Enemy Cards',
+      cage: '~50% chance 2 Cages (chests)',
+      sub: 'Standard stats · Up to 2 rescued cards',
+    },
+    hard: {
+      spec: '3 Buffed Cards (+1 to +2 ⚔/❤)',
+      cage: '3 Cages (3 rescued cards on win)',
+      sub: '6 Enemy cards total · Tough challenge',
+    },
+  };
+
+  for (const [key, d] of Object.entries(DIFFICULTIES)) {
+    const isSelected = (key === currentSelected);
+    const details = diffDetails[key];
+    const btn = document.createElement('div');
+    btn.className = `diff-card-btn ${key}` + (isSelected ? ' selected' : '');
+    btn.innerHTML = `
+      <div class="diff-card-top">
+        <span class="diff-card-badge diff-badge badge-${key}">${d.emoji} ${d.name}</span>
+        ${isSelected ? '<span class="diff-selected-check">✔ SELECTED</span>' : ''}
+      </div>
+      <div class="diff-card-spec">${details.spec}</div>
+      <div class="diff-card-cage">${details.cage}</div>
+      <div class="diff-card-sub">${details.sub}</div>
+    `;
+
+    btn.addEventListener('click', () => {
+      state.nextDifficulty = key;
+      state.difficulty = key;
+      state.enemy = generateEnemy(state.battleNum, state.difficulty);
+      renderDifficultyOptions();
+      updateContinueBtnText(state.extractCountdown === 1 ? 'final' : 'normal');
+      audio.beep(key === 'hard' ? 440 : key === 'medium' ? 520 : 620);
+    });
+
+    container.appendChild(btn);
+  }
+}
+
+function updateContinueBtnText(mode = 'normal') {
+  const btnContinue = $('btn-continue');
+  if (!btnContinue) return;
+  const diffInfo = DIFFICULTIES[state.nextDifficulty || state.difficulty || 'easy'];
+  if (mode === 'final') {
+    btnContinue.textContent = `Continue to Final Battle (${diffInfo.badge}) ▶`;
+  } else {
+    btnContinue.textContent = `Continue Expedition (${diffInfo.badge}) ▶`;
+  }
 }
 
 // ---------- Idle preview cycle ----------
@@ -1817,6 +2024,20 @@ function closeEditorModal() {
 
 $('btn-open-editor')?.addEventListener('click', openEditorModal);
 $('btn-close-editor')?.addEventListener('click', closeEditorModal);
+
+// Prep screen difficulty pill clicks
+document.querySelectorAll('#prep-difficulty-picker .diff-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (state.battleNum === 1) return;
+    const diff = btn.dataset.diff;
+    if (!diff || !DIFFICULTIES[diff]) return;
+    state.difficulty = diff;
+    state.nextDifficulty = diff;
+    state.enemy = generateEnemy(state.battleNum, state.difficulty);
+    audio.beep(diff === 'hard' ? 440 : diff === 'medium' ? 520 : 620);
+    renderPrep();
+  });
+});
 
 renderTriggerLegend();
 renderClassLegend();

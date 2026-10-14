@@ -66,10 +66,15 @@
         </div>
 
         <div class="panel panel-enemy">
-          <h2>Next opponent <span class="hint">(front is on the left)</span></h2>
+          <h2>Next opponent <span id="prep-difficulty-badge" class="diff-badge badge-easy">🟢 Easy</span> <span class="hint">(front is on the left)</span></h2>
           <div id="enemy-preview" class="row row-enemy"></div>
           <div class="prep-actions prep-actions-right">
-            <span class="hint">Steps through every ability preview in acting order</span>
+            <div id="prep-difficulty-picker" class="prep-difficulty-picker">
+              <span class="hint" style="font-size:11px;">Difficulty:</span>
+              <button type="button" class="btn btn-tiny diff-pill" data-diff="easy">🟢 Easy</button>
+              <button type="button" class="btn btn-tiny diff-pill" data-diff="medium">🟡 Medium</button>
+              <button type="button" class="btn btn-tiny diff-pill" data-diff="hard">🔴 Hard</button>
+            </div>
             <button id="btn-preview-battle" class="btn">▶ Preview battle</button>
           </div>
         </div>
@@ -210,6 +215,16 @@
           <p id="result-discard-label"></p>
           <div id="result-discard" class="row row-result"></div>
         </div>
+
+        <!-- DIFFICULTY SELECTION (for next battle) -->
+        <div id="result-difficulty-wrap" class="result-difficulty-wrap hidden">
+          <div class="difficulty-header">
+            <span class="diff-title">🎯 Next Battle Difficulty (Battle <b id="next-battle-num">2</b>)</span>
+            <span class="hint">Choose your challenge for the next encounter:</span>
+          </div>
+          <div id="difficulty-options" class="difficulty-options-row"></div>
+        </div>
+
         <div class="result-actions">
           <button id="btn-skip-recruit" class="btn hidden">Skip ⏭</button>
           <button id="btn-continue" class="btn btn-primary">Continue ▶</button>
