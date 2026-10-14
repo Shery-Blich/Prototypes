@@ -1,0 +1,5 @@
+{
+  "title": "Class Card Extraction (Turn-Based Lanes)",
+  "description": "Fork of Difficulty Rewards where fighting is turn based by slot: the 1st card fights the enemy's 1st, then 2nd vs 2nd, 3rd vs 3rd, and so on to the end of the queue, then the round repeats from the front. All other mechanics are unchanged.",
+  "created": "2026-10-14T18:00:00+03:00"
+}
