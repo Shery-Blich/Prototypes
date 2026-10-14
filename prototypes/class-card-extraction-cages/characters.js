@@ -537,7 +537,9 @@ export const BASE_CHARACTERS = {
 
 // ─── ACTIVE CHARACTERS REGISTRY ──────────────────────────────────────────────
 export const CHARACTERS = {};
-export const RECRUITABLE = [];
+export const RECRUITABLE = Object.keys(BASE_CHARACTERS).filter(
+  id => !BASE_CHARACTERS[id].token && !BASE_CHARACTERS[id].isCage && id !== 'cage' && BASE_CHARACTERS[id].class !== 'cage'
+);
 
 let nextUid = 1;
 
@@ -549,8 +551,22 @@ export function ensureNextUid(n) {
   if (n >= nextUid) nextUid = n + 1;
 }
 
+export function isCageCard(id) {
+  if (!id || id === 'cage') return true;
+  const def = CHARACTERS[id] || BASE_CHARACTERS[id];
+  return Boolean(def && (def.isCage || def.class === 'cage'));
+}
+
 export function randomCharacterId() {
-  return RECRUITABLE[Math.floor(Math.random() * RECRUITABLE.length)];
+  if (!RECRUITABLE.length) {
+    for (const [id, def] of Object.entries(BASE_CHARACTERS)) {
+      if (!def.token && !def.isCage && id !== 'cage' && def.class !== 'cage') {
+        RECRUITABLE.push(id);
+      }
+    }
+  }
+  const picked = RECRUITABLE[Math.floor(Math.random() * RECRUITABLE.length)];
+  return picked || 'dps_start';
 }
 
 // ─── OVERRIDE STORAGE & REHYDRATION ──────────────────────────────────────────
@@ -618,7 +634,9 @@ export function applyCharacterOverrides(overrides = {}) {
   // Refresh recruitable list
   RECRUITABLE.length = 0;
   for (const [id, def] of Object.entries(CHARACTERS)) {
-    if (!def.token) RECRUITABLE.push(id);
+    if (!def.token && !def.isCage && id !== 'cage' && def.class !== 'cage') {
+      RECRUITABLE.push(id);
+    }
   }
 }
 
@@ -642,6 +660,7 @@ export function exportCharactersJs(chars = CHARACTERS) {
     lines.push(`    atk: ${Number(def.atk) || 0},`);
     lines.push(`    hp: ${Number(def.hp) || 1},`);
     if (def.token) lines.push(`    token: true,`);
+    if (def.isCage) lines.push(`    isCage: true,`);
     if (def.trigger) lines.push(`    trigger: ${JSON.stringify(def.trigger)},`);
     lines.push(`    text: ${JSON.stringify(def.text || '')},`);
     if (def.preset) {
@@ -652,7 +671,7 @@ export function exportCharactersJs(chars = CHARACTERS) {
 
   lines.push(`};`);
   lines.push(``);
-  lines.push(`export const RECRUITABLE = Object.keys(CHARACTERS).filter(id => !CHARACTERS[id].token);`);
+  lines.push(`export const RECRUITABLE = Object.keys(CHARACTERS).filter(id => !CHARACTERS[id].token && !CHARACTERS[id].isCage && id !== 'cage' && CHARACTERS[id].class !== 'cage');`);
   lines.push(``);
   lines.push(`let nextUid = 1;`);
   lines.push(`export function makeCharacter(id) { return { uid: nextUid++, id }; }`);

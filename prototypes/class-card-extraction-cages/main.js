@@ -1,4 +1,4 @@
-import { CHARACTERS, CLASSES, TRIGGERS, ensureNextUid, makeCharacter, randomCharacterId } from './characters.js';
+import { CHARACTERS, CLASSES, TRIGGERS, ensureNextUid, isCageCard, makeCharacter, randomCharacterId } from './characters.js';
 import { Battle } from './battle.js';
 import { SimpleAudio } from '/src/shared/utils.js';
 import { initEditor } from './editor.js';
@@ -41,7 +41,7 @@ const state = {
 
 const MODIFIER_DEFAULTS = {
   playerStartsPct: 50, // chance (0-100) that the player makes the first attack
-  cagesPerBattle: 1,   // number of Cage cards (0 ATK, 2 HP) in enemy team (0-4)
+  cagesPerBattle: -1,  // -1 = Random (0-3), or 0, 1, 2, 3 fixed
   playerSlots: 5,      // your team slots (1-10)
   enemySlots: 5,       // enemy team slots (1-10)
   campMax: 10,         // characters in camp (0-20)
@@ -50,20 +50,26 @@ const MODIFIER_DEFAULTS = {
 // Stepper modifiers: range and description
 const STEPPERS = {
   cagesPerBattle: {
-    min: 0,
-    max: 4,
-    desc: n => n === 0
-      ? 'No cages in enemy teams (no rescued cards from combat).'
-      : `${n} Cage card${n === 1 ? '' : 's'} (0 ATK / 2 HP) in enemy team. Destroy to rescue cards upon victory!`
+    min: -1,
+    max: 3,
+    label: n => (n === -1 ? 'Random (0-3)' : `${n}`),
+    desc: n => n === -1
+      ? 'A battle always has 0–3 Cage cards chosen randomly (0 ATK / 2 HP). Destroy them to rescue cards upon victory!'
+      : n === 0
+        ? 'No cages in enemy teams (no rescued cards from combat).'
+        : `Fixed: exactly ${n} Cage card${n === 1 ? '' : 's'} (0 ATK / 2 HP) in enemy team. Destroy to rescue cards upon victory!`
   },
   playerSlots: { min: 1, max: 10, desc: n => `Up to ${n} character${n === 1 ? '' : 's'} in your team. Lowering it sends the back of your team to camp.` },
-  enemySlots: { min: 1, max: 10, desc: n => `Enemy teams start at ${Math.min(3, n)} and grow to ${n} character${n === 1 ? '' : 's'}.` },
+  enemySlots: { min: 1, max: 10, desc: n => `Enemy teams start at ${Math.min(4, n)} and grow to ${n} character${n === 1 ? '' : 's'}.` },
   campMax: { min: 0, max: 20, desc: n => (n === 0 ? 'No camp: everyone you own is in your team.' : `Up to ${n} character${n === 1 ? '' : 's'} wait in camp. Lowering it below what's there asks you to discard.`) },
 };
 
 function loadModifiers() {
   try {
     const saved = JSON.parse(localStorage.getItem('ccec-modifiers') || '{}');
+    if (saved.cagesPerBattle === undefined || saved.cagesPerBattle === 1 || saved.cagesPerBattle < -1 || saved.cagesPerBattle > 3) {
+      saved.cagesPerBattle = -1;
+    }
     return { ...MODIFIER_DEFAULTS, ...saved };
   } catch {
     return { ...MODIFIER_DEFAULTS };
@@ -91,7 +97,7 @@ function renderModifiers() {
     const btnDown = document.querySelector(`[data-step="${key}"][data-dir="-1"]`);
     const btnUp = document.querySelector(`[data-step="${key}"][data-dir="1"]`);
     const btnReset = document.querySelector(`[data-reset="${key}"]`);
-    if (valEl) valEl.textContent = v;
+    if (valEl) valEl.textContent = cfg.label ? cfg.label(v) : v;
     if (descEl) descEl.textContent = cfg.desc(v);
     if (btnDown) btnDown.disabled = v <= cfg.min;
     if (btnUp) btnUp.disabled = v >= cfg.max;
@@ -180,28 +186,6 @@ function pickDiscards(count, onConfirm, onCancel) {
   draw();
 }
 
-$('mod-recruits').addEventListener('input', e => {
-  state.modifiers.recruitsPerWin = Number(e.target.value);
-  saveModifiers();
-  renderModifiers();
-});
-$('mod-recruits-reset').addEventListener('click', () => {
-  state.modifiers.recruitsPerWin = MODIFIER_DEFAULTS.recruitsPerWin;
-  saveModifiers();
-  renderModifiers();
-});
-
-$('mod-losses').addEventListener('input', e => {
-  state.modifiers.lossesPerDefeat = Number(e.target.value);
-  saveModifiers();
-  renderModifiers();
-});
-$('mod-losses-reset').addEventListener('click', () => {
-  state.modifiers.lossesPerDefeat = MODIFIER_DEFAULTS.lossesPerDefeat;
-  saveModifiers();
-  renderModifiers();
-});
-
 $('mod-start-pct').addEventListener('input', e => {
   state.modifiers.playerStartsPct = Number(e.target.value);
   saveModifiers();
@@ -222,7 +206,13 @@ function rollFirstSide() {
 // ---------- Stash & Base Management ----------
 
 function generateRandomStash(count = 20) {
-  return Array.from({ length: count }, () => makeCharacter(randomCharacterId()));
+  const cards = [];
+  for (let i = 0; i < count; i++) {
+    let id = randomCharacterId();
+    if (isCageCard(id)) id = 'dps_start';
+    cards.push(makeCharacter(id));
+  }
+  return cards;
 }
 
 function loadStash() {
@@ -236,13 +226,18 @@ function loadStash() {
           if (c && typeof c.uid === 'number' && c.uid > maxUid) maxUid = c.uid;
         }
         ensureNextUid(maxUid + 1);
-        return parsed.filter(c => c && CHARACTERS[c.id]);
+        const valid = parsed.filter(c => c && c.id && CHARACTERS[c.id] && !isCageCard(c.id));
+        if (valid.length > 0) return valid;
       }
     }
   } catch (err) {
     console.warn('Failed to load stash:', err);
   }
-  return generateRandomStash(20);
+  const initial = generateRandomStash(20);
+  try {
+    localStorage.setItem('ccec-stash', JSON.stringify(initial));
+  } catch {}
+  return initial;
 }
 
 function saveStash() {
@@ -335,7 +330,9 @@ function renderHome() {
   }
 
   for (const c of state.stash) {
+    if (!c || !c.id) continue;
     const d = CHARACTERS[c.id];
+    if (!d) continue;
     const isSelected = state.selectedStashUids.has(c.uid);
     const el = cardEl(c.id, d.atk, d.hp, {
       cls: 'stash-card clickable' + (isSelected ? ' selected' : ''),
@@ -371,7 +368,7 @@ function startExpedition() {
   const selectedUids = state.selectedStashUids;
   if (!selectedUids || selectedUids.size < MIN_TEAM) return;
 
-  const selectedCards = state.stash.filter(c => selectedUids.has(c.uid));
+  const selectedCards = state.stash.filter(c => selectedUids.has(c.uid) && !isCageCard(c.id));
   state.stash = state.stash.filter(c => !selectedUids.has(c.uid));
   saveStash();
   state.selectedStashUids.clear();
@@ -404,14 +401,17 @@ function newRun() {
   showPrep();
 }
 
-// Enemy teams grow from 3 characters (one more every 2 battles) up to the enemy team slots.
+// Enemy teams grow from 4 characters up to the enemy team slots.
 // Card stats always stay at base values as battles go on (no stat improvement over time).
-const enemySize = n => Math.min(enemySlots(), 3 + Math.floor((n - 1) / 2));
+const enemySize = n => Math.min(enemySlots(), Math.max(4, 3 + Math.floor((n - 1) / 2)));
 
 function generateEnemy(n) {
   const size = enemySize(n);
-  const desiredCages = state.modifiers?.cagesPerBattle ?? 1;
-  const cageCount = Math.max(0, Math.min(desiredCages, size - 1));
+  const setting = state.modifiers?.cagesPerBattle ?? -1;
+  // -1 means 0-3 cages chosen randomly each battle
+  const desiredCages = setting === -1 ? Math.floor(Math.random() * 4) : Number(setting);
+  // Guarantee at least 1 combat fighter on enemy team
+  const cageCount = Math.max(0, Math.min(desiredCages, Math.max(0, size - 1)));
   const fighterCount = size - cageCount;
 
   const fighters = Array.from({ length: fighterCount }, () => ({
@@ -495,7 +495,9 @@ function initTriggerTips() {
 // ---------- Cards ----------
 
 function cardEl(id, atk, hp, opts = {}) {
-  const def = CHARACTERS[id];
+  const def = CHARACTERS[id] || { name: id || 'Unknown', emoji: '❓', atk: atk || 1, hp: hp || 1, text: '', class: 'dps', token: false };
+  atk = atk ?? def.atk;
+  hp = hp ?? def.hp;
   const cls = def.class || null;
   const clsDef = cls ? CLASSES[cls] : null;
   const el = document.createElement('div');
@@ -593,7 +595,10 @@ function renderPrep() {
       const empty = document.createElement('div');
       empty.className = 'card empty';
       empty.textContent = i === 0 ? 'Front' : `Slot ${i + 1}`;
-      dropTarget(empty, () => true, d => {
+      dropTarget(empty, d => {
+        const charId = d.id || state.roster.find(r => r.uid === d.uid)?.id;
+        return !isCageCard(charId);
+      }, d => {
         if (d.from === 'team') state.team.splice(state.team.indexOf(d.uid), 1);
         state.team.push(d.uid);
       });
@@ -615,7 +620,11 @@ function renderPrep() {
     el.appendChild(ctrls);
     makeDraggable(el, 'team', uid);
     // Camp card dropped here: swap (this one goes to camp). Team card: swap the two slots.
-    dropTarget(el, d => d.uid !== uid, d => {
+    dropTarget(el, d => {
+      if (d.uid === uid) return false;
+      const charId = d.id || state.roster.find(r => r.uid === d.uid)?.id;
+      return !isCageCard(charId);
+    }, d => {
       if (d.from === 'camp') state.team[i] = d.uid;
       else swap(state.team.indexOf(d.uid), i, false);
     });
@@ -630,6 +639,7 @@ function renderPrep() {
     const d = CHARACTERS[c.id];
     const el = cardEl(c.id, d.atk, d.hp, { cls: 'clickable' });
     el.addEventListener('click', () => {
+      if (isCageCard(c.id)) return;
       if (state.team.length >= teamSlots()) return;
       state.team.push(c.uid);
       teamChanged();
@@ -1383,10 +1393,12 @@ function showRescueReward(cagesKilled) {
     return;
   }
 
-  // Roll cagesKilled random characters to rescue
-  const rescuedDefs = Array.from({ length: cagesKilled }, () => ({
-    id: randomCharacterId(),
-  }));
+  // Roll cagesKilled random characters to rescue (strictly non-cage)
+  const rescuedDefs = Array.from({ length: cagesKilled }, () => {
+    let id = randomCharacterId();
+    if (isCageCard(id)) id = 'dps_start';
+    return { id };
+  });
 
   // Default: select all rescued cards
   const picks = Array.from({ length: cagesKilled }, (_, i) => i);
