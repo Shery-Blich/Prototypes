@@ -510,9 +510,10 @@ export const STARTER_PACK_IDS = [
   'support_attack',  // Healer Doe (🦙)
   'tank_hurt',       // Thick Skin (🐪)
   'warlock_death',   // Death Curse (🦎)
-  'rotator_start',   // Swiftbeak (🦅)
-  'support_death',   // Final Gift (🐐)
 ];
+
+// First card guaranteed to unlock at Level 1 before transitioning to random unlocks
+export const FIRST_UNLOCK_CARD_ID = 'rotator_start'; // Swiftbeak (🦅)
 
 export const XP_CONFIG = {
   cardPlayed: 22,

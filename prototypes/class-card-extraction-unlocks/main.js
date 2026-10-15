@@ -4,6 +4,7 @@ import {
   TRIGGERS,
   RECRUITABLE,
   STARTER_PACK_IDS,
+  FIRST_UNLOCK_CARD_ID,
   XP_CONFIG,
   UNLOCK_THRESHOLDS,
   getXpThresholdForLevel,
@@ -20,7 +21,7 @@ import { SimpleAudio } from '/src/shared/utils.js';
 import { initEditor } from './editor.js';
 
 const MIN_TEAM = 1;
-const STARTING_ROSTER = 6;
+const STARTING_ROSTER = 4;
 
 // Team slots per side and camp size are gameplay modifiers (see MODIFIER_DEFAULTS).
 const teamSlots = () => state.modifiers.playerSlots;
@@ -65,10 +66,11 @@ export const DIFFICULTIES = {
 };
 
 // ─── META-PROGRESSION (XP & CARD UNLOCKS) ───────────────────────────────────
-const PROGRESSION_STORAGE_KEY = 'cceu-progression';
+const PROGRESSION_STORAGE_KEY = 'cceu-progression-v2';
 
 function defaultProgression() {
   return {
+    version: 2,
     totalXp: 0,
     level: 0,
     runCount: 0,
@@ -85,6 +87,7 @@ function loadProgression() {
     if (saved) {
       const parsed = JSON.parse(saved);
       progression = {
+        version: 2,
         totalXp: Number(parsed.totalXp) || 0,
         level: Number(parsed.level) || 0,
         runCount: Number(parsed.runCount) || 0,
@@ -120,6 +123,7 @@ function saveProgression() {
 
 function resetProgression() {
   localStorage.removeItem(PROGRESSION_STORAGE_KEY);
+  localStorage.removeItem(STASH_STORAGE_KEY);
   progression = defaultProgression();
   setUnlockedIds(progression.unlockedCards);
   saveProgression();
@@ -387,9 +391,11 @@ function generateRandomStash(count = 20) {
   return cards;
 }
 
+const STASH_STORAGE_KEY = 'cceu-stash-v2';
+
 function loadStash() {
   try {
-    const raw = localStorage.getItem('cceu-stash');
+    const raw = localStorage.getItem(STASH_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -405,17 +411,17 @@ function loadStash() {
   } catch (err) {
     console.warn('Failed to load stash:', err);
   }
-  // Start with the Starter Pack (claw strike, healer doe, thick skin, death curse, swiftbeak, final gift)
+  // Start with the 4-card Starter Pack (claw strike, healer doe, thick skin, death curse)
   const initial = STARTER_PACK_IDS.map(id => makeCharacter(id));
   try {
-    localStorage.setItem('cceu-stash', JSON.stringify(initial));
+    localStorage.setItem(STASH_STORAGE_KEY, JSON.stringify(initial));
   } catch {}
   return initial;
 }
 
 function saveStash() {
   try {
-    localStorage.setItem('cceu-stash', JSON.stringify(state.stash));
+    localStorage.setItem(STASH_STORAGE_KEY, JSON.stringify(state.stash));
   } catch (err) {
     console.warn('Failed to save stash:', err);
   }
@@ -619,7 +625,7 @@ function renderProgressionPanel() {
       poolContainer.appendChild(el);
     }
   } else {
-    if (tabHint) tabHint.textContent = 'Locked cards will NEVER spawn as enemies. Level up via XP to unlock 1–3 random cards per level!';
+    if (tabHint) tabHint.textContent = 'Locked cards will NEVER spawn as enemies. Level up via XP to unlock 1 card per level (Swiftbeak first, then random)!';
     if (lockedCards.length === 0) {
       poolContainer.innerHTML = '<div class="hint" style="padding:20px;font-size:15px;color:#86efac;">🎉 All cards in the game have been unlocked!</div>';
       return;
@@ -627,15 +633,24 @@ function renderProgressionPanel() {
     for (const id of lockedCards) {
       const def = CHARACTERS[id];
       if (!def) continue;
-      const el = cardEl(id, def.atk, def.hp, { cls: 'locked-card' });
+      const isNextFirstUnlock = (id === FIRST_UNLOCK_CARD_ID && lockedCards.includes(FIRST_UNLOCK_CARD_ID));
+      const el = cardEl(id, def.atk, def.hp, {
+        cls: 'locked-card' + (isNextFirstUnlock ? ' next-unlock-card' : ''),
+      });
       const lockOverlay = document.createElement('div');
       lockOverlay.className = 'card-lock-overlay';
-      lockOverlay.textContent = '🔒';
+      lockOverlay.textContent = isNextFirstUnlock ? '🦅' : '🔒';
       el.appendChild(lockOverlay);
       const tag = frontTag();
-      tag.textContent = 'LOCKED 🔒';
-      tag.style.background = '#334155';
-      tag.style.color = '#94a3b8';
+      if (isNextFirstUnlock) {
+        tag.textContent = 'NEXT UNLOCK 🦅';
+        tag.style.background = '#0ea5e9';
+        tag.style.color = '#ffffff';
+      } else {
+        tag.textContent = 'LOCKED 🔒';
+        tag.style.background = '#334155';
+        tag.style.color = '#94a3b8';
+      }
       el.appendChild(tag);
       poolContainer.appendChild(el);
     }
@@ -654,7 +669,7 @@ function initProgressionEvents() {
     audio.beep(460);
   });
   $('btn-reset-progression')?.addEventListener('click', () => {
-    if (confirm('Reset all XP, levels, and card unlocks back to the 6-card Starter Pack?')) {
+    if (confirm('Reset all XP, levels, and card unlocks back to the 4-card Starter Pack?')) {
       resetProgression();
       audio.explosion();
     }
@@ -1628,19 +1643,22 @@ function finalizeRunXp(isSuccessfulExtraction) {
   const levelsGained = Math.max(0, newLevel - prevLevel);
   progression.level = newLevel;
 
-  // For every XP level gained, unlock 1 to 3 random cards into available pool
+  // For every XP level gained, unlock only 1 card.
+  // Swiftbeak is guaranteed to be the first card unlocked, then random cards.
   const newlyUnlockedCardIds = [];
   if (levelsGained > 0) {
     for (let l = 0; l < levelsGained; l++) {
       const lockedPool = RECRUITABLE.filter(id => !progression.unlockedCards.includes(id));
       if (lockedPool.length === 0) break;
-      const count = Math.min(lockedPool.length, Math.floor(Math.random() * 3) + 1);
-      const shuffled = [...lockedPool].sort(() => Math.random() - 0.5);
-      const chosen = shuffled.slice(0, count);
-      for (const id of chosen) {
-        progression.unlockedCards.push(id);
-        newlyUnlockedCardIds.push(id);
+      let chosenId = null;
+      if (lockedPool.includes(FIRST_UNLOCK_CARD_ID)) {
+        chosenId = FIRST_UNLOCK_CARD_ID;
+      } else {
+        const randomIndex = Math.floor(Math.random() * lockedPool.length);
+        chosenId = lockedPool[randomIndex];
       }
+      progression.unlockedCards.push(chosenId);
+      newlyUnlockedCardIds.push(chosenId);
     }
   }
 
@@ -1727,7 +1745,7 @@ function renderDebrief(debrief, outcomeType) {
   if (debrief.levelsGained > 0 && debrief.newlyUnlockedCardIds.length > 0) {
     unlockBox.classList.remove('hidden');
     $('debrief-unlock-msg').textContent = debrief.levelsGained === 1
-      ? `Level ${debrief.newLevel} reached! (+${debrief.newlyUnlockedCardIds.length} card${debrief.newlyUnlockedCardIds.length === 1 ? '' : 's'} unlocked)`
+      ? `Level ${debrief.newLevel} reached! (+${debrief.newlyUnlockedCardIds.length} card unlocked)`
       : `Gained ${debrief.levelsGained} levels! (Now Level ${debrief.newLevel}, +${debrief.newlyUnlockedCardIds.length} cards unlocked)`;
 
     for (const id of debrief.newlyUnlockedCardIds) {
@@ -1735,9 +1753,15 @@ function renderDebrief(debrief, outcomeType) {
       if (!def) continue;
       const el = cardEl(id, def.atk, def.hp, { cls: 'spawn-pool-card' });
       const tag = frontTag();
-      tag.textContent = 'UNLOCKED TO POOL 🎉';
-      tag.style.background = '#22c55e';
-      tag.style.color = '#052e16';
+      if (id === FIRST_UNLOCK_CARD_ID) {
+        tag.textContent = 'SWIFTBEAK UNLOCKED 🦅';
+        tag.style.background = '#0ea5e9';
+        tag.style.color = '#ffffff';
+      } else {
+        tag.textContent = 'UNLOCKED TO POOL 🎉';
+        tag.style.background = '#22c55e';
+        tag.style.color = '#052e16';
+      }
       el.appendChild(tag);
       unlockedCardsRow.appendChild(el);
     }
