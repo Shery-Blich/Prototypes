@@ -113,7 +113,7 @@
     <section id="trek-screen" class="screen hidden">
       <div class="trek-top">
         <div class="water-big">💧 <b id="t-water">0</b></div>
-        <button id="btn-cashout" class="btn btn-cash btn-cash-big">🏁 CASH OUT</button>
+        <button id="btn-cashout" class="btn btn-cash btn-cash-big">🏕️ Return to camp<span id="cash-home" class="cash-home"></span></button>
       </div>
       <div id="toasts" class="toasts"></div>
       <div class="graph-wrap">
@@ -253,6 +253,17 @@
     </details>
 
     <!-- CAMP OVERFLOW (modifier change) -->
+    <div id="desert-overlay" class="overlay hidden">
+      <div class="result-box">
+        <h1 id="desert-title" class="lose"></h1>
+        <p id="desert-text" class="desert-text"></p>
+        <div id="desert-cards" class="row row-result"></div>
+        <p id="desert-hint" class="desert-hint"></p>
+        <div class="result-actions">
+          <button id="btn-desert-continue" class="btn btn-primary">OK</button>
+        </div>
+      </div>
+    </div>
     <div id="discard-overlay" class="overlay hidden">
       <div class="result-box">
         <h1 class="lose">Camp overflow</h1>

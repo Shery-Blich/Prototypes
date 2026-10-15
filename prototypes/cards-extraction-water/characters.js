@@ -192,3 +192,11 @@ export function makeCharacter(id) {
 export function randomCharacterId() {
   return RECRUITABLE[Math.floor(Math.random() * RECRUITABLE.length)];
 }
+
+// Rough battle strength of each recruit (stats plus how much its ability tends to add), used to
+// pick enemies that match your team. The Brute snowballs, so it rates highest.
+export const POWER = {
+  archer: 5, bard: 6, medic: 7, necromancer: 5, shepherd: 8, alchemist: 7, bannerman: 8,
+  cleric: 6, thornguard: 9, paladin: 10, rager: 8, golem: 10, brute: 13, berserker: 8,
+  squire: 6, beekeeper: 8, broodmother: 8,
+};
