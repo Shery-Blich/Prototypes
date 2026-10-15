@@ -11,13 +11,6 @@
   <div id="app">
     <header class="hud">
       <div class="hud-stat hud-level-stat" id="hud-level-wrap" title="Meta-Progression Level & Cumulative XP">🎖️ Level <b id="hud-level">0</b> <span class="hud-xp-sub">(<span id="hud-xp-curr">0</span>/<span id="hud-xp-target">191</span> XP)</span></div>
-      <div class="hud-stat" id="hud-battle-stat">Battle <b id="hud-battle">1</b></div>
-      <div class="hud-stat" id="hud-wins-stat">Wins <b id="hud-wins">0</b></div>
-      <div class="hud-stat" id="hud-ties-stat">Ties <b id="hud-ties">0</b></div>
-      <div class="hud-stat" id="hud-losses-stat">Losses <b id="hud-losses">0</b></div>
-      <div class="hud-stat" id="hud-camp-stat">Camp <b id="hud-roster">0</b></div>
-      <div class="hud-stat" id="hud-extract-wrap">Extraction <b id="hud-extract-status">At Base</b></div>
-      <div class="hud-stat" id="hud-stash-wrap">Stash <b id="hud-stash-count">6</b></div>
       <div id="trigger-legend" class="trigger-legend"></div>
       <div id="class-legend" class="class-legend"></div>
       <button id="btn-evac-base" class="btn btn-small hidden" title="Return to Home Stash with surviving cards">🏠 Evac to Base</button>
@@ -30,7 +23,6 @@
         <div class="home-title-row">
           <div>
             <h1>🏕️ Base Camp & Stash</h1>
-            <p class="hint">Select cards from your stash to take on the expedition. Defeat wipes all carried cards! Winning battles allows picking reward cards based on difficulty level.</p>
           </div>
           <div class="home-actions">
             <button id="btn-auto-loadout" class="btn">Auto-pick</button>
@@ -41,8 +33,32 @@
         </div>
         <div class="loadout-summary">
           <span class="loadout-pill">Expedition Loadout: <b id="loadout-count">0</b> / <b id="loadout-max">15</b> cards</span>
-          <span class="hint" id="loadout-formula">(Team slots: 5 + Camp size: 10)</span>
           <span class="loadout-pill stash-pill">In Stash: <b id="stash-count">20</b> cards</span>
+        </div>
+      </div>
+
+      <!-- HOME LEVELS PROGRESS BAR WITH MYSTERY CARD SILHOUETTE -->
+      <div class="panel home-progression-card">
+        <div class="home-progress-header">
+          <div class="home-progress-title">
+            <span class="badge badge-lvl" id="home-lvl-badge">Level 0</span>
+            <span class="home-progress-target">Next Unlock: <b id="home-next-level-label">Level 1 (Swiftbeak 🦅)</b></span>
+          </div>
+          <div class="home-xp-info">
+            <span id="home-xp-progress-text">0 / 191 XP (191 XP needed)</span>
+          </div>
+        </div>
+
+        <div class="home-progress-bar-row">
+          <div class="xp-progress-track">
+            <div id="home-xp-fill" class="xp-progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="card-silhouette-target" id="card-silhouette-target" title="Next Card Unlock Reward">
+            <div class="silhouette-card-inner">
+              <span class="silhouette-qm">?</span>
+            </div>
+            <span class="silhouette-badge" id="silhouette-badge">Lvl 1</span>
+          </div>
         </div>
       </div>
 
@@ -50,51 +66,6 @@
         <h2>Card Stash <span class="hint">(click cards to toggle selection for your expedition loadout)</span></h2>
         <div id="stash-cards" class="row row-stash"></div>
       </div>
-
-      <!-- CARD UNLOCKS & XP PROGRESSION PANEL -->
-      <div class="panel progression-panel">
-        <div class="progression-header">
-          <div class="prog-title-group">
-            <h2>🎖️ Card Unlocks & XP Progression <span class="badge badge-lvl" id="home-lvl-badge">Level 0</span></h2>
-            <p class="hint">Locked cards will not spawn as enemies until unlocked. Earn XP after each extraction (successful or not) to level up and unlock 1–3 random cards!</p>
-          </div>
-          <div class="prog-meta-stats">
-            <span class="prog-pill">Total XP: <b id="home-total-xp">0</b></span>
-            <span class="prog-pill">Runs: <b id="home-run-count">0</b></span>
-            <span class="prog-pill">Unlocked: <b id="home-unlocked-ratio">4 / 20</b></span>
-            <button id="btn-reset-progression" class="btn btn-tiny btn-danger" title="Reset XP and card unlocks back to starter pack">Reset Progress</button>
-          </div>
-        </div>
-
-        <div class="xp-progress-bar-container">
-          <div class="xp-bar-labels">
-            <span>Next Unlock: <b id="home-next-level-label">Level 1 (Swiftbeak 🦅)</b></span>
-            <span id="home-xp-progress-text">0 / 191 XP (191 XP needed)</span>
-          </div>
-          <div class="xp-progress-track">
-            <div id="home-xp-fill" class="xp-progress-fill" style="width: 0%;"></div>
-          </div>
-        </div>
-
-        <div class="xp-rules-chips">
-          <span class="rule-chip">🃏 Card Played: <b>+22 XP</b></span>
-          <span class="rule-chip">🏆 Level Cleared: <b>+25 XP</b></span>
-          <span class="rule-chip">🚁 Run Completion: <b>+50 XP</b></span>
-          <span class="rule-chip" id="rule-first-run-chip">🌟 First Run Bonus: <b>+50 XP</b> (Run 1)</span>
-        </div>
-
-        <!-- Card Pool Tabs -->
-        <div class="card-pool-section">
-          <div class="card-pool-tabs">
-            <button type="button" id="tab-unlocked-pool" class="btn btn-small tab-btn active">👹 Enemy Spawn Pool (<span id="unlocked-count">4</span>)</button>
-            <button type="button" id="tab-locked-pool" class="btn btn-small tab-btn">🔒 Locked Cards (<span id="locked-count">16</span>)</button>
-            <span class="hint tab-hint" id="pool-tab-hint">These unlocked cards can spawn as enemy opponents in battles and be recruited on victory.</span>
-          </div>
-          <div id="pool-cards-container" class="row row-stash pool-cards-row"></div>
-        </div>
-      </div>
-
-      <div id="home-modifiers-slot"></div>
     </section>
 
     <!-- PREP SCREEN -->
@@ -102,7 +73,7 @@
       <svg id="preview-arrows" class="preview-arrows"></svg>
       <div class="prep-top">
         <div class="panel panel-team">
-          <h2>Your team <span class="hint">(1-5 characters · opposing front cards attack at the same time · initiative modifier decides whose abilities trigger first)</span></h2>
+          <h2>Your team</h2>
           <div id="team-slots" class="row row-team"></div>
           <div class="prep-actions">
             <button id="btn-fight" class="btn btn-primary">⚔ Fight</button>
@@ -111,7 +82,7 @@
         </div>
 
         <div class="panel panel-enemy">
-          <h2>Next opponent <span id="prep-difficulty-badge" class="diff-badge badge-easy">🟢 Easy</span> <span class="hint">(front is on the left)</span></h2>
+          <h2>Next opponent <span id="prep-difficulty-badge" class="diff-badge badge-easy">🟢 Easy</span></h2>
           <div id="enemy-preview" class="row row-enemy"></div>
           <div class="prep-actions prep-actions-right">
             <div id="prep-difficulty-picker" class="prep-difficulty-picker">
@@ -128,59 +99,8 @@
       <div id="preview-info" class="preview-info hidden"></div>
 
       <div id="camp-panel" class="panel">
-        <h2>Camp <b id="camp-count"></b> <span class="hint">(characters not in your team · click or drag to add to team · drag onto a team character to swap them · when the camp is full the team can't shrink)</span></h2>
+        <h2>Your Camp <b id="camp-count"></b></h2>
         <div id="roster" class="row row-roster"></div>
-      </div>
-
-      <div id="prep-modifiers-slot">
-        <div id="modifiers-panel" class="panel">
-          <h2>Gameplay modifiers <span class="hint">(apply from the next battle)</span></h2>
-          <div class="modifier">
-            <label for="mod-start-pct" class="mod-name">🎲 Who triggers first</label>
-            <span class="mod-end">Enemy</span>
-            <input id="mod-start-pct" type="range" min="0" max="100" step="5" />
-            <span class="mod-end">You</span>
-            <b id="mod-start-val" class="mod-val"></b>
-            <button id="mod-start-reset" class="btn btn-small">Reset</button>
-            <span id="mod-start-desc" class="hint"></span>
-          </div>
-          <div class="modifier modifier-bool">
-            <span class="mod-name">🎁 Reward cards source</span>
-            <button type="button" id="mod-reward-toggle" class="btn btn-small mod-toggle-btn">Random Cards 🎲</button>
-            <button type="button" id="mod-reward-reset" class="btn btn-small">Reset</button>
-            <span id="mod-reward-desc" class="hint"></span>
-          </div>
-          <div class="modifier modifier-bool">
-            <span class="mod-name">⭐ Keep enemy buffs</span>
-            <button type="button" id="mod-keep-buffs-toggle" class="btn btn-small mod-toggle-btn">Reset to Base 🔄</button>
-            <button type="button" id="mod-keep-buffs-reset" class="btn btn-small">Reset</button>
-            <span id="mod-keep-buffs-desc" class="hint"></span>
-          </div>
-          <div class="modifier">
-            <span class="mod-name">👥 Your team slots</span>
-            <button class="btn btn-small" data-step="playerSlots" data-dir="-1">−</button>
-            <b id="mod-playerSlots-val" class="mod-val mod-step-val"></b>
-            <button class="btn btn-small" data-step="playerSlots" data-dir="1">+</button>
-            <button class="btn btn-small" data-reset="playerSlots">Reset</button>
-            <span id="mod-playerSlots-desc" class="hint"></span>
-          </div>
-          <div class="modifier">
-            <span class="mod-name">👹 Enemy team slots</span>
-            <button class="btn btn-small" data-step="enemySlots" data-dir="-1">−</button>
-            <b id="mod-enemySlots-val" class="mod-val mod-step-val"></b>
-            <button class="btn btn-small" data-step="enemySlots" data-dir="1">+</button>
-            <button class="btn btn-small" data-reset="enemySlots">Reset</button>
-            <span id="mod-enemySlots-desc" class="hint"></span>
-          </div>
-          <div class="modifier">
-            <span class="mod-name">⛺ Camp size</span>
-            <button class="btn btn-small" data-step="campMax" data-dir="-1">−</button>
-            <b id="mod-campMax-val" class="mod-val mod-step-val"></b>
-            <button class="btn btn-small" data-step="campMax" data-dir="1">+</button>
-            <button class="btn btn-small" data-reset="campMax">Reset</button>
-            <span id="mod-campMax-desc" class="hint"></span>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -194,7 +114,6 @@
         <button class="btn speed" data-speed="2">2x</button>
         <button class="btn speed" data-speed="4">4x</button>
         <button class="btn" id="btn-skip">Skip ⏭</button>
-        <span class="hint">Click a character to preview its ability</span>
         <span id="pause-label" class="pause-label hidden">⏸ Paused · click it again to resume</span>
         <span id="turn-label" class="turn-label"></span>
       </div>
@@ -210,8 +129,9 @@
           <div id="battle-enemy" class="row"></div>
         </div>
       </div>
+      <!-- Explanatory text beneath battle screen removed -->
       <div id="battle-preview-info" class="preview-info battle-preview-info hidden"></div>
-      <div id="battle-log" class="log"></div>
+      <div id="battle-log" class="log hidden"></div>
     </section>
 
     <!-- CAMP OVERFLOW (modifier change) -->
@@ -330,6 +250,119 @@
           <button id="btn-continue" class="btn btn-primary">Continue ▶</button>
           <button id="btn-extract" class="btn btn-extract hidden">🚁 Extract in 2 battles</button>
           <button id="btn-return-home" class="btn btn-primary hidden">Return to Home Stash 🏠</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING BUTTON AT BOTTOM-LEFT CORNER -->
+  <button id="btn-open-modifiers" class="btn-floating-corner" title="Open Gameplay Modifiers & Card Progression">
+    <span class="corner-btn-icon">⚙️</span>
+    <span class="corner-btn-label">Modifiers & Progression</span>
+  </button>
+
+  <!-- GAMEPLAY MODIFIERS & CARD PROGRESSION MODAL -->
+  <div id="modifiers-modal" class="editor-modal-backdrop hidden">
+    <div class="editor-modal-dialog modifiers-modal-dialog">
+      <div class="editor-modal-header">
+        <div class="modal-title-group">
+          <h2>⚙️ Modifiers & Card Progression</h2>
+          <div class="modal-subtabs">
+            <button type="button" id="tab-mod-settings" class="btn btn-small tab-btn active">⚙️ Gameplay Modifiers</button>
+            <button type="button" id="tab-mod-progression" class="btn btn-small tab-btn">🎖️ Card Unlocks & Pool</button>
+          </div>
+        </div>
+        <div class="editor-modal-actions">
+          <button id="btn-close-modifiers" class="btn btn-small">✕ Close</button>
+        </div>
+      </div>
+
+      <div class="modifiers-modal-content-area">
+        <!-- TAB 1: GAMEPLAY MODIFIERS -->
+        <div id="modal-tab-content-settings" class="modal-tab-pane">
+          <div id="modifiers-panel" class="panel">
+            <h2>Gameplay modifiers <span class="hint">(apply from the next battle)</span></h2>
+            <div class="modifier">
+              <label for="mod-start-pct" class="mod-name">🎲 Who triggers first</label>
+              <span class="mod-end">Enemy</span>
+              <input id="mod-start-pct" type="range" min="0" max="100" step="5" />
+              <span class="mod-end">You</span>
+              <b id="mod-start-val" class="mod-val"></b>
+              <button id="mod-start-reset" class="btn btn-small">Reset</button>
+              <span id="mod-start-desc" class="hint"></span>
+            </div>
+            <div class="modifier modifier-bool">
+              <span class="mod-name">🎁 Reward cards source</span>
+              <button type="button" id="mod-reward-toggle" class="btn btn-small mod-toggle-btn">Random Cards 🎲</button>
+              <button type="button" id="mod-reward-reset" class="btn btn-small">Reset</button>
+              <span id="mod-reward-desc" class="hint"></span>
+            </div>
+            <div class="modifier modifier-bool">
+              <span class="mod-name">⭐ Keep enemy buffs</span>
+              <button type="button" id="mod-keep-buffs-toggle" class="btn btn-small mod-toggle-btn">Reset to Base 🔄</button>
+              <button type="button" id="mod-keep-buffs-reset" class="btn btn-small">Reset</button>
+              <span id="mod-keep-buffs-desc" class="hint"></span>
+            </div>
+            <div class="modifier">
+              <span class="mod-name">👥 Your team slots</span>
+              <button class="btn btn-small" data-step="playerSlots" data-dir="-1">−</button>
+              <b id="mod-playerSlots-val" class="mod-val mod-step-val"></b>
+              <button class="btn btn-small" data-step="playerSlots" data-dir="1">+</button>
+              <button class="btn btn-small" data-reset="playerSlots">Reset</button>
+              <span id="mod-playerSlots-desc" class="hint"></span>
+            </div>
+            <div class="modifier">
+              <span class="mod-name">👹 Enemy team slots</span>
+              <button class="btn btn-small" data-step="enemySlots" data-dir="-1">−</button>
+              <b id="mod-enemySlots-val" class="mod-val mod-step-val"></b>
+              <button class="btn btn-small" data-step="enemySlots" data-dir="1">+</button>
+              <button class="btn btn-small" data-reset="enemySlots">Reset</button>
+              <span id="mod-enemySlots-desc" class="hint"></span>
+            </div>
+            <div class="modifier">
+              <span class="mod-name">⛺ Camp size</span>
+              <button class="btn btn-small" data-step="campMax" data-dir="-1">−</button>
+              <b id="mod-campMax-val" class="mod-val mod-step-val"></b>
+              <button class="btn btn-small" data-step="campMax" data-dir="1">+</button>
+              <button class="btn btn-small" data-reset="campMax">Reset</button>
+              <span id="mod-campMax-desc" class="hint"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: CARD UNLOCKS & XP PROGRESSION -->
+        <div id="modal-tab-content-progression" class="modal-tab-pane hidden">
+          <div class="panel progression-panel">
+            <div class="progression-header">
+              <div class="prog-title-group">
+                <h2>🎖️ Card Unlocks & Enemy Spawn Pool</h2>
+                <p class="hint">Locked cards will not spawn as enemies until unlocked. Earn XP after each extraction to unlock 1 card per level!</p>
+              </div>
+              <div class="prog-meta-stats">
+                <span class="prog-pill">Total XP: <b id="home-total-xp">0</b></span>
+                <span class="prog-pill">Runs: <b id="home-run-count">0</b></span>
+                <span class="prog-pill">Unlocked: <b id="home-unlocked-ratio">4 / 20</b></span>
+                <button id="btn-reset-progression" class="btn btn-tiny btn-danger" title="Reset XP and card unlocks back to starter pack">Reset Progress</button>
+              </div>
+            </div>
+
+            <div class="xp-rules-chips">
+              <span class="rule-chip">🃏 Card Played: <b>+22 XP</b></span>
+              <span class="rule-chip">🏆 Level Cleared: <b>+25 XP</b></span>
+              <span class="rule-chip">🚁 Run Completion: <b>+50 XP</b></span>
+              <span class="rule-chip" id="rule-first-run-chip">🌟 First Run Bonus: <b>+50 XP</b> (Run 1)</span>
+            </div>
+
+            <!-- Card Pool Tabs -->
+            <div class="card-pool-section">
+              <div class="card-pool-tabs">
+                <button type="button" id="tab-unlocked-pool" class="btn btn-small tab-btn active">👹 Enemy Spawn Pool (<span id="unlocked-count">4</span>)</button>
+                <button type="button" id="tab-locked-pool" class="btn btn-small tab-btn">🔒 Locked Cards (<span id="locked-count">16</span>)</button>
+                <span class="hint tab-hint" id="pool-tab-hint">These unlocked cards can spawn as enemy opponents in battles and be recruited on victory.</span>
+              </div>
+              <div id="pool-cards-container" class="row row-stash pool-cards-row"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

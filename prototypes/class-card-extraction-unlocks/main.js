@@ -438,11 +438,7 @@ function returnAllToStash() {
 }
 
 function moveModifiersPanel(targetSlotId) {
-  const panel = $('modifiers-panel');
-  const target = $(targetSlotId);
-  if (panel && target && panel.parentElement !== target) {
-    target.appendChild(panel);
-  }
+  // Modifiers panel permanently resides inside the bottom-left modal window
 }
 
 // ---------- Home Screen ----------
@@ -459,8 +455,6 @@ function showHome() {
   $('battle-screen').classList.add('hidden');
   $('result-overlay').classList.add('hidden');
   $('discard-overlay').classList.add('hidden');
-
-  moveModifiersPanel('home-modifiers-slot');
 
   if (!state.selectedStashUids) {
     state.selectedStashUids = new Set();
@@ -486,12 +480,13 @@ function showHome() {
 
 function renderHome() {
   updateHud();
+  renderProgressionPanel();
   const max = maxExpeditionLoadout();
   const currentCount = state.selectedStashUids ? state.selectedStashUids.size : 0;
 
   $('loadout-count').textContent = currentCount;
   $('loadout-max').textContent = max;
-  $('loadout-formula').textContent = `(Team slots: ${teamSlots()} + Camp size: ${campMax()})`;
+  if ($('loadout-formula')) $('loadout-formula').textContent = `(Team slots: ${teamSlots()} + Camp size: ${campMax()})`;
   $('stash-count').textContent = state.stash.length;
 
   const btnGo = $('btn-go-expedition');
@@ -568,7 +563,11 @@ function renderProgressionPanel() {
   if (ratioEl) ratioEl.textContent = `${progression.unlockedCards.length} / ${RECRUITABLE.length}`;
 
   const nextLbl = $('home-next-level-label');
-  if (nextLbl) nextLbl.textContent = `Level ${currentLvl + 1}`;
+  if (nextLbl) {
+    nextLbl.textContent = currentLvl === 0
+      ? 'Level 1 (Swiftbeak 🦅)'
+      : `Level ${currentLvl + 1}`;
+  }
 
   const progressText = $('home-xp-progress-text');
   const span = Math.max(1, nextThresh - currThresh);
@@ -579,6 +578,15 @@ function renderProgressionPanel() {
   if (progressText) {
     const diff = Math.max(0, nextThresh - currentXp);
     progressText.textContent = `${currentXp} / ${nextThresh} XP (${diff} XP needed)`;
+  }
+
+  const silBadge = $('silhouette-badge');
+  if (silBadge) silBadge.textContent = `Lvl ${currentLvl + 1}`;
+  const silTarget = $('card-silhouette-target');
+  if (silTarget) {
+    silTarget.title = currentLvl === 0
+      ? 'Next Card Reward: Swiftbeak 🦅 (Guaranteed at Level 1)'
+      : `Next Card Reward: 1 Random Card (at Level ${currentLvl + 1})`;
   }
 
   const firstRunChip = $('rule-first-run-chip');
@@ -865,38 +873,32 @@ function updateHud() {
   const xpTargetEl = $('hud-xp-target');
   if (xpTargetEl) xpTargetEl.textContent = getXpThresholdForLevel(progression.level + 1);
 
-  if (state.screen === 'home') {
-    $('hud-battle').textContent = 'Base';
-    $('hud-wins').textContent = '0';
-    $('hud-ties').textContent = '0';
-    $('hud-losses').textContent = '0';
-    $('hud-roster').textContent = '--';
-    $('hud-extract-status').textContent = 'At Base';
-    $('hud-extract-status').className = '';
-    $('hud-stash-count').textContent = state.stash ? state.stash.length : 0;
-    $('btn-evac-base').classList.add('hidden');
-    return;
+  if ($('hud-battle')) {
+    const diffInfo = DIFFICULTIES[state.difficulty || 'easy'];
+    $('hud-battle').textContent = state.screen === 'home' ? 'Base' : `${state.battleNum} (${diffInfo.badge})`;
   }
-
-  const diffInfo = DIFFICULTIES[state.difficulty || 'easy'];
-  $('hud-battle').textContent = `${state.battleNum} (${diffInfo.badge})`;
-  $('hud-wins').textContent = state.wins || 0;
-  $('hud-ties').textContent = state.ties || 0;
-  $('hud-losses').textContent = state.losses || 0;
-  $('hud-roster').textContent = `${campCount()}/${campMax()}`;
-  $('hud-stash-count').textContent = state.stash ? state.stash.length : 0;
-  $('btn-evac-base').classList.toggle('hidden', state.inBattle);
+  if ($('hud-wins')) $('hud-wins').textContent = state.screen === 'home' ? '0' : (state.wins || 0);
+  if ($('hud-ties')) $('hud-ties').textContent = state.screen === 'home' ? '0' : (state.ties || 0);
+  if ($('hud-losses')) $('hud-losses').textContent = state.screen === 'home' ? '0' : (state.losses || 0);
+  if ($('hud-roster')) $('hud-roster').textContent = state.screen === 'home' ? '--' : `${campCount()}/${campMax()}`;
+  if ($('hud-stash-count')) $('hud-stash-count').textContent = state.stash ? state.stash.length : 0;
+  if ($('btn-evac-base')) $('btn-evac-base').classList.toggle('hidden', state.screen === 'home' || state.inBattle);
 
   const extractEl = $('hud-extract-status');
-  if (state.extractCountdown === null) {
-    extractEl.textContent = 'Not active';
-    extractEl.className = '';
-  } else if (state.extractCountdown === 2) {
-    extractEl.textContent = 'In 2 battles';
-    extractEl.className = 'hud-extract-active';
-  } else if (state.extractCountdown === 1) {
-    extractEl.textContent = 'In 1 battle!';
-    extractEl.className = 'hud-extract-urgent';
+  if (extractEl) {
+    if (state.screen === 'home') {
+      extractEl.textContent = 'At Base';
+      extractEl.className = '';
+    } else if (state.extractCountdown === null) {
+      extractEl.textContent = 'Not active';
+      extractEl.className = '';
+    } else if (state.extractCountdown === 2) {
+      extractEl.textContent = 'In 2 battles';
+      extractEl.className = 'hud-extract-active';
+    } else if (state.extractCountdown === 1) {
+      extractEl.textContent = 'In 1 battle!';
+      extractEl.className = 'hud-extract-urgent';
+    }
   }
 }
 
@@ -910,7 +912,6 @@ function showPrep() {
   $('battle-screen').classList.add('hidden');
   $('result-overlay').classList.add('hidden');
   $('discard-overlay').classList.add('hidden');
-  moveModifiersPanel('prep-modifiers-slot');
   renderModifiers();
   renderPrep();
   resetIdle();
@@ -980,15 +981,6 @@ function renderPrep() {
     const hpBonus = c.hpBonus || 0;
     const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, { atkBonus, hpBonus });
     if (i === 0) el.appendChild(frontTag());
-    const ctrls = document.createElement('div');
-    ctrls.className = 'card-ctrls';
-    ctrls.append(
-      ctrlBtn('◀', 'Move back', i < state.team.length - 1, () => swap(i, i + 1)),
-      ctrlBtn('✕', campCount() >= campMax() ? 'Camp is full' : 'Back to camp', campCount() < campMax(),
-        () => { state.team.splice(i, 1); teamChanged(); renderPrep(); }),
-      ctrlBtn('▶', 'Move forward', i > 0, () => swap(i, i - 1)),
-    );
-    el.appendChild(ctrls);
     makeDraggable(el, 'team', uid);
     // Camp card dropped here: swap (this one goes to camp). Team card: swap the two slots.
     dropTarget(el, d => {
@@ -2619,6 +2611,51 @@ function closeEditorModal() {
 
 $('btn-open-editor')?.addEventListener('click', openEditorModal);
 $('btn-close-editor')?.addEventListener('click', closeEditorModal);
+
+// ---------- Modifiers & Progression Modal ----------
+function openModifiersModal(initialTab = 'settings') {
+  const modal = $('modifiers-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  switchModalTab(initialTab);
+  renderModifiers();
+  renderProgressionPanel();
+}
+
+function closeModifiersModal() {
+  const modal = $('modifiers-modal');
+  if (modal) modal.classList.add('hidden');
+  if (state.screen === 'home') renderHome();
+  else if (state.screen === 'prep') renderPrep();
+}
+
+function switchModalTab(tabKey) {
+  const isSettings = tabKey === 'settings';
+  $('tab-mod-settings')?.classList.toggle('active', isSettings);
+  $('tab-mod-progression')?.classList.toggle('active', !isSettings);
+  $('modal-tab-content-settings')?.classList.toggle('hidden', !isSettings);
+  $('modal-tab-content-progression')?.classList.toggle('hidden', isSettings);
+}
+
+$('btn-open-modifiers')?.addEventListener('click', () => openModifiersModal('settings'));
+$('btn-close-modifiers')?.addEventListener('click', closeModifiersModal);
+$('tab-mod-settings')?.addEventListener('click', () => { switchModalTab('settings'); audio.beep(520); });
+$('tab-mod-progression')?.addEventListener('click', () => { switchModalTab('progression'); audio.beep(520); });
+$('card-silhouette-target')?.addEventListener('click', () => { openModifiersModal('progression'); audio.beep(550); });
+
+$('modifiers-modal')?.addEventListener('click', e => {
+  if (e.target === $('modifiers-modal')) closeModifiersModal();
+});
+$('editor-modal')?.addEventListener('click', e => {
+  if (e.target === $('editor-modal')) closeEditorModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModifiersModal();
+    closeEditorModal();
+  }
+});
 
 // Prep screen difficulty pill clicks
 document.querySelectorAll('#prep-difficulty-picker .diff-pill').forEach(btn => {
