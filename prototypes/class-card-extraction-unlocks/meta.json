@@ -1,5 +1,5 @@
 {
   "title": "Class Card Extraction (Card Unlocks & XP)",
-  "description": "Fork with summoner cards removed and a meta-progression card unlock system: player starts with a 4-card Starter Pack, earns XP from battles/extractions, and levels up to unlock 1 new card per level into the enemy spawn pool (Swiftbeak first, then random).",
+  "description": "Start with 4 cards, battle and extract to earn XP, and level up to unlock new cards. Goal: grow your collection and level up.",
   "created": "2026-10-15T17:35:00+03:00"
 }
