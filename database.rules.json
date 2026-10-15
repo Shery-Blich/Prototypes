@@ -1,0 +1,19 @@
+{
+  "rules": {
+    "$env": {
+      ".read": "$env === 'dev' || $env === 'prod'",
+      "votes": {
+        "$id": {
+          ".write": "$env === 'dev' || $env === 'prod'",
+          ".validate": "newData.isNumber()"
+        }
+      },
+      "highlights": {
+        "$id": {
+          ".write": "$env === 'dev' || $env === 'prod'",
+          ".validate": "newData.isBoolean()"
+        }
+      }
+    }
+  }
+}
