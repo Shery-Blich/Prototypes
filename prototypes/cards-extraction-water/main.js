@@ -20,7 +20,7 @@ const WIN_COST_PCT = 0.03;     // after a win, per fighter that fell
 const LOSS_MIN_PCT = 0.05;     // a lost battle takes this share of your water at the start of a run...
 const LOSS_MAX_PCT = 0.5;      // ...up to this near its end (when the wells dry up)
 const SCARE_STEPS = 3;         // a scare (lost water bucket) lasts this many steps, then it's found
-const LOSS_DRY_CHANCE = 0.25;  // chance a lost battle also dries up the wells (same ending as reaching 5x)
+const LOSS_DRY_CHANCE = 0.25;  // chance a lost battle or fleeing robbers breaks morale (same ending as reaching 5x)
 const RECRUIT_PCT = 0.10;      // recruiting a defeated enemy on the path
 const SHOP_PRICE = 12;         // recruits for hire at the oasis (flat, from the bank)
 const SHOP_MIN = 2;            // passing travelers each time you're back at camp
@@ -1674,6 +1674,7 @@ function encounter() {
     if (atFloor()) return endExpedition('fled');
     delete e.leftWith;
     resumeTrek();
+    if (!e.crashed && Math.random() < LOSS_DRY_CHANCE) startDecline('fled');
   };
 }
 
@@ -1882,7 +1883,11 @@ function startDecline(why = 'tired') {
   e.crashStep = e.step;
   const last = e.history[e.history.length - 1];
   e.history.push({ x: last.x + 0.2, water: e.water, kind: 'crash' });
-  toast(why === 'defeat' ? '😞 After the defeat, morale is breaking…' : '😩 The caravan is exhausted, morale is dropping…', 'down');
+  toast({
+    defeat: '😞 After the defeat, morale is breaking…',
+    fled: '😞 Running from robbers broke their spirit…',
+    tired: '😩 The caravan is exhausted, morale is dropping…',
+  }[why], 'down');
   audio.playTone(110, 'sawtooth', 0.4, 0.15);
   renderTrek();
 }
