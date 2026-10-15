@@ -73,7 +73,26 @@
         </div>
       </div>
 
-      <!-- Encounter: an enemy blocks the path -->
+      <!-- Choose the expedition team (more characters than team slots) -->
+      <div id="select-panel" class="panel select-panel hidden">
+        <h2>🐪 Choose your expedition team</h2>
+        <p class="hint">Tap or drag characters between the bars. Only the team goes out; the camp stays safe at home.</p>
+        <div id="sel-camp-section" class="panel oasis-section open sel-section">
+          <div class="section-head"><h2>⛺ Camp <span id="sel-camp-count" class="hint"></span></h2></div>
+          <div id="sel-camp" class="camp-groups"></div>
+        </div>
+        <div id="sel-team-section" class="panel oasis-section open sel-section">
+          <div class="section-head"><h2>🐪 Expedition team <span id="sel-team-count" class="hint"></span></h2></div>
+          <div id="sel-team" class="camp-groups"></div>
+        </div>
+        <div class="sel-actions">
+          <button id="btn-sel-back" class="btn">◀ Back</button>
+          <span id="sel-hint" class="hint"></span>
+          <button id="btn-sel-go" class="btn btn-primary btn-go"></button>
+        </div>
+      </div>
+
+    <!-- Encounter: an enemy blocks the path -->
       <div id="encounter-bar" class="panel encounter-bar">
         <div class="enc-text">⚔ <b>An enemy caravan blocks the path!</b></div>
         <button id="btn-enc-cashout" class="btn btn-flee">🏃 Flee home (lose 75% of your water)</button>
@@ -103,7 +122,7 @@
       <div id="preview-info" class="preview-info hidden"></div>
 
       <div id="camp-panel" class="panel">
-        <h2>Camp <b id="camp-count"></b> <span class="hint">(characters not in your team · click or drag to add to team · drag onto a team character to swap them · when the camp is full the team can't shrink)</span></h2>
+        <h2>Backup <b id="camp-count"></b> <span class="hint">(expedition members not in this battle, and recruits · click or drag to add to the team · drag onto a team character to swap them)</span></h2>
         <div id="roster" class="row row-roster"></div>
       </div>
 
@@ -126,7 +145,7 @@
       <div class="trek-controls">
         <span>Pace:</span>
         <button class="btn pace" data-pace="1">1x</button>
-        <button class="btn pace" data-pace="2">2x</button>
+        <button class="btn pace" data-pace="1.5">1.5x</button>
         <button id="btn-trek-pause" class="btn">⏸ Pause</button>
       </div>
       <div id="trek-log" class="hidden"></div>

@@ -636,3 +636,9 @@ b.down { color: #f87171; }
 .gl-start { position: absolute; transform: translate(10px, -140%); font-weight: 800; font-size: 14px; color: #cbd5e1; text-shadow: 0 2px 6px #000; white-space: nowrap; }
 .gl-star { position: absolute; transform: translate(-0.6em, -50%); font-weight: 900; font-size: 16px; color: #facc15; text-shadow: 0 2px 6px #000; white-space: nowrap; }
 .gl-star.left { transform: translate(calc(-100% + 0.6em), -50%); }
+/* ---------- Expedition team selection ---------- */
+.select-panel .sel-section { cursor: default; margin-bottom: 10px; }
+.select-panel .sel-section.drop-ok { outline: 2px dashed #facc15; outline-offset: 2px; }
+.select-panel .token-chip { cursor: pointer; }
+.sel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sel-actions .btn-go { margin-left: auto; }

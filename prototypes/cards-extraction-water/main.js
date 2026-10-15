@@ -43,7 +43,11 @@ const enemySlots = () => state.modifiers.enemySlots;
 const slotsFor = side => (side === 'player' ? teamSlots() : enemySlots());
 const campMax = () => state.modifiers.campMax; // characters not in the team, at all times
 
-const campCount = () => state.roster.length - state.team.length;
+// On an expedition only its members (the team plus backup) are around; at the oasis, everyone.
+const pool = () => (state.party ? state.roster.filter(r => state.party.includes(r.uid)) : state.roster);
+// Characters not in the team: the backup on an expedition, the camp at the oasis.
+const bench = () => pool().filter(r => !state.team.includes(r.uid));
+const campCount = () => bench().length;
 
 const $ = id => document.getElementById(id);
 const audio = new SimpleAudio();
@@ -176,7 +180,7 @@ document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click
 // Camp overflow: choose exactly `count` camp characters to discard.
 function pickDiscards(count, onConfirm, onCancel) {
   const chosen = [];
-  const camp = state.roster.filter(r => !state.team.includes(r.uid));
+  const camp = bench();
   const confirm = $('discard-confirm');
   const draw = () => {
     $('discard-text').textContent =
@@ -372,16 +376,18 @@ function showPrep() {
 
 function renderPrep() {
   updateHud();
-  const oasis = state.mode === 'oasis';
+  const select = state.mode === 'select';
+  const oasis = state.mode === 'oasis' || select;
   if (oasis) { stopIdleCycle(); state.previewKey = null; }
   // Trigger and class legends only matter when looking at a fight.
   document.querySelector('.hud').classList.toggle('hud-oasis', oasis);
-  $('oasis-panel').classList.toggle('hidden', !oasis);
+  $('oasis-panel').classList.toggle('hidden', !oasis || select);
+  $('select-panel').classList.toggle('hidden', !select);
   $('encounter-bar').classList.toggle('hidden', oasis);
   // At the oasis there's no team to arrange: that happens when a battle starts.
   document.querySelector('.prep-top').classList.toggle('hidden', oasis);
   $('camp-panel').classList.toggle('hidden', oasis);
-  if (oasis) renderOasis(); else renderEncounter();
+  if (select) renderSelect(); else if (oasis) renderOasis(); else renderEncounter();
   renderSynergies();
 
   const lineup = { player: [], enemy: [] };
@@ -422,7 +428,7 @@ function renderPrep() {
     ctrls.className = 'card-ctrls';
     ctrls.append(
       ctrlBtn('◀', 'Move back', i < state.team.length - 1, () => swap(i, i + 1)),
-      ctrlBtn('✕', campCount() >= campMax() ? 'Camp is full' : 'Back to camp', campCount() < campMax(),
+      ctrlBtn('✕', campCount() >= campMax() ? 'Backup is full' : 'To backup', campCount() < campMax(),
         () => { state.team.splice(i, 1); teamChanged(); renderPrep(); }),
       ctrlBtn('▶', 'Move forward', i > 0, () => swap(i, i - 1)),
     );
@@ -440,7 +446,7 @@ function renderPrep() {
   // Camp: everyone not in the team
   const campRow = $('roster');
   campRow.innerHTML = '';
-  for (const c of state.roster.filter(r => !state.team.includes(r.uid))) {
+  for (const c of bench()) {
     const d = CHARACTERS[c.id];
     const el = cardEl(c.id, d.atk, d.hp, { cls: 'clickable' });
     el.addEventListener('click', () => {
@@ -453,7 +459,7 @@ function renderPrep() {
     makeDraggable(el, 'camp', c.uid);
     campRow.appendChild(el);
   }
-  if (!campRow.children.length) campRow.innerHTML = '<span class="hint">The camp is empty.</span>';
+  if (!campRow.children.length) campRow.innerHTML = '<span class="hint">No backup: everyone on the expedition is in the team.</span>';
   $('camp-count').textContent = `${campCount()}/${campMax()}`;
 
   const n = state.team.length;
@@ -462,7 +468,7 @@ function renderPrep() {
   $('fight-hint').textContent = !ok
     ? `Pick at least ${MIN_TEAM} character${MIN_TEAM > 1 ? 's' : ''}`
     : oasis ? `${n} in the team` : `${n} character${n > 1 ? 's' : ''} fight`;
-  if (oasis) updateSetOut();
+  if (oasis && !select) updateSetOut();
 
   fitRows();
   if (!showAbilityPreview(lineup, state.previewKey, prepUi())) state.previewKey = null;
@@ -1120,7 +1126,10 @@ function showLeaveBehind(participants, lost) {
     }
     state.roster = state.roster.filter(r => !gone.has(r.uid));
     state.team = state.team.filter(uid => !gone.has(uid));
+    state.party = state.party.filter(uid => !gone.has(uid));
     $('result-overlay').classList.add('hidden');
+    // The backup steps up; nobody left means the expedition is lost.
+    if (!state.team.length) state.team = bench().slice(0, teamSlots()).map(r => r.uid);
     if (!state.team.length) return endExpedition('alone');
     if (atFloor()) return endExpedition('dry');
     resumeTrek();
@@ -1183,7 +1192,7 @@ function showRecruit(defeated, intro) {
     if (needDiscard) {
       const own = $('result-discard');
       own.innerHTML = '';
-      for (const c of state.roster) {
+      for (const c of pool()) {
         const d = CHARACTERS[c.id];
         const el = cardEl(c.id, d.atk, d.hp, { cls: 'discard-option' + (discards.includes(c.uid) ? ' discarding' : '') });
         if (state.team.includes(c.uid)) {
@@ -1210,17 +1219,19 @@ function showRecruit(defeated, intro) {
     const freed = [];
     for (const uid of discards) {
       state.roster = state.roster.filter(r => r.uid !== uid);
+      state.party = state.party.filter(u => u !== uid);
       const slot = state.team.indexOf(uid);
       if (slot >= 0) { state.team[slot] = null; freed.push(slot); }
     }
     const teamSize = () => state.team.filter(u => u !== null).length;
     for (const i of picks) {
       const recruit = makeCharacter(defeated[i].id);
-      const inCamp = state.roster.length - teamSize();
+      const inCamp = state.party.length - teamSize();
       if (inCamp < campMax()) { /* goes to camp */ }
       else if (freed.length) state.team[freed.shift()] = recruit.uid;
       else state.team.push(recruit.uid);
       state.roster.push(recruit);
+      state.party.push(recruit.uid);
     }
     state.team = state.team.filter(u => u !== null);
     changeWater(-picks.length * price, 'cost', `🤝 Recruited ${picks.map(i => CHARACTERS[defeated[i].id].emoji).join('')}`);
@@ -1367,6 +1378,7 @@ const gameOver = () => !canSetOut() || (!state.roster.length && state.bank < SHO
 function showOasis() {
   stopTicking();
   state.mode = 'oasis';
+  state.party = null;
   state.exp = null;
   state.enemy = [];
   state.previewKey = null;
@@ -1493,7 +1505,6 @@ function renderTravelers() {
             state.bank -= SHOP_PRICE;
             const c = makeCharacter(id);
             state.roster.push(c);
-            if (campCount() > campMax()) state.team.push(c.uid);
             state.offers[i] = null;
             audio.score();
             teamChanged();
@@ -1626,11 +1637,102 @@ function renderRates() {
   $('mod-battle-rate').textContent = `${e ? 'Carrying' : 'Starting with'} ${fmt(water)}💧: a battle about every ${Math.round(battleEveryMs(water) / 1000)}s (30s at 25💧 or less, down to 10s at 100💧 or more).`;
 }
 
+// Set Out: with more characters than team slots you first pick who goes; otherwise everyone does.
 function setOut() {
   if (gameOver()) { newRun(); return; }
   if (!state.roster.length) return;
-  // Nobody picked to fight yet: the first few walk in front.
-  if (!state.team.length) state.team = state.roster.slice(0, Math.min(3, teamSlots())).map(c => c.uid);
+  audio.init();
+  state.team = state.team.filter(uid => state.roster.some(r => r.uid === uid));
+  if (state.roster.length <= teamSlots()) {
+    state.team = state.roster.map(c => c.uid);
+    launch();
+    return;
+  }
+  state.mode = 'select';
+  showPrep();
+}
+
+// ---------- Choosing the expedition team ----------
+// Two bars like the oasis camp, both open: tap a token (or drag it) to move it across.
+
+const selDrag = { uid: null };
+
+function moveToTeam(uid, toTeam) {
+  const inTeam = state.team.includes(uid);
+  if (toTeam === inTeam) return;
+  if (toTeam && state.team.length >= teamSlots()) return;
+  if (toTeam) state.team.push(uid); else state.team = state.team.filter(u => u !== uid);
+  audio.beep(toTeam ? 620 : 420);
+  renderSelect();
+}
+
+function renderSelect() {
+  const team = state.roster.filter(r => state.team.includes(r.uid));
+  const camp = state.roster.filter(r => !state.team.includes(r.uid));
+  $('sel-team-count').textContent = `(${team.length}/${teamSlots()})`;
+  $('sel-camp-count').textContent = `(${camp.length})`;
+  fillGroups($('sel-team'), team, true, 'Tap characters in camp to add them.');
+  fillGroups($('sel-camp'), camp, false, 'Everyone is going.');
+  const btn = $('btn-sel-go');
+  btn.disabled = !team.length;
+  btn.textContent = '🐪 Set Out';
+  $('sel-hint').textContent = team.length >= teamSlots() ? 'The team is full: tap a member to send them back to camp.' : '';
+}
+
+// Tokens grouped by class, like the oasis camp (no water use shown).
+function fillGroups(box, members, inTeam, empty) {
+  box.innerHTML = '';
+  if (!members.length) { box.innerHTML = `<span class="hint">${empty}</span>`; return; }
+  for (const [key, cls] of Object.entries(CLASSES)) {
+    const list = members.filter(c => CHARACTERS[c.id].cls === key);
+    if (!list.length) continue;
+    const group = document.createElement('div');
+    group.className = `camp-group group-${key}`;
+    group.innerHTML = `<div class="group-title"><span>${cls.emoji} ${cls.name}s (${list.length})</span></div>`;
+    const row = document.createElement('div');
+    row.className = 'group-row';
+    for (const c of list) {
+      const d = CHARACTERS[c.id];
+      const t = document.createElement('div');
+      t.className = `token-chip cls-${d.cls}`;
+      t.textContent = d.emoji;
+      t.draggable = true;
+      // Hover shows its card, like tapping a token in the oasis camp.
+      // (The card ignores the mouse so it never covers the tokens under it.)
+      t.addEventListener('mouseenter', () => { showCardPop(t, c.id); $('card-pop').style.pointerEvents = 'none'; });
+      t.addEventListener('mouseleave', () => { hideCardPop(); $('card-pop').style.pointerEvents = ''; });
+      t.addEventListener('click', () => { hideCardPop(); $('card-pop').style.pointerEvents = ''; moveToTeam(c.uid, !inTeam); });
+      t.addEventListener('dragstart', e => {
+        hideCardPop();
+        selDrag.uid = c.uid;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(c.uid));
+      });
+      t.addEventListener('dragend', () => { selDrag.uid = null; });
+      row.appendChild(t);
+    }
+    group.appendChild(row);
+    box.appendChild(group);
+  }
+}
+
+for (const [id, toTeam] of [['sel-team-section', true], ['sel-camp-section', false]]) {
+  const el = $(id);
+  el.addEventListener('dragover', e => { if (selDrag.uid !== null) { e.preventDefault(); el.classList.add('drop-ok'); } });
+  el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) el.classList.remove('drop-ok'); });
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('drop-ok');
+    if (selDrag.uid !== null) moveToTeam(selDrag.uid, toTeam);
+    selDrag.uid = null;
+  });
+}
+$('btn-sel-back').addEventListener('click', () => { state.mode = 'oasis'; showPrep(); });
+$('btn-sel-go').addEventListener('click', () => { if (state.team.length) launch(); });
+
+// The team is locked in from here: only they (and whoever you recruit) are on the expedition.
+function launch() {
+  state.party = [...state.team];
   audio.init();
   const stake = state.stake;
   state.bank -= stake;
@@ -1864,6 +1966,7 @@ function treasure() {
     if (id) {
       const c = makeCharacter(id);
       state.roster.push(c);
+      state.party.push(c.uid);
       if (campCount() > campMax()) state.team.push(c.uid);
       trekLog(`🎁 ${CHARACTERS[id].emoji} ${CHARACTERS[id].name} joins the caravan`, 'up');
     }
