@@ -230,9 +230,10 @@ body {
   display: flex; align-items: center; justify-content: center; gap: 14px;
   background: #1e293b; border: 1px solid #334155; border-radius: 10px;
   padding: 26px 12px; min-height: 230px;
+  overflow: visible;
 }
-.side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
-.side .row { width: 100%; }
+.side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; overflow: visible; }
+.side .row { width: 100%; overflow: visible; }
 .side-player { align-items: flex-end; }
 .side-label { font-size: 12px; font-weight: 700; color: #64748b; letter-spacing: 0.1em; }
 .side .row { flex-wrap: nowrap; min-height: 150px; }
@@ -252,8 +253,102 @@ body {
 /* One line per row: all rows share one card scale (set by fitRows) */
 .row-team, .row-enemy, #battle-player, #battle-enemy { flex-wrap: nowrap; }
 .row-team > .card, .row-enemy > .card, #battle-player > .card, #battle-enemy > .card { zoom: var(--card-zoom, 1); flex-shrink: 0; }
-.compact-cards :is(.row-team, .row-enemy, #battle-player, #battle-enemy) .card-text { display: none; }
-.arena .card-text { font-size: 9.5px; }
+
+/* ── Combat Cards: No Name, Ability on Hover/Click, Emoji Class Token ── */
+#battle-screen .card-name,
+.arena .card-name {
+  display: none !important;
+}
+
+#battle-screen .card-text,
+.arena .card-text {
+  display: none;
+}
+
+#battle-screen .card:hover .card-text,
+.arena .card:hover .card-text,
+#battle-screen .card.pop-open .card-text,
+.arena .card.pop-open .card-text {
+  display: block !important;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  border: 1px solid #818cf8;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #f8fafc;
+  line-height: 1.35;
+  width: 155px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85), 0 0 16px rgba(99, 102, 241, 0.45);
+  z-index: 1000;
+  pointer-events: none;
+  text-align: center;
+  white-space: normal;
+  animation: pop-tooltip 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#battle-screen .card:hover .card-text::after,
+.arena .card:hover .card-text::after,
+#battle-screen .card.pop-open .card-text::after,
+.arena .card.pop-open .card-text::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #818cf8;
+}
+
+@keyframes pop-tooltip {
+  from { opacity: 0; transform: translate(-50%, 6px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+#battle-screen .class-badge,
+.arena .class-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 5px;
+  border-radius: 9999px;
+  cursor: help;
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 11px;
+  z-index: 10;
+  transition: all 0.18s ease;
+}
+
+#battle-screen .class-badge .class-badge-emoji,
+.arena .class-badge .class-badge-emoji {
+  font-size: 11px;
+  line-height: 1;
+}
+
+#battle-screen .class-badge .class-badge-label,
+.arena .class-badge .class-badge-label {
+  display: none;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+#battle-screen .class-badge:hover,
+.arena .class-badge:hover {
+  padding: 2px 7px;
+  box-shadow: 0 0 10px currentColor;
+}
+
+#battle-screen .class-badge:hover .class-badge-label,
+.arena .class-badge:hover .class-badge-label {
+  display: inline;
+}
 
 .log {
   margin-top: 12px; height: 180px; overflow-y: auto;

@@ -486,10 +486,10 @@ function renderHome() {
   const max = maxExpeditionLoadout();
   const currentCount = state.selectedStashUids ? state.selectedStashUids.size : 0;
 
-  $('loadout-count').textContent = currentCount;
-  $('loadout-max').textContent = max;
+  if ($('loadout-count')) $('loadout-count').textContent = currentCount;
+  if ($('loadout-max')) $('loadout-max').textContent = max;
   if ($('loadout-formula')) $('loadout-formula').textContent = `(Team slots: ${teamSlots()} + Camp size: ${campMax()})`;
-  $('stash-count').textContent = state.stash.length;
+  if ($('stash-count')) $('stash-count').textContent = state.stash.length;
 
   const btnGo = $('btn-go-expedition');
   btnGo.disabled = currentCount < MIN_TEAM;
@@ -517,7 +517,7 @@ function renderHome() {
   // 1. Render Selected Cards Window (Higher on screen, no header text)
   if (selectedContainer) {
     if (selectedCards.length === 0) {
-      selectedContainer.innerHTML = '<span class="hint selected-empty-hint">Selected expedition squad will appear here. Click cards from your stash below to choose them.</span>';
+      selectedContainer.innerHTML = '';
     } else {
       for (const c of selectedCards) {
         const d = CHARACTERS[c.id];
@@ -531,7 +531,7 @@ function renderHome() {
         });
         const tag = document.createElement('div');
         tag.className = 'stash-loadout-tag';
-        tag.textContent = '✓ SELECTED (CLICK TO REMOVE)';
+        tag.textContent = '✓ SELECTED (REMOVE)';
         el.appendChild(tag);
 
         el.addEventListener('click', () => {
@@ -544,12 +544,12 @@ function renderHome() {
     }
   }
 
-  // 2. Render Stash Cards (Lower on screen)
+  // 2. Render Stash Cards (The Oasis)
   if (stashContainer) {
     if (state.stash.length === 0) {
-      stashContainer.innerHTML = '<div class="hint" style="padding:20px;font-size:15px;">Your stash is empty! Click "Restock +20" above to generate cards, or use "Expedition with Starter Pack".</div>';
+      stashContainer.innerHTML = '<div class="hint" style="padding:20px;font-size:14px;color:#94a3b8;">The Oasis is empty. Embark using "Expedition with Starter Pack" above to explore and acquire new cards!</div>';
     } else if (unselectedCards.length === 0) {
-      stashContainer.innerHTML = '<div class="hint" style="padding:20px;font-size:14px;color:#94a3b8;">All stash cards are currently in your selected loadout window above.</div>';
+      stashContainer.innerHTML = '<div class="hint" style="padding:20px;font-size:14px;color:#94a3b8;">All cards from The Oasis are in your selected loadout window above.</div>';
     } else {
       for (const c of unselectedCards) {
         const d = CHARACTERS[c.id];
@@ -888,8 +888,11 @@ function cardEl(id, atk, hp, opts = {}) {
     ? `<div class="hard-buff-badge">+${opts.atkBonus || 0}⚔/+${opts.hpBonus || 0}❤</div>`
     : '';
 
+  const classEmoji = clsDef ? (clsDef.emoji || '⭐') : '';
+  const classLabel = clsDef ? clsDef.label : '';
+
   el.innerHTML = `
-    ${clsDef ? `<div class="class-badge" style="background:${clsDef.color}22;color:${clsDef.color};border:1px solid ${clsDef.color}55">${clsDef.label}</div>` : ''}
+    ${clsDef ? `<div class="class-badge" data-class="${cls}" title="${classLabel}" style="background:${clsDef.color}22;color:${clsDef.color};border:1px solid ${clsDef.color}55"><span class="class-badge-emoji">${classEmoji}</span><span class="class-badge-label">${classLabel}</span></div>` : ''}
     ${buffBadge}
     <div class="card-emoji">${def.emoji}</div>
     <div class="card-name">${def.name}</div>
@@ -1465,8 +1468,14 @@ const view = {
       units.forEach((u, i) => {
         let el = cardMap.get(u.uid);
         if (!el) {
-          el = cardEl(u.id, u.atk, u.hp, { cls: 'selectable', atkBonus: u.atkBonus || 0, hpBonus: u.hpBonus || 0 });
-          el.addEventListener('click', () => toggleBattlePreview(`b${u.uid}`));
+          el = cardEl(u.id, u.atk, u.hp, { cls: 'selectable combat-card', atkBonus: u.atkBonus || 0, hpBonus: u.hpBonus || 0 });
+          el.addEventListener('click', (e) => {
+            const isPop = el.classList.contains('pop-open');
+            document.querySelectorAll('.arena .card.pop-open').forEach(c => c.classList.remove('pop-open'));
+            if (!isPop) el.classList.add('pop-open');
+            toggleBattlePreview(`b${u.uid}`);
+            e.stopPropagation();
+          });
           cardMap.set(u.uid, el);
         }
         el.querySelector('.atk-val').textContent = u.atk;
@@ -1935,9 +1944,9 @@ function showTotalDefeat(participants) {
   state.extractCountdown = null;
   updateHud();
 
-  title.textContent = 'Combat Lost · Squad Destroyed 💀';
+  title.textContent = 'Combat Lost 💀';
   title.className = 'lose';
-  text.textContent = `Combat lost! You lost every card in your squad (all ${lostRoster.length} carried card${lostRoster.length === 1 ? '' : 's'} were destroyed). You have been returned to base camp.`;
+  text.textContent = '';
 
   for (const p of lostRoster) {
     const d = CHARACTERS[p.id];
@@ -1961,8 +1970,8 @@ function showTotalDefeat(participants) {
     showHome();
   };
 
-  const debrief = finalizeRunXp(false);
-  renderDebrief(debrief, 'defeat');
+  finalizeRunXp(false);
+  $('result-xp-debrief')?.classList.add('hidden');
 }
 
 // Preview player's current squad (team slots and camp) during card recruit selection
@@ -2655,7 +2664,7 @@ function startStarterPackExpedition() {
 $('btn-go-expedition').addEventListener('click', startExpedition);
 $('btn-starter-expedition')?.addEventListener('click', startStarterPackExpedition);
 
-$('btn-auto-loadout').addEventListener('click', () => {
+$('btn-auto-loadout')?.addEventListener('click', () => {
   if (!state.selectedStashUids) state.selectedStashUids = new Set();
   state.selectedStashUids.clear();
   const max = maxExpeditionLoadout();
@@ -2666,18 +2675,24 @@ $('btn-auto-loadout').addEventListener('click', () => {
   renderHome();
 });
 
-$('btn-clear-loadout').addEventListener('click', () => {
+$('btn-clear-loadout')?.addEventListener('click', () => {
   if (state.selectedStashUids) state.selectedStashUids.clear();
   audio.beep(400);
   renderHome();
 });
 
-$('btn-restock-stash').addEventListener('click', () => {
+$('btn-restock-stash')?.addEventListener('click', () => {
   const fresh = generateRandomStash(20);
   state.stash.push(...fresh);
   saveStash();
   audio.beep(650);
   renderHome();
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.arena .card')) {
+    document.querySelectorAll('.arena .card.pop-open').forEach(c => c.classList.remove('pop-open'));
+  }
 });
 
 $('btn-evac-base').addEventListener('click', () => {

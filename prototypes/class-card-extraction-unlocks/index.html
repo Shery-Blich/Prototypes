@@ -9,9 +9,7 @@
 </head>
 <body>
   <div id="app">
-    <header class="hud">
-      <div class="hud-stat hud-level-stat" id="hud-level-wrap" title="Meta-Progression Level & Cumulative XP">🎖️ Level <b id="hud-level">0</b> <span class="hud-xp-sub">(<span id="hud-xp-curr">0</span>/<span id="hud-xp-target">191</span> XP)</span></div>
-    </header>
+    <header class="hud"></header>
 
     <!-- HOME SCREEN (BASE & STASH) -->
     <section id="home-screen" class="screen">
@@ -22,15 +20,8 @@
           </div>
           <div class="home-actions">
             <button id="btn-starter-expedition" class="btn btn-starter" title="Start expedition with free 4 starter cards without using your stash!">🎁 Expedition with Starter Pack</button>
-            <button id="btn-auto-loadout" class="btn">Auto-pick</button>
-            <button id="btn-clear-loadout" class="btn">Clear</button>
-            <button id="btn-restock-stash" class="btn btn-small" title="Generate 20 fresh random cards">Restock +20</button>
             <button id="btn-go-expedition" class="btn btn-primary">⚔️ Go Expedition</button>
           </div>
-        </div>
-        <div class="loadout-summary">
-          <span class="loadout-pill">Expedition Loadout: <b id="loadout-count">0</b> / <b id="loadout-max">15</b> cards</span>
-          <span class="loadout-pill stash-pill">In Stash: <b id="stash-count">20</b> cards</span>
         </div>
       </div>
 
@@ -41,16 +32,6 @@
 
       <!-- HOME LEVELS PROGRESS BAR WITH MYSTERY CARD SILHOUETTE -->
       <div class="panel home-progression-card">
-        <div class="home-progress-header">
-          <div class="home-progress-title">
-            <span class="badge badge-lvl" id="home-lvl-badge">Level 0</span>
-            <span class="home-progress-target">Next Unlock: <b id="home-next-level-label">Level 1 (Swiftbeak 🦅)</b></span>
-          </div>
-          <div class="home-xp-info">
-            <span id="home-xp-progress-text">0 / 191 XP (191 XP needed)</span>
-          </div>
-        </div>
-
         <div class="home-progress-bar-row">
           <div class="xp-progress-track">
             <div id="home-xp-fill" class="xp-progress-fill" style="width: 0%;"></div>
@@ -59,13 +40,13 @@
             <div class="silhouette-card-inner">
               <span class="silhouette-qm">?</span>
             </div>
-            <span class="silhouette-badge" id="silhouette-badge">Lvl 1</span>
+            <span class="silhouette-badge" id="silhouette-badge">?</span>
           </div>
         </div>
       </div>
 
       <div class="panel">
-        <h2>Card Stash <span class="hint">(click cards to toggle selection for your expedition loadout)</span></h2>
+        <h2>The Oasis</h2>
         <div id="stash-cards" class="row row-stash"></div>
       </div>
     </section>

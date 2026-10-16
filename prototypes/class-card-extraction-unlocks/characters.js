@@ -14,12 +14,13 @@ export const TRIGGERS = {
 
 // ─── CLASS META (for the visual badge / background) ──────────────────────────
 export const CLASSES = {
-  rotator: { label: 'Rotator', color: '#0ea5e9' },   // sky-blue
-  dps:     { label: 'DPS',     color: '#ef4444' },   // red
-  warlock: { label: 'Warlock', color: '#a855f7' },   // purple
-  support: { label: 'Support', color: '#f59e0b' },   // amber
-  tank:    { label: 'Tank',    color: '#6b7280' },   // slate-grey
-  cage:    { label: 'Cage',    color: '#eab308' },   // gold / locked cage
+  rotator:  { label: 'Rotator',  emoji: '🦅', color: '#0ea5e9' },   // sky-blue
+  dps:      { label: 'DPS',      emoji: '🐯', color: '#ef4444' },   // red
+  warlock:  { label: 'Warlock',  emoji: '🦎', color: '#a855f7' },   // purple
+  support:  { label: 'Support',  emoji: '🦙', color: '#f59e0b' },   // amber
+  tank:     { label: 'Tank',     emoji: '🐪', color: '#6b7280' },   // slate-grey
+  cage:     { label: 'Cage',     emoji: '⛓️', color: '#eab308' },   // gold / locked cage
+  summoner: { label: 'Summoner', emoji: '🐛', color: '#22c55e' },
 };
 
 // ─── ABILITY PRESETS & LOGIC BUILDER ─────────────────────────────────────────
