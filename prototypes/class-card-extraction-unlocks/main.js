@@ -847,7 +847,7 @@ function renderClassLegend() {
   if (!el) return;
   el.innerHTML = Object.entries(CLASSES)
     .map(([key, c]) =>
-      `<span class="class-legend-item" style="background:${c.color}22;color:${c.color};border:1px solid ${c.color}44">${c.label}</span>`)
+      `<span class="class-legend-item" style="background:${c.color}22;color:${c.color};border:1px solid ${c.color}44">${c.emoji ? c.emoji + ' ' : ''}${c.label}</span>`)
     .join('');
 }
 
@@ -1509,6 +1509,11 @@ const view = {
     el.classList.remove(cls);
     void el.offsetWidth; // restart animation
     el.classList.add(cls);
+    if (cls === 'ability') {
+      el.classList.add('pop-open');
+      const duration = Math.max(700, 1500 / (state.speed || 1));
+      setTimeout(() => el.classList.remove('pop-open'), duration);
+    }
     if (cls !== 'dying') setTimeout(() => el.classList.remove(cls), 600);
   },
   log(msg) {
@@ -1532,6 +1537,10 @@ const view = {
     items = items.filter(it => cardMap.get(it.unit.uid) && !isOverSlot(cardMap.get(it.unit.uid)));
     if (!source || !items.length) return;
 
+    if (source instanceof Element) {
+      source.classList.add('pop-open');
+    }
+
     const arrows = items.map(it => {
       const el = cardMap.get(it.unit.uid);
       if (it.fx) {
@@ -1548,7 +1557,10 @@ const view = {
     const drawn = drawArrows(source, arrows, src.def.trigger, ui);
     await snakeArrows(drawn, 250, 700);
     ui.svg.innerHTML = '';
-    if (source instanceof Element) source.classList.remove('preview-source');
+    if (source instanceof Element) {
+      source.classList.remove('preview-source');
+      source.classList.remove('pop-open');
+    }
   },
   // Also holds the battle here while it's paused for a preview.
   async wait(ms) {
@@ -2123,7 +2135,7 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
     list.push(v);
   };
 
-  title.textContent = `Victory · ${diff.name} Rewards 🎁`;
+  title.textContent = 'Victory!';
   title.className = 'win';
 
   const draw = () => {
@@ -2489,27 +2501,8 @@ function renderDifficultyOptions() {
 
   const currentSelected = state.nextDifficulty || state.difficulty || 'easy';
 
-  const diffDetails = {
-    easy: {
-      spec: '1–2 Enemy Cards',
-      reward: 'Pick 1 Card Reward on win',
-      sub: 'Standard stats · Mostly 1 enemy slot',
-    },
-    medium: {
-      spec: '2–3 Enemy Cards',
-      reward: 'Pick up to 2 Card Rewards on win',
-      sub: 'Standard stats · Greater challenge & rewards',
-    },
-    hard: {
-      spec: '3 Buffed Cards (+1 to +2 ⚔/❤)',
-      reward: 'Pick up to 3 Card Rewards on win',
-      sub: 'Enemy stats boosted · Maximum rewards',
-    },
-  };
-
   for (const [key, d] of Object.entries(DIFFICULTIES)) {
     const isSelected = (key === currentSelected);
-    const details = diffDetails[key];
     const btn = document.createElement('div');
     btn.className = `diff-card-btn ${key}` + (isSelected ? ' selected' : '');
     btn.innerHTML = `
@@ -2517,9 +2510,6 @@ function renderDifficultyOptions() {
         <span class="diff-card-badge diff-badge badge-${key}">${d.emoji} ${d.name}</span>
         ${isSelected ? '<span class="diff-selected-check">✔ SELECTED</span>' : ''}
       </div>
-      <div class="diff-card-spec">${details.spec}</div>
-      <div class="diff-card-reward">🎁 ${details.reward}</div>
-      <div class="diff-card-sub">${details.sub}</div>
     `;
 
     btn.addEventListener('click', () => {

@@ -30,21 +30,34 @@ body {
 /* Player rows: index 0 (front) is shown on the right, facing the enemy */
 .row-team, #battle-player { flex-direction: row-reverse; justify-content: flex-start; }
 
-.prep-top { display: flex; gap: 14px; align-items: stretch; }
-.prep-top .panel { flex: 1; min-width: 0; }
-.prep-top .row { flex-wrap: nowrap; }
-.prep-top .card { width: 104px; }
-/* Fixed height so every card in the scaled rows is the same size whatever its ability text */
-.prep-top .card, .arena .card { height: 176px; min-height: 0; }
-.prep-top .card-text, .arena .card-text { flex: 1; min-height: 0; overflow: hidden; }
-.prep-top .card-text { font-size: 9.5px; }
-.prep-top .card.empty { width: 104px; }
-/* Team and opponent always share one line; panel widths follow their slot counts (set in renderPrep) */
-.prep-top .panel-team { flex: var(--slots, 5) 1 0; }
-.prep-top .panel-enemy { flex: var(--slots, 5) 1 0; }
-
-.prep-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
-.prep-actions-right { justify-content: flex-end; }
+.prep-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+.prep-control-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.prep-control-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.prep-difficulty-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.prep-arena {
+  margin-bottom: 14px;
+}
+/* Arena panel flex widths follow slot counts */
+.side-player.panel-team { flex: var(--slots, 5) 1 0; }
+.side-enemy.panel-enemy { flex: var(--slots, 5) 1 0; }
 #btn-preview-battle.active { border-color: #a855f7; color: #e9d5ff; }
 
 .btn {
@@ -57,31 +70,58 @@ body {
 .btn-primary:hover:not(:disabled) { background: #6366f1; }
 .btn.active { background: #4f46e5; border-color: #818cf8; }
 
-/* ---------- Cards ---------- */
+/* ---------- Cards (Universal Simplified Design) ---------- */
 .card {
   position: relative;
-  width: 128px; min-height: 150px;
+  width: 104px; min-height: 110px;
   background: linear-gradient(180deg, #334155, #1e293b);
   border: 2px solid #475569; border-radius: 10px;
-  padding: 8px 8px 30px;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 6px 30px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px;
   user-select: none;
+  box-sizing: border-box;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 /* ── Class background panels ─────────────────────────────────────────────── */
-/* Each class has a translucent tinted background and a coloured bottom-border accent. */
-
 .card::before {
   content: '';
   position: absolute; inset: 0; border-radius: 9px;
   pointer-events: none; opacity: 0.13;
 }
-/* Class badge in the top-right corner */
+
+/* Universal Class Badge - small round emoji token, label reveals on hover */
 .class-badge {
-  position: absolute; top: 4px; right: 6px;
-  font-size: 8px; font-weight: 800; letter-spacing: 0.06em;
-  padding: 2px 5px; border-radius: 4px; text-transform: uppercase;
-  line-height: 1.2;
+  position: absolute; top: 4px; right: 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+  border-radius: 9999px;
+  padding: 0;
+  cursor: help;
+  z-index: 10;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.class-badge .class-badge-emoji {
+  font-size: 11px;
+  line-height: 1;
+}
+.class-badge .class-badge-label {
+  display: none;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-left: 3px;
+}
+.class-badge:hover {
+  width: auto;
+  padding: 2px 7px;
+  box-shadow: 0 0 10px currentColor;
+}
+.class-badge:hover .class-badge-label {
+  display: inline;
 }
 
 /* Rotator – sky-blue */
@@ -89,7 +129,7 @@ body {
 .card.class-rotator::before { background: #0ea5e9; }
 .card.class-rotator .class-badge { background: #0c4a6e; color: #7dd3fc; }
 
-/* DPS – red */
+/* Warrior (DPS) – red with sword */
 .card.class-dps { border-color: #ef4444; }
 .card.class-dps::before { background: #ef4444; }
 .card.class-dps .class-badge { background: #450a0a; color: #fca5a5; }
@@ -109,10 +149,10 @@ body {
 .card.class-support::before { background: #f59e0b; }
 .card.class-support .class-badge { background: #451a03; color: #fcd34d; }
 
-/* Tank – slate-grey */
-.card.class-tank { border-color: #94a3b8; }
-.card.class-tank::before { background: #94a3b8; }
-.card.class-tank .class-badge { background: #1e293b; color: #cbd5e1; }
+/* Healer (Tank) – emerald */
+.card.class-tank { border-color: #10b981; }
+.card.class-tank::before { background: #10b981; }
+.card.class-tank .class-badge { background: #064e3b; color: #6ee7b7; }
 
 /* Cage – special gold / iron locked prison */
 .card.class-cage {
@@ -126,25 +166,90 @@ body {
 /* Token bug inherits summoner colour but dashed border */
 .card.token { border-style: dashed; }
 
-/* ─────────────────────────────────────────────────────────────────────────── */
-
-.card-emoji { font-size: 34px; line-height: 1.1; }
-.card-name { font-weight: 700; font-size: 13px; }
-.card-text { font-size: 10.5px; color: #cbd5e1; text-align: center; line-height: 1.25; }
-.card-stats {
-  position: absolute; left: 6px; right: 6px; bottom: 6px;
-  display: flex; justify-content: space-between; align-items: center; font-size: 13px;
+/* ── Big Emoji ───────────────────────────────────────────────────────────── */
+.card-emoji {
+  font-size: 46px;
+  line-height: 1;
+  margin: 3px 0 2px 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  transition: transform 0.15s ease;
 }
-.stat { padding: 1px 6px; border-radius: 6px; }
-.stat.atk { background: #78350f; color: #fde68a; }
-.stat.hp { background: #7f1d1d; color: #fecaca; }
+.card:hover .card-emoji {
+  transform: scale(1.08);
+}
+
+/* ── Card Name Hidden Everywhere ────────────────────────────────────────── */
+.card-name {
+  display: none !important;
+}
+
+/* ── Card Ability Text: Hidden by default, pops up on hover or ability play ─ */
+.card-text {
+  display: none;
+}
+.card:hover .card-text,
+.card.pop-open .card-text {
+  display: block !important;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  border: 1px solid #818cf8;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #f8fafc;
+  line-height: 1.35;
+  width: 155px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85), 0 0 16px rgba(99, 102, 241, 0.45);
+  z-index: 1000;
+  pointer-events: none;
+  text-align: center;
+  white-space: normal;
+  animation: pop-tooltip 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card:hover .card-text::after,
+.card.pop-open .card-text::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #818cf8;
+}
+
+/* ── Bigger Attack and Health/Damage Stats ───────────────────────────────── */
+.card-stats {
+  position: absolute; left: 5px; right: 5px; bottom: 5px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.stat {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  line-height: 1;
+}
+.stat b, .stat .atk-val, .stat .hp-val {
+  font-size: 16px;
+  font-weight: 900;
+}
+.stat.atk { background: #78350f; color: #fde68a; border: 1px solid rgba(251, 191, 36, 0.3); }
+.stat.hp { background: #7f1d1d; color: #fecaca; border: 1px solid rgba(248, 113, 113, 0.3); }
 .shield-icon { visibility: hidden; font-size: 14px; }
 .card.shielded .shield-icon { visibility: visible; }
 .card.shielded { box-shadow: 0 0 0 2px #38bdf8, 0 0 14px rgba(56, 189, 248, 0.6); }
 
 .card.empty {
+  width: 104px; min-height: 110px;
   border-style: dashed; background: transparent; color: #475569;
-  justify-content: center; font-size: 13px; padding: 8px;
+  justify-content: center; font-size: 13px; font-weight: 600; padding: 8px;
 }
 .card.clickable { cursor: pointer; transition: transform 0.12s, border-color 0.12s; }
 .card.clickable:hover { transform: translateY(-3px); }
@@ -244,7 +349,7 @@ body {
 .side-enemy .card.class-warlock { border-color: #a855f7; }
 .side-enemy .card.class-summoner{ border-color: #22c55e; }
 .side-enemy .card.class-support { border-color: #f59e0b; }
-.side-enemy .card.class-tank    { border-color: #94a3b8; }
+.side-enemy .card.class-tank    { border-color: #10b981; }
 .side-enemy .card.class-cage    { border-color: #eab308; }
 .side-enemy .card.front { border-color: #f59e0b; }
 .vs { font-weight: 900; color: #475569; font-size: 20px; }
@@ -253,102 +358,6 @@ body {
 /* One line per row: all rows share one card scale (set by fitRows) */
 .row-team, .row-enemy, #battle-player, #battle-enemy { flex-wrap: nowrap; }
 .row-team > .card, .row-enemy > .card, #battle-player > .card, #battle-enemy > .card { zoom: var(--card-zoom, 1); flex-shrink: 0; }
-
-/* ── Combat Cards: No Name, Ability on Hover/Click, Emoji Class Token ── */
-#battle-screen .card-name,
-.arena .card-name {
-  display: none !important;
-}
-
-#battle-screen .card-text,
-.arena .card-text {
-  display: none;
-}
-
-#battle-screen .card:hover .card-text,
-.arena .card:hover .card-text,
-#battle-screen .card.pop-open .card-text,
-.arena .card.pop-open .card-text {
-  display: block !important;
-  position: absolute;
-  bottom: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: #0f172a;
-  border: 1px solid #818cf8;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 11.5px;
-  font-weight: 500;
-  color: #f8fafc;
-  line-height: 1.35;
-  width: 155px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85), 0 0 16px rgba(99, 102, 241, 0.45);
-  z-index: 1000;
-  pointer-events: none;
-  text-align: center;
-  white-space: normal;
-  animation: pop-tooltip 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-#battle-screen .card:hover .card-text::after,
-.arena .card:hover .card-text::after,
-#battle-screen .card.pop-open .card-text::after,
-.arena .card.pop-open .card-text::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: #818cf8;
-}
-
-@keyframes pop-tooltip {
-  from { opacity: 0; transform: translate(-50%, 6px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
-}
-
-#battle-screen .class-badge,
-.arena .class-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 5px;
-  border-radius: 9999px;
-  cursor: help;
-  position: absolute;
-  top: 4px;
-  right: 6px;
-  font-size: 11px;
-  z-index: 10;
-  transition: all 0.18s ease;
-}
-
-#battle-screen .class-badge .class-badge-emoji,
-.arena .class-badge .class-badge-emoji {
-  font-size: 11px;
-  line-height: 1;
-}
-
-#battle-screen .class-badge .class-badge-label,
-.arena .class-badge .class-badge-label {
-  display: none;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-}
-
-#battle-screen .class-badge:hover,
-.arena .class-badge:hover {
-  padding: 2px 7px;
-  box-shadow: 0 0 10px currentColor;
-}
-
-#battle-screen .class-badge:hover .class-badge-label,
-.arena .class-badge:hover .class-badge-label {
-  display: inline;
-}
 
 .log {
   margin-top: 12px; height: 180px; overflow-y: auto;

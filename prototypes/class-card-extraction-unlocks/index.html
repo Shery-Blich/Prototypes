@@ -54,35 +54,38 @@
     <!-- PREP SCREEN -->
     <section id="prep-screen" class="screen hidden">
       <svg id="preview-arrows" class="preview-arrows"></svg>
-      <div class="prep-top">
-        <div class="panel panel-team">
-          <h2>Your team</h2>
-          <div id="team-slots" class="row row-team"></div>
-          <div class="prep-actions">
-            <button id="btn-fight" class="btn btn-primary">⚔ Fight</button>
-            <span id="fight-hint" class="hint"></span>
-          </div>
+      <div class="prep-header-bar">
+        <div class="prep-control-left">
+          <button id="btn-fight" class="btn btn-primary">⚔ Fight</button>
+          <span id="fight-hint" class="hint"></span>
         </div>
-
-        <div class="panel panel-enemy">
-          <h2>Next opponent <span id="prep-difficulty-badge" class="diff-badge badge-easy">🟢 Easy</span></h2>
-          <div id="enemy-preview" class="row row-enemy"></div>
-          <div class="prep-actions prep-actions-right">
-            <div id="prep-difficulty-picker" class="prep-difficulty-picker">
-              <span class="hint" style="font-size:11px;">Difficulty:</span>
-              <button type="button" class="btn btn-tiny diff-pill" data-diff="easy">🟢 Easy</button>
-              <button type="button" class="btn btn-tiny diff-pill" data-diff="medium">🟡 Medium</button>
-              <button type="button" class="btn btn-tiny diff-pill" data-diff="hard">🔴 Hard</button>
-            </div>
-            <button id="btn-preview-battle" class="btn">▶ Preview battle</button>
+        <div class="prep-control-right">
+          <div id="prep-difficulty-picker" class="prep-difficulty-picker">
+            <span class="hint" style="font-size:11px;">Difficulty:</span>
+            <button type="button" class="btn btn-tiny diff-pill" data-diff="easy">🟢 Easy</button>
+            <button type="button" class="btn btn-tiny diff-pill" data-diff="medium">🟡 Medium</button>
+            <button type="button" class="btn btn-tiny diff-pill" data-diff="hard">🔴 Hard</button>
           </div>
+          <button id="btn-preview-battle" class="btn">▶ Preview battle</button>
+        </div>
+      </div>
+
+      <div class="arena prep-arena">
+        <div class="side side-player panel-team">
+          <div class="side-label">YOU</div>
+          <div id="team-slots" class="row row-team"></div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="side side-enemy panel-enemy">
+          <div class="side-label">ENEMY <span id="prep-difficulty-badge" class="diff-badge badge-easy">🟢 Easy</span></div>
+          <div id="enemy-preview" class="row row-enemy"></div>
         </div>
       </div>
 
       <div id="preview-info" class="preview-info hidden"></div>
 
       <div id="camp-panel" class="panel">
-        <h2>Your Camp <b id="camp-count"></b></h2>
+        <h2>Your Camp<b id="camp-count" style="display:none;"></b></h2>
         <div id="roster" class="row row-roster"></div>
       </div>
     </section>
@@ -169,7 +172,6 @@
         <div id="result-difficulty-wrap" class="result-difficulty-wrap hidden">
           <div class="difficulty-header">
             <span class="diff-title">🎯 Next Battle Difficulty (Battle <b id="next-battle-num">2</b>)</span>
-            <span class="hint">Choose your challenge for the next encounter:</span>
           </div>
           <div id="difficulty-options" class="difficulty-options-row"></div>
         </div>
