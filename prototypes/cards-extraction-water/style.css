@@ -340,6 +340,10 @@ body {
 .btn-cash:hover:not(:disabled) { background: #eab308; }
 .btn-cash-big { font-size: 20px; padding: 14px 26px; border-radius: 12px; box-shadow: 0 0 22px rgba(250, 204, 21, 0.35); position: relative; }
 .btn-cash-big b { font-weight: 900; }
+.btn-cash-big.profit { background: #16a34a; border-color: #4ade80; color: #f0fdf4; box-shadow: 0 0 22px rgba(74, 222, 128, 0.35); }
+.btn-cash-big.profit:hover:not(:disabled) { background: #22c55e; }
+.btn-cash-big.loss { background: #b91c1c; border-color: #f87171; color: #fef2f2; box-shadow: 0 0 22px rgba(248, 113, 113, 0.35); }
+.btn-cash-big.loss:hover:not(:disabled) { background: #dc2626; }
 .key-hint { position: absolute; bottom: -18px; right: 6px; font-size: 10px; color: #94a3b8; font-weight: 400; }
 .trek-top { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 12px; }
 .trek-stats { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -622,3 +626,19 @@ b.down { color: #f87171; }
 .camp-groups.collapsed .camp-group { gap: 0; }
 
 .group-synergy { font-size: 12px; color: #cbd5e1; margin-top: -2px; }
+
+.desert-text { font-style: italic; }
+.desert-hint { font-size: 13px; opacity: 0.7; }
+.cash-home { display: block; font-size: 11px; font-weight: 600; opacity: 0.75; }
+
+.graph .ghost { fill: none; stroke: #facc15; stroke-width: 2; stroke-dasharray: 4 6; opacity: 0.45; vector-effect: non-scaling-stroke; }
+.gl-dot.start { background: #94a3b8; }
+.gl-start { position: absolute; transform: translate(10px, -140%); font-weight: 800; font-size: 14px; color: #cbd5e1; text-shadow: 0 2px 6px #000; white-space: nowrap; }
+.gl-star { position: absolute; transform: translate(-0.6em, -50%); font-weight: 900; font-size: 16px; color: #facc15; text-shadow: 0 2px 6px #000; white-space: nowrap; }
+.gl-star.left { transform: translate(calc(-100% + 0.6em), -50%); }
+/* ---------- Expedition team selection ---------- */
+.select-panel .sel-section { cursor: default; margin-bottom: 10px; }
+.select-panel .sel-section.drop-ok { outline: 2px dashed #facc15; outline-offset: 2px; }
+.select-panel .token-chip { cursor: pointer; }
+.sel-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sel-actions .btn-go { margin-left: auto; }

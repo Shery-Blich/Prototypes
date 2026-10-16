@@ -1,5 +1,5 @@
 {
   "title": "Class Card Extraction (Cage Rescue)",
-  "description": "Fork with simultaneous clash where defeat wipes all carried cards. Defeated enemies cannot be recruited; instead, breaking enemy Cage cards (0 ATK / 2 HP) yields random rescued cards to add to your squad upon winning combat.",
+  "description": "Push deeper with your squad, breaking enemy cages to rescue new cards. Losing wipes everything you carry. Goal: extract the biggest squad to your stash.",
   "created": "2026-10-14T10:00:00+03:00"
 }

@@ -1,4 +1,4 @@
-import { CHARACTERS, TRIGGERS, CLASSES, makeCharacter, randomCharacterId } from './characters.js';
+import { CHARACTERS, TRIGGERS, CLASSES, makeCharacter, randomCharacterId, RECRUITABLE, POWER } from './characters.js';
 import { Battle } from './battle.js';
 import { SimpleAudio } from '/src/shared/utils.js';
 
@@ -19,8 +19,12 @@ const DRINK_PCT = 0.005;       // each team member drinks this per step (camp do
 const WIN_COST_PCT = 0.03;     // after a win, per fighter that fell
 const LOSS_MIN_PCT = 0.05;     // a lost battle takes this share of your water at the start of a run...
 const LOSS_MAX_PCT = 0.5;      // ...up to this near its end (when the wells dry up)
-const SCARE_STEPS = 3;         // a scare (lost water bucket) lasts this many steps, then it's found
+const SCARE_STEPS = 3;         // a scare (lost water bucket) lasts this many steps, then it's found...
+const SCARE_REAL_CHANCE = 0.1; // ...except this often, when it's gone for good (a real water loss)
+const DOOM_CHANCE = 0.05;      // chance an expedition is doomed: morale breaks at a random step before the peak
 const LOSS_DRY_CHANCE = 0.25;  // chance a lost battle or fleeing robbers breaks morale (same ending as reaching 5x)
+const PITY_START_PCT = 0.4;    // cashing out right away costs this share of the stake (a disappointed caravan)...
+const PITY_SECONDS = 45;       // ...fading to nothing after this much walking (at 1x pace)
 const RECRUIT_PCT = 0.10;      // recruiting a defeated enemy on the path
 const SHOP_PRICE = 12;         // recruits for hire at the oasis (flat, from the bank)
 const SHOP_MIN = 2;            // passing travelers each time you're back at camp
@@ -28,6 +32,9 @@ const SHOP_MAX = 3;
 const CAMP_DRINK_PER_DAY = 1;  // flavour text only: there are no days
 const BATTLE_FASTEST_MS = 10000; // battles come faster the more water you carry: every 30s at
 const BATTLE_SLOWEST_MS = 30000; // 25💧 or less, down to every 10s at 100💧 or more (at 1x pace)
+const EXPECT_MIN = 1.5;        // what the caravan expects to bring home, rolled per expedition between
+const EXPECT_MAX = 2.5;        // ...these multiples; coming home in profit but under it is a timid run
+const TIMID_RUNS = 2;          // the first timid run is a warning; from this many in a row, characters walk out
 const FLEE_KEEP = 0.25;        // fleeing robbers keeps this share of your water (ignores the floor)
 
 // Team slots per side and camp size are gameplay modifiers (see MODIFIER_DEFAULTS).
@@ -36,7 +43,11 @@ const enemySlots = () => state.modifiers.enemySlots;
 const slotsFor = side => (side === 'player' ? teamSlots() : enemySlots());
 const campMax = () => state.modifiers.campMax; // characters not in the team, at all times
 
-const campCount = () => state.roster.length - state.team.length;
+// On an expedition only its members (the team plus backup) are around; at the oasis, everyone.
+const pool = () => (state.party ? state.roster.filter(r => state.party.includes(r.uid)) : state.roster);
+// Characters not in the team: the backup on an expedition, the camp at the oasis.
+const bench = () => pool().filter(r => !state.team.includes(r.uid));
+const campCount = () => bench().length;
 
 const $ = id => document.getElementById(id);
 const audio = new SimpleAudio();
@@ -53,6 +64,7 @@ const state = {
   team: [],          // roster uids, index 0 = front
   battleNum: 1,
   wins: 0,
+  timidRuns: 0,      // timid cash-outs in a row (see EXPECT_MIN)
   losses: 0,
   enemy: [],         // [{id, atkBonus, hpBonus}]
   speed: 1,
@@ -80,7 +92,7 @@ const MODIFIER_DEFAULTS = {
 // Stepper modifiers: range and description
 const STEPPERS = {
   playerSlots: { min: 1, max: 10, desc: n => `Up to ${n} character${n === 1 ? '' : 's'} in your team. Lowering it sends the back of your team to camp.` },
-  enemySlots: { min: 1, max: 10, desc: n => `Enemy teams start at ${Math.min(3, n)} and grow to ${n} character${n === 1 ? '' : 's'}.` },
+  enemySlots: { min: 1, max: 10, desc: n => `Enemy teams start at 1 and grow by one per battle, up to ${n} character${n === 1 ? '' : 's'}.` },
   lossLeaveBehind: { min: 0, max: 5, desc: n => (n === 0 ? 'A lost battle only costs water.' : `A lost battle costs water and ${n} of the fighters (you choose who).`) },
   campMax: { min: 0, max: 20, desc: n => (n === 0 ? 'No camp: everyone you own is in your team.' : `Up to ${n} character${n === 1 ? '' : 's'} wait in camp. Lowering it below what's there asks you to discard.`) },
 };
@@ -168,7 +180,7 @@ document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click
 // Camp overflow: choose exactly `count` camp characters to discard.
 function pickDiscards(count, onConfirm, onCancel) {
   const chosen = [];
-  const camp = state.roster.filter(r => !state.team.includes(r.uid));
+  const camp = bench();
   const confirm = $('discard-confirm');
   const draw = () => {
     $('discard-text').textContent =
@@ -226,14 +238,25 @@ function rollFirstSide() {
 
 // ---------- Run setup ----------
 
+// A fresh game starts with two copies of the same Helper (their synergy is on from the first
+// battle) and one other character.
+function starterIds() {
+  const helpers = RECRUITABLE.filter(id => CHARACTERS[id].cls === 'helper');
+  const others = RECRUITABLE.filter(id => CHARACTERS[id].cls !== 'helper');
+  const helper = helpers[Math.floor(Math.random() * helpers.length)];
+  return [helper, helper, others[Math.floor(Math.random() * others.length)]];
+}
+
 function newRun() {
   // Start with up to 6 characters that fit the team slots + camp; 3 in the team (more if the camp can't hold the rest).
   const start = Math.min(STARTING_ROSTER, teamSlots() + campMax());
-  state.roster = Array.from({ length: start }, () => makeCharacter(randomCharacterId()));
+  state.roster = starterIds().slice(0, start).map(makeCharacter);
   const teamSize = Math.max(Math.min(3, teamSlots()), start - campMax());
   state.team = state.roster.slice(0, teamSize).map(c => c.uid);
   state.battleNum = 1;
   state.wins = 0;
+  state.timidRuns = 0;
+  state.seen = new Set(state.roster.map(c => c.id)); // character types met so far (see encounterEnemy)
   state.losses = 0;
   state.bank = START_BANK;
   state.expNum = 1;
@@ -353,16 +376,18 @@ function showPrep() {
 
 function renderPrep() {
   updateHud();
-  const oasis = state.mode === 'oasis';
+  const select = state.mode === 'select';
+  const oasis = state.mode === 'oasis' || select;
   if (oasis) { stopIdleCycle(); state.previewKey = null; }
   // Trigger and class legends only matter when looking at a fight.
   document.querySelector('.hud').classList.toggle('hud-oasis', oasis);
-  $('oasis-panel').classList.toggle('hidden', !oasis);
+  $('oasis-panel').classList.toggle('hidden', !oasis || select);
+  $('select-panel').classList.toggle('hidden', !select);
   $('encounter-bar').classList.toggle('hidden', oasis);
   // At the oasis there's no team to arrange: that happens when a battle starts.
   document.querySelector('.prep-top').classList.toggle('hidden', oasis);
   $('camp-panel').classList.toggle('hidden', oasis);
-  if (oasis) renderOasis(); else renderEncounter();
+  if (select) renderSelect(); else if (oasis) renderOasis(); else renderEncounter();
   renderSynergies();
 
   const lineup = { player: [], enemy: [] };
@@ -403,7 +428,7 @@ function renderPrep() {
     ctrls.className = 'card-ctrls';
     ctrls.append(
       ctrlBtn('◀', 'Move back', i < state.team.length - 1, () => swap(i, i + 1)),
-      ctrlBtn('✕', campCount() >= campMax() ? 'Camp is full' : 'Back to camp', campCount() < campMax(),
+      ctrlBtn('✕', campCount() >= campMax() ? 'Backup is full' : 'To backup', campCount() < campMax(),
         () => { state.team.splice(i, 1); teamChanged(); renderPrep(); }),
       ctrlBtn('▶', 'Move forward', i > 0, () => swap(i, i - 1)),
     );
@@ -421,7 +446,7 @@ function renderPrep() {
   // Camp: everyone not in the team
   const campRow = $('roster');
   campRow.innerHTML = '';
-  for (const c of state.roster.filter(r => !state.team.includes(r.uid))) {
+  for (const c of bench()) {
     const d = CHARACTERS[c.id];
     const el = cardEl(c.id, d.atk, d.hp, { cls: 'clickable' });
     el.addEventListener('click', () => {
@@ -434,7 +459,7 @@ function renderPrep() {
     makeDraggable(el, 'camp', c.uid);
     campRow.appendChild(el);
   }
-  if (!campRow.children.length) campRow.innerHTML = '<span class="hint">The camp is empty.</span>';
+  if (!campRow.children.length) campRow.innerHTML = '<span class="hint">No backup: everyone on the expedition is in the team.</span>';
   $('camp-count').textContent = `${campCount()}/${campMax()}`;
 
   const n = state.team.length;
@@ -443,7 +468,7 @@ function renderPrep() {
   $('fight-hint').textContent = !ok
     ? `Pick at least ${MIN_TEAM} character${MIN_TEAM > 1 ? 's' : ''}`
     : oasis ? `${n} in the team` : `${n} character${n > 1 ? 's' : ''} fight`;
-  if (oasis) updateSetOut();
+  if (oasis && !select) updateSetOut();
 
   fitRows();
   if (!showAbilityPreview(lineup, state.previewKey, prepUi())) state.previewKey = null;
@@ -1101,9 +1126,11 @@ function showLeaveBehind(participants, lost) {
     }
     state.roster = state.roster.filter(r => !gone.has(r.uid));
     state.team = state.team.filter(uid => !gone.has(uid));
+    state.party = state.party.filter(uid => !gone.has(uid));
     $('result-overlay').classList.add('hidden');
-    if (!state.roster.length) return endExpedition('alone');
-    if (!state.team.length) state.team = state.roster.slice(0, Math.min(3, teamSlots())).map(r => r.uid);
+    // The backup steps up; nobody left means the expedition is lost.
+    if (!state.team.length) state.team = bench().slice(0, teamSlots()).map(r => r.uid);
+    if (!state.team.length) return endExpedition('alone');
     if (atFloor()) return endExpedition('dry');
     resumeTrek();
     if (!state.exp.crashed && Math.random() < LOSS_DRY_CHANCE) startDecline('defeat');
@@ -1165,7 +1192,7 @@ function showRecruit(defeated, intro) {
     if (needDiscard) {
       const own = $('result-discard');
       own.innerHTML = '';
-      for (const c of state.roster) {
+      for (const c of pool()) {
         const d = CHARACTERS[c.id];
         const el = cardEl(c.id, d.atk, d.hp, { cls: 'discard-option' + (discards.includes(c.uid) ? ' discarding' : '') });
         if (state.team.includes(c.uid)) {
@@ -1192,17 +1219,19 @@ function showRecruit(defeated, intro) {
     const freed = [];
     for (const uid of discards) {
       state.roster = state.roster.filter(r => r.uid !== uid);
+      state.party = state.party.filter(u => u !== uid);
       const slot = state.team.indexOf(uid);
       if (slot >= 0) { state.team[slot] = null; freed.push(slot); }
     }
     const teamSize = () => state.team.filter(u => u !== null).length;
     for (const i of picks) {
       const recruit = makeCharacter(defeated[i].id);
-      const inCamp = state.roster.length - teamSize();
+      const inCamp = state.party.length - teamSize();
       if (inCamp < campMax()) { /* goes to camp */ }
       else if (freed.length) state.team[freed.shift()] = recruit.uid;
       else state.team.push(recruit.uid);
       state.roster.push(recruit);
+      state.party.push(recruit.uid);
     }
     state.team = state.team.filter(u => u !== null);
     changeWater(-picks.length * price, 'cost', `🤝 Recruited ${picks.map(i => CHARACTERS[defeated[i].id].emoji).join('')}`);
@@ -1349,6 +1378,7 @@ const gameOver = () => !canSetOut() || (!state.roster.length && state.bank < SHO
 function showOasis() {
   stopTicking();
   state.mode = 'oasis';
+  state.party = null;
   state.exp = null;
   state.enemy = [];
   state.previewKey = null;
@@ -1475,7 +1505,6 @@ function renderTravelers() {
             state.bank -= SHOP_PRICE;
             const c = makeCharacter(id);
             state.roster.push(c);
-            if (campCount() > campMax()) state.team.push(c.uid);
             state.offers[i] = null;
             audio.score();
             teamChanged();
@@ -1608,11 +1637,102 @@ function renderRates() {
   $('mod-battle-rate').textContent = `${e ? 'Carrying' : 'Starting with'} ${fmt(water)}💧: a battle about every ${Math.round(battleEveryMs(water) / 1000)}s (30s at 25💧 or less, down to 10s at 100💧 or more).`;
 }
 
+// Set Out: with more characters than team slots you first pick who goes; otherwise everyone does.
 function setOut() {
   if (gameOver()) { newRun(); return; }
   if (!state.roster.length) return;
-  // Nobody picked to fight yet: the first few walk in front.
-  if (!state.team.length) state.team = state.roster.slice(0, Math.min(3, teamSlots())).map(c => c.uid);
+  audio.init();
+  state.team = state.team.filter(uid => state.roster.some(r => r.uid === uid));
+  if (state.roster.length <= teamSlots()) {
+    state.team = state.roster.map(c => c.uid);
+    launch();
+    return;
+  }
+  state.mode = 'select';
+  showPrep();
+}
+
+// ---------- Choosing the expedition team ----------
+// Two bars like the oasis camp, both open: tap a token (or drag it) to move it across.
+
+const selDrag = { uid: null };
+
+function moveToTeam(uid, toTeam) {
+  const inTeam = state.team.includes(uid);
+  if (toTeam === inTeam) return;
+  if (toTeam && state.team.length >= teamSlots()) return;
+  if (toTeam) state.team.push(uid); else state.team = state.team.filter(u => u !== uid);
+  audio.beep(toTeam ? 620 : 420);
+  renderSelect();
+}
+
+function renderSelect() {
+  const team = state.roster.filter(r => state.team.includes(r.uid));
+  const camp = state.roster.filter(r => !state.team.includes(r.uid));
+  $('sel-team-count').textContent = `(${team.length}/${teamSlots()})`;
+  $('sel-camp-count').textContent = `(${camp.length})`;
+  fillGroups($('sel-team'), team, true, 'Tap characters in camp to add them.');
+  fillGroups($('sel-camp'), camp, false, 'Everyone is going.');
+  const btn = $('btn-sel-go');
+  btn.disabled = !team.length;
+  btn.textContent = '🐪 Set Out';
+  $('sel-hint').textContent = team.length >= teamSlots() ? 'The team is full: tap a member to send them back to camp.' : '';
+}
+
+// Tokens grouped by class, like the oasis camp (no water use shown).
+function fillGroups(box, members, inTeam, empty) {
+  box.innerHTML = '';
+  if (!members.length) { box.innerHTML = `<span class="hint">${empty}</span>`; return; }
+  for (const [key, cls] of Object.entries(CLASSES)) {
+    const list = members.filter(c => CHARACTERS[c.id].cls === key);
+    if (!list.length) continue;
+    const group = document.createElement('div');
+    group.className = `camp-group group-${key}`;
+    group.innerHTML = `<div class="group-title"><span>${cls.emoji} ${cls.name}s (${list.length})</span></div>`;
+    const row = document.createElement('div');
+    row.className = 'group-row';
+    for (const c of list) {
+      const d = CHARACTERS[c.id];
+      const t = document.createElement('div');
+      t.className = `token-chip cls-${d.cls}`;
+      t.textContent = d.emoji;
+      t.draggable = true;
+      // Hover shows its card, like tapping a token in the oasis camp.
+      // (The card ignores the mouse so it never covers the tokens under it.)
+      t.addEventListener('mouseenter', () => { showCardPop(t, c.id); $('card-pop').style.pointerEvents = 'none'; });
+      t.addEventListener('mouseleave', () => { hideCardPop(); $('card-pop').style.pointerEvents = ''; });
+      t.addEventListener('click', () => { hideCardPop(); $('card-pop').style.pointerEvents = ''; moveToTeam(c.uid, !inTeam); });
+      t.addEventListener('dragstart', e => {
+        hideCardPop();
+        selDrag.uid = c.uid;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(c.uid));
+      });
+      t.addEventListener('dragend', () => { selDrag.uid = null; });
+      row.appendChild(t);
+    }
+    group.appendChild(row);
+    box.appendChild(group);
+  }
+}
+
+for (const [id, toTeam] of [['sel-team-section', true], ['sel-camp-section', false]]) {
+  const el = $(id);
+  el.addEventListener('dragover', e => { if (selDrag.uid !== null) { e.preventDefault(); el.classList.add('drop-ok'); } });
+  el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) el.classList.remove('drop-ok'); });
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('drop-ok');
+    if (selDrag.uid !== null) moveToTeam(selDrag.uid, toTeam);
+    selDrag.uid = null;
+  });
+}
+$('btn-sel-back').addEventListener('click', () => { state.mode = 'oasis'; showPrep(); });
+$('btn-sel-go').addEventListener('click', () => { if (state.team.length) launch(); });
+
+// The team is locked in from here: only they (and whoever you recruit) are on the expedition.
+function launch() {
+  state.party = [...state.team];
   audio.init();
   const stake = state.stake;
   state.bank -= stake;
@@ -1621,8 +1741,10 @@ function setOut() {
     step: 0, crashStep: null, crashed: false, // the wells only dry up after reaching 5x (see tick)
     capClock: 0,
     scaresAt: scheduleScares(), scare: null,
+    doomAt: Math.random() < DOOM_CHANCE ? 8 + Math.floor(Math.random() * 50) : null, // hidden
     battleClock: 0, battleJitter: battleJitter(), boostClock: 0, boostEvery: boostEveryMs(stake),
     fights: 0, difficulty: 1,
+    expect: EXPECT_MIN + Math.random() * (EXPECT_MAX - EXPECT_MIN), // hidden from the player
     history: [{ x: 0, water: stake, kind: 'step' }],
     tiles: ['🏝️'],
   };
@@ -1702,25 +1824,40 @@ const EVENTS = [
   { key: 'eventLoss', run: waterLoss },
 ];
 
-// Battles before the wells dry up are meant to be winnable: the enemy starts one smaller than
-// your team and catches up over the first minute, with no extra stats. After the crash they're
-// bigger than you and get stronger every step.
+// Enemy waves. Each expedition opens with a single enemy and adds one per battle
+// up to the enemy slots; past that, every battle raises their power instead (see POWER): the
+// enemies are picked near a target strength that starts at your team's average and climbs, so
+// the gang turns into Golems, Paladins and finally Brutes. Past the strongest character, the extra power becomes +1 stats. After the crash the
+// target climbs further, every step. Types you haven't met yet are picked first when they fit.
+const ENC_POWER_PER_BATTLE = 1.5; // target power per enemy, added per battle once the enemy team is full
+const ENC_CRASH_POWER = 3;        // added once morale breaks, plus ENC_CRASH_POWER_STEP per step after
+const ENC_CRASH_POWER_STEP = 0.5;
+const ENC_TOP_POWER = Math.max(...RECRUITABLE.map(id => POWER[id]));
+
 function encounterSize() {
-  const e = state.exp;
-  const n = Math.max(1, state.team.length);
-  const seconds = e.step * STEP_MS / 1000;
-  const size = e.crashed ? n + 1 : n - 1 + Math.floor(seconds / 40);
-  return Math.max(1, Math.min(enemySlots(), size, e.crashed ? 99 : n));
+  return Math.min(enemySlots(), 1 + state.exp.fights);
 }
 
 function encounterEnemy(size) {
   const e = state.exp;
-  const team = Array.from({ length: size }, () => ({ id: randomCharacterId(), atkBonus: 0, hpBonus: 0 }));
-  let bonus = e.crashed ? 4 + Math.floor((e.step - e.crashStep) / 2) : 0;
-  while (bonus-- > 0) {
-    const u = team[Math.floor(Math.random() * team.length)];
-    if (Math.random() < 0.5) u.atkBonus++; else u.hpBonus++;
+  const members = state.team.map(uid => state.roster.find(r => r.uid === uid));
+  const avg = members.length ? members.reduce((t, c) => t + POWER[c.id], 0) / members.length : 7;
+  const past = Math.max(0, 1 + e.fights - enemySlots());
+  const target = avg + past * ENC_POWER_PER_BATTLE
+    + (e.crashed ? ENC_CRASH_POWER + ENC_CRASH_POWER_STEP * (e.step - e.crashStep) : 0);
+  // Characters within 2 below the target (or the closest ones), the strongest once it's past them all.
+  const near = RECRUITABLE.filter(id => POWER[id] <= target + 1 && POWER[id] >= Math.min(target, ENC_TOP_POWER) - 2);
+  const pool = near.length ? near : RECRUITABLE;
+  // Power the characters themselves can't reach goes into their stats.
+  const extra = Math.max(0, Math.round(target - ENC_TOP_POWER));
+  const team = [];
+  for (let i = 0; i < size; i++) {
+    const unseen = pool.filter(id => !state.seen.has(id) && !team.some(u => u.id === id));
+    const from = unseen.length ? unseen : pool;
+    const atkBonus = Math.floor(extra / 2);
+    team.push({ id: from[Math.floor(Math.random() * from.length)], atkBonus, hpBonus: extra - atkBonus });
   }
+  for (const u of team) state.seen.add(u.id);
   return team;
 }
 
@@ -1829,6 +1966,7 @@ function treasure() {
     if (id) {
       const c = makeCharacter(id);
       state.roster.push(c);
+      state.party.push(c.uid);
       if (campCount() > campMax()) state.team.push(c.uid);
       trekLog(`🎁 ${CHARACTERS[id].emoji} ${CHARACTERS[id].name} joins the caravan`, 'up');
     }
@@ -1852,7 +1990,7 @@ function stopTicking() {
 }
 
 // Any popup on screen freezes the walk: water, the graph and the event clocks.
-const POPUPS = ['robbers-overlay', 'treasure-overlay', 'result-overlay', 'end-overlay', 'discard-overlay'];
+const POPUPS = ['robbers-overlay', 'treasure-overlay', 'result-overlay', 'end-overlay', 'discard-overlay', 'desert-overlay'];
 const popupOpen = () => POPUPS.some(id => !$(id).classList.contains('hidden'));
 
 function startTicking() {
@@ -1887,6 +2025,7 @@ function startDecline(why = 'tired') {
     defeat: '😞 After the defeat, morale is breaking…',
     fled: '😞 Running from robbers broke their spirit…',
     tired: '😩 The caravan is exhausted, morale is dropping…',
+    doom: '🤒 A fever spreads through the caravan, morale is collapsing…',
   }[why], 'down');
   audio.playTone(110, 'sawtooth', 0.4, 0.15);
   renderTrek();
@@ -1896,9 +2035,9 @@ function startDecline(why = 'tired') {
 // few steps later (with whatever you'd have found meanwhile). Panic-cashing out during one keeps
 // only the low amount. Steps are spread between 8 and 60 and at least 10 apart.
 const SCARES = [
-  ['🪣 Someone lost the water bucket!', '😅 Found it behind a dune!'],
-  ['🐫 A camel ran off with the waterskins!', '😅 Caught it, the water is safe!'],
-  ['🕳️ The barrels fell into a crevice!', '😅 Pulled them back up!'],
+  ['🪣 Someone lost the water bucket!', '😅 Found it behind a dune!', '💔 The bucket is gone for good'],
+  ['🐫 A camel ran off with the waterskins!', '😅 Caught it, the water is safe!', '💔 The camel got away with the water'],
+  ['🕳️ The barrels fell into a crevice!', '😅 Pulled them back up!', '💔 The barrels are lost in the crevice'],
 ];
 
 function scheduleScares() {
@@ -1912,9 +2051,9 @@ function scheduleScares() {
 }
 
 function startScare(e) {
-  const [lost, found] = SCARES[Math.floor(Math.random() * SCARES.length)];
+  const [lost, found, gone] = SCARES[Math.floor(Math.random() * SCARES.length)];
   e.scaresAt.shift();
-  e.scare = { saved: e.water, left: SCARE_STEPS, found };
+  e.scare = { saved: e.water, left: SCARE_STEPS, found, gone };
   e.tiles[e.tiles.length - 1] = '😱';
   changeWater(e.stake * (0.6 + 0.25 * Math.random()) - e.water, 'scare', lost);
   audio.playTone(180, 'square', 0.25, 0.15);
@@ -1958,6 +2097,13 @@ function tick() {
     if (--e.scare.left > 0) {
       changeWater(e.stake * 0.02 * (Math.random() - 0.5), 'step');
       audio.playTone(140, 'sine', 0.12, 0.1);
+    } else if (Math.random() < SCARE_REAL_CHANCE) {
+      // Not this time: the water is gone for good.
+      e.tiles[e.tiles.length - 1] = '💔';
+      changeWater(0, 'loss', e.scare.gone);
+      toast(e.scare.gone, 'down');
+      audio.playTone(150, 'sawtooth', 0.18, 0.12);
+      e.scare = null;
     } else {
       changeWater(e.scare.saved - e.water, 'step', e.scare.found);
       toast(e.scare.found);
@@ -1974,6 +2120,11 @@ function tick() {
 
   renderTrek();
   if (atFloor()) { stopTicking(); setTimeout(() => endExpedition('dry'), 500); return; }
+  // A doomed expedition breaks at its step, peak or not; nothing hints at it beforehand.
+  if (!e.crashed && e.doomAt !== null && e.step >= e.doomAt) {
+    startDecline('doom');
+    return;
+  }
   // Only scare from above where you started, and never once morale is breaking.
   if (!e.crashed && e.scaresAt.length && e.step >= e.scaresAt[0] && e.water > e.stake) {
     startScare(e);
@@ -2003,6 +2154,11 @@ function renderTrek() {
   if (!e) return;
   updateHud();
   $('t-water').textContent = fmt(e.water);
+  const home = Math.max(e.floor, e.water - pityCost(e));
+  $('cash-home').textContent = `come back with ${fmt(home)}💧`;
+  // Green past the profit target, yellow for a small (timid) profit, red if you'd come back short.
+  $('btn-cashout').classList.toggle('profit', home >= e.stake * e.expect);
+  $('btn-cashout').classList.toggle('loss', home < e.stake);
   renderRates();
   $('t-water').className = e.water >= e.stake ? 'up' : 'down';
 
@@ -2021,8 +2177,9 @@ function drawGraph(svg, labels, e, final) {
   const W = 900, H = 300, PAD = 8;
   const pts = e.history;
   const lastX = pts[pts.length - 1].x;
-  const xMax = final ? lastX + 1 : Math.max(20, lastX + 4);
-  const yMax = Math.max(e.peak, e.stake * 1.6) * 1.1;
+  const best = final ? e.bestPossible : null;
+  const xMax = final ? Math.max(lastX, best.x) + 1 : Math.max(20, lastX + 4);
+  const yMax = Math.max(e.peak, e.stake * 1.6, best ? best.water : 0) * 1.1;
   const X = x => PAD + (x / xMax) * (W - PAD * 2);
   const Y = w => H - PAD - (w / yMax) * (H - PAD * 2);
   const pct = (v, max) => `${(v / max) * 100}%`;
@@ -2040,6 +2197,10 @@ function drawGraph(svg, labels, e, final) {
   for (let m = 0.5; m * e.stake < yMax; m += 0.5) {
     if (m === 1) grid += `<line class="grid grid-stake" x1="0" x2="${W}" y1="${Y(m * e.stake)}" y2="${Y(m * e.stake)}" />`;
   }
+  // Where a plain walk would have gone if you'd stayed: a faint dashed line up to the star.
+  const ghost = final && e.ghost?.length > 1
+    ? `<path class="ghost" d="${e.ghost.filter(p => p.x <= best.x).map((p, i) => `${i ? 'L' : 'M'}${X(p.x).toFixed(1)},${Y(p.water).toFixed(1)}`).join(' ')}" />`
+    : '';
   const last = pts[pts.length - 1];
   svg.innerHTML = `
     <defs><linearGradient id="${svg.id}-fill" x1="0" x2="0" y1="0" y2="1">
@@ -2048,12 +2209,22 @@ function drawGraph(svg, labels, e, final) {
     </linearGradient></defs>
     ${grid}
     <path d="${area}" fill="url(#${svg.id}-fill)" />
+    ${ghost}
     ${segs}`;
 
   let html = `<span class="gl-dot ${up ? 'up' : 'down'}" style="left:${pct(X(last.x), W)};top:${pct(Y(last.water), H)}"></span>`;
   for (const p of pts) {
-    const icon = { fight: '⚔️', spike: '💥', treasure: '🎁', crash: '📉', loss: '💔' }[p.kind];
+    const icon = { fight: '⚔️', spike: '💥', treasure: '🎁', crash: '📉', loss: '💔', pity: '😒', fled: '🏃' }[p.kind];
     if (icon) html += `<span class="gl-fight" style="left:${pct(X(p.x), W)};top:${pct(Y(p.water), H)}">${icon}</span>`;
+  }
+  if (final) {
+    const at = (x, w) => `left:${pct(X(x), W)};top:${pct(Y(w), H)}`;
+    html += `<span class="gl-dot start" style="${at(0, e.stake)}"></span>`
+      + `<span class="gl-start" style="${at(0, e.stake)}">Set out ${fmt(e.stake)}💧</span>`
+      + `<span class="gl-now ${up ? 'up' : 'down'}" style="${at(last.x, last.water)}">Home ${fmt(e.water)}💧</span>`
+      + (X(best.x) > W / 2
+        ? `<span class="gl-star left" style="${at(best.x, best.water)}">${fmt(best.water)}💧 ⭐</span>`
+        : `<span class="gl-star" style="${at(best.x, best.water)}">⭐ ${fmt(best.water)}💧</span>`);
   }
   labels.innerHTML = html;
 }
@@ -2088,27 +2259,38 @@ function endExpedition(reason) {
   stopTicking();
   state.mode = 'ended';
   e.bestPossible = bestPossible(e);
+  // You always bring something home (never less than the floor), unless your whole team is gone.
+  e.water = reason === 'alone' ? 0 : Math.max(e.water, e.floor);
+  // The graph ends where you came home (after the early-return cost or a flight).
+  const lastPt = e.history[e.history.length - 1];
+  if (Math.abs(lastPt.water - e.water) > 0.01) {
+    e.history.push({ x: lastPt.x + 0.3, water: e.water, kind: e.pity ? 'pity' : reason === 'fled' ? 'fled' : 'step' });
+  }
   state.bank += e.water;
   const mult = e.water / e.stake;
   state.best = Math.max(state.best, mult);
   state.expNum++;
   const title = $('end-title');
-  const home = `You brought home ${fmt(e.water)}💧 (you set out with ${fmt(e.stake)}💧).`;
-  const bestText = ` ⭐ Expedition max: ${fmt(e.bestPossible.water)}💧.`;
-  const good = reason === 'cashout' && mult >= 1;
+  const good = mult >= 1;
   title.className = good ? 'win' : 'lose';
   title.textContent = {
-    cashout: mult >= 1 ? '🏁 Cashed out!' : '🏁 Cut your losses',
+    cashout: e.pity ? '😒 Came back too early' : good ? '🏁 Cashed out!' : '🏁 Came back short',
     fled: '🏃 Fled home',
     alone: '🏜️ Abandoned',
     dry: '🏜️ Expedition ended!',
   }[reason];
   $('end-text').textContent = {
-    cashout: home,
-    fled: `You dropped most of your water running away. ${home}`,
-    alone: `Your whole caravan left you. ${home}`,
-    dry: `Morale ran out and your caravan turned back. ${home}`,
-  }[reason] + bestText;
+    cashout: e.pity ? `You left too early. The disappointed caravan drank ${fmt(e.pity)}💧 to drown their sorrows.`
+      : good ? 'The caravan made it back to the oasis.' : 'You cut your losses and turned back.',
+    fled: 'You dropped most of your water running away.',
+    alone: 'Your whole team was left behind, and all the water with them.',
+    dry: 'Morale ran out and your caravan turned back.',
+  }[reason];
+  // Small profits in a row make the caravan restless; a real haul settles them down.
+  const timid = reason === 'cashout' && mult >= 1 && mult < e.expect;
+  if (timid) state.timidRuns++;
+  else if (mult >= e.expect) state.timidRuns = 0;
+  e.timid = timid;
   recordTake(e, reason);
   if (good) audio.score(); else audio.explosion();
   $('end-overlay').classList.remove('hidden');
@@ -2170,8 +2352,23 @@ function cashOut() {
     return;
   }
   // Panic-selling mid-scare keeps the low amount; the max still counts what was coming back.
-  if (state.exp.scare) state.exp.leftWith = state.exp.scare.saved;
+  const e = state.exp;
+  if (e.scare) e.leftWith = e.scare.saved;
+  // Coming back early disappoints the caravan, and some water goes to drowning their sorrows.
+  const pity = pityCost(e);
+  if (pity > 0) {
+    e.leftWith ??= e.water;
+    const before = e.water;
+    e.water = Math.max(e.floor, e.water - pity);
+    e.pity = before - e.water;
+  }
   endExpedition('cashout');
+}
+
+// Water the caravan drinks to its disappointment if you cash out now.
+function pityCost(e) {
+  const seconds = e.step * STEP_MS / 1000;
+  return e.stake * PITY_START_PCT * Math.max(0, 1 - seconds / PITY_SECONDS);
 }
 
 function setPace(p) {
@@ -2194,8 +2391,61 @@ $('btn-trek-pause').addEventListener('click', () => {
 document.querySelectorAll('.pace').forEach(b => b.addEventListener('click', () => setPace(Number(b.dataset.pace))));
 $('btn-end-continue').addEventListener('click', () => {
   $('end-overlay').classList.add('hidden');
+  // After a timid run the caravan reacts once you're back at camp (over the prep screen).
+  const timid = state.exp?.timid;
   rollOffers();
   showOasis();
+  if (timid) caravanReacts();
+});
+
+// Timid runs (cashing out in profit but under what the caravan expected): the first one gets a warning, then
+// characters walk out: 1 on the next timid run in a row, 2 on the one after, and so on, until a
+// real haul (or nobody's left).
+const DESERT_LINES = [
+  "I didn't cross the desert to turn back at the first dune. Find me when you're ready to go all the way.",
+  "We keep coming home with a few drops. I need a leader who goes for the real haul.",
+  "I signed on for glory and full barrels, not safe little strolls. I'm done waiting.",
+  "Every time it gets good, you turn us around. I'll find a caravan with more nerve.",
+];
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+function caravanReacts() {
+  const leaveCount = state.timidRuns - TIMID_RUNS + 1;
+  $('desert-cards').innerHTML = '';
+  if (leaveCount <= 0) {
+    $('desert-title').textContent = '😤 The caravan grumbles';
+    $('desert-text').textContent = '"All that walking for a few drops? We came out here for a real haul."';
+    $('desert-hint').textContent = 'That was a timid run: you came home in profit, but with less than your caravan expected to get. '
+      + 'Too many timid runs and characters will leave you.';
+  } else {
+    if (!state.roster.length) return;
+    const gone = [];
+    for (let i = 0; i < leaveCount && state.roster.length; i++) {
+      const c = pick(state.roster);
+      state.roster = state.roster.filter(r => r !== c);
+      state.team = state.team.filter(uid => uid !== c.uid);
+      gone.push(c);
+    }
+    if (!state.team.length) state.team = state.roster.slice(0, Math.min(3, teamSlots())).map(r => r.uid);
+    const names = gone.map(c => `${CHARACTERS[c.id].emoji} ${CHARACTERS[c.id].name}`);
+    $('desert-title').textContent = gone.length === 1 ? `${names[0]} left the caravan` : `${gone.length} left the caravan`;
+    $('desert-text').textContent = `"${pick(DESERT_LINES)}"`;
+    $('desert-hint').textContent = !state.roster.length
+      ? 'Nobody is left. Hire a passing traveler to set out again.'
+      : 'Too many timid runs: your caravan expected more from you.';
+    for (const c of gone) {
+      const def = CHARACTERS[c.id];
+      $('desert-cards').appendChild(cardEl(c.id, def.atk + (c.atkBonus ?? 0), def.hp + (c.hpBonus ?? 0)));
+    }
+    renderPrep();
+    audio.explosion();
+  }
+  $('desert-overlay').classList.remove('hidden');
+}
+
+$('btn-desert-continue').addEventListener('click', () => {
+  $('desert-overlay').classList.add('hidden');
+  renderPrep();
 });
 window.addEventListener('keydown', e => {
   if (e.code === 'Space' && state.mode === 'trek') { e.preventDefault(); cashOut(); }
