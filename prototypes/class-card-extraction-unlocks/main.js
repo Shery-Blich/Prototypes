@@ -1188,12 +1188,16 @@ function renderMap() {
 
     const el = document.createElement('div');
     el.className = `map-tile tile-${node.type} tile-${node.id}`
+      + (node.difficulty ? ` tile-${node.difficulty}` : '')
       + (isReachable ? ' reachable' : '')
       + (isVisited && !isCurrent ? ' visited' : '')
       + (isCurrent ? ' player-here' : '');
 
     el.style.left = `${node.x}px`;
     el.style.top = `${node.y}px`;
+    if (node.color) {
+      el.style.backgroundColor = node.color;
+    }
 
     el.innerHTML = `
       <div class="tile-inner">

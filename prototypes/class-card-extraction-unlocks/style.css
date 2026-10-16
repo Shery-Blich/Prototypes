@@ -1848,13 +1848,13 @@ details.result-squad-preview[open] summary.squad-dropdown-summary {
 .tile-start {
   background: #fdf8ea;
 }
-.tile-easy {
+.tile-easy, .tile-b1_easy, .tile-b2_easy, .tile-b5_easy {
   background: #fbc05c;
 }
-.tile-medium {
+.tile-medium, .tile-b3_med, .tile-b4_med {
   background: #f98342;
 }
-.tile-hard {
+.tile-hard, .tile-b_skull {
   background: #e0534b;
 }
 .tile-extract {
