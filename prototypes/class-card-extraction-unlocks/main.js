@@ -963,8 +963,7 @@ export const MAP_NODES = {
     id: 'start',
     type: 'start',
     name: 'Expedition Start',
-    x: 590, y: 355,
-    col: 6, row: 2,
+    x: 696, y: 274,
     color: '#fdf8ea',
     icon: 'start',
     label: 'Start (Base Departure)',
@@ -976,12 +975,11 @@ export const MAP_NODES = {
     difficulty: 'easy',
     swords: 1,
     name: 'Border Skirmish',
-    x: 505, y: 260,
-    col: 5, row: 1,
+    x: 592, y: 170,
     color: '#fbc05c',
     icon: 'sword',
     label: 'Easy Battle (1 Sword)',
-    neighbors: ['start', 'b2_easy', 'b3_med'],
+    neighbors: ['start', 'b2_easy'],
   },
   b2_easy: {
     id: 'b2_easy',
@@ -989,12 +987,11 @@ export const MAP_NODES = {
     difficulty: 'easy',
     swords: 1,
     name: 'Desert Ambush',
-    x: 420, y: 355,
-    col: 4, row: 2,
+    x: 488, y: 274,
     color: '#fbc05c',
     icon: 'sword',
     label: 'Easy Battle (1 Sword)',
-    neighbors: ['b1_easy', 'b4_med'],
+    neighbors: ['b1_easy', 'b3_med', 'ext_bottom'],
   },
   b3_med: {
     id: 'b3_med',
@@ -1002,12 +999,11 @@ export const MAP_NODES = {
     difficulty: 'medium',
     swords: 2,
     name: 'Dune Patrol',
-    x: 420, y: 165,
-    col: 4, row: 0,
+    x: 384, y: 170,
     color: '#f98342',
     icon: 'swords2',
     label: 'Medium Battle (2 Swords)',
-    neighbors: ['b1_easy', 'b4_med', 'b_skull'],
+    neighbors: ['b2_easy', 'b_skull', 'b4_med'],
   },
   b4_med: {
     id: 'b4_med',
@@ -1015,12 +1011,11 @@ export const MAP_NODES = {
     difficulty: 'medium',
     swords: 2,
     name: 'Canyon Outpost',
-    x: 335, y: 260,
-    col: 3, row: 1,
+    x: 280, y: 274,
     color: '#f98342',
     icon: 'swords2',
     label: 'Medium Battle (2 Swords)',
-    neighbors: ['b2_easy', 'b3_med', 'b5_easy', 'ext_bottom'],
+    neighbors: ['b3_med', 'b5_easy', 'ext_bottom'],
   },
   b_skull: {
     id: 'b_skull',
@@ -1028,8 +1023,7 @@ export const MAP_NODES = {
     difficulty: 'hard',
     swords: 3,
     name: 'Warlord Stronghold',
-    x: 335, y: 70,
-    col: 3, row: -1,
+    x: 280, y: 66,
     color: '#e0534b',
     icon: 'skull',
     label: 'Boss Battle (Skull 💀)',
@@ -1041,8 +1035,7 @@ export const MAP_NODES = {
     difficulty: 'easy',
     swords: 1,
     name: 'Ruins Crossing',
-    x: 250, y: 165,
-    col: 2, row: 0,
+    x: 176, y: 170,
     color: '#fbc05c',
     icon: 'sword',
     label: 'Easy Battle (1 Sword)',
@@ -1052,19 +1045,17 @@ export const MAP_NODES = {
     id: 'ext_bottom',
     type: 'extract',
     name: 'Southern Extraction Point',
-    x: 250, y: 355,
-    col: 2, row: 2,
+    x: 384, y: 378,
     color: '#6cb8eb',
     icon: 'door',
     label: 'Extraction Point (Exit 🚪➔)',
-    neighbors: ['b4_med'],
+    neighbors: ['b2_easy', 'b4_med'],
   },
   ext_top: {
     id: 'ext_top',
     type: 'extract',
     name: 'Northern Extraction Point',
-    x: 165, y: 70,
-    col: 1, row: -1,
+    x: 72, y: 66,
     color: '#6cb8eb',
     icon: 'door',
     label: 'Extraction Point (Exit 🚪➔)',
@@ -1100,7 +1091,7 @@ function canReachExtraction(startId, visitedSet) {
 
 function getMapIconSvg(iconType) {
   if (iconType === 'start') {
-    return `<svg viewBox="0 0 36 36" class="tile-svg"><path d="M23 28 L11 18 L23 8" fill="none" stroke="#2b1408" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    return `<svg viewBox="0 0 36 36" class="tile-svg" style="transform: rotate(45deg);"><path d="M23 28 L11 18 L23 8" fill="none" stroke="#2b1408" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   }
   if (iconType === 'sword') {
     return `<svg viewBox="0 0 36 36" class="tile-svg"><line x1="10" y1="26" x2="25" y2="11" stroke="#2b1408" stroke-width="4.5" stroke-linecap="round"/><polygon points="23,9 27,9 27,13" fill="#2b1408"/><line x1="8" y1="21" x2="15" y2="28" stroke="#2b1408" stroke-width="3.5" stroke-linecap="round"/><circle cx="7" cy="29" r="2.5" fill="#2b1408"/></svg>`;
@@ -1203,7 +1194,6 @@ function renderMap() {
 
     el.style.left = `${node.x}px`;
     el.style.top = `${node.y}px`;
-    el.title = `${node.name} (${node.label})`;
 
     el.innerHTML = `
       <div class="tile-inner">
@@ -2442,7 +2432,6 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
   const text = $('result-text');
   const cards = $('result-cards');
   const btn = $('btn-continue');
-  const skip = $('btn-skip-recruit');
 
   btn.classList.remove('hidden');
   btn.disabled = false;
@@ -2517,7 +2506,6 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
 
   const draw = () => {
     btn.classList.remove('hidden');
-    skip.classList.remove('hidden');
     const needDiscard = Math.max(0, picks.length - room);
     if (discards.length > needDiscard) discards.length = needDiscard;
     text.textContent = '';
@@ -2618,9 +2606,6 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
     onPostCardChoice('win');
   };
 
-  skip.textContent = 'Skip to Map ⏭';
-  skip.onclick = () => onPostCardChoice('win');
-  skip.classList.remove('hidden');
   draw();
 }
 
@@ -2633,11 +2618,10 @@ function onPostCardChoice(lastResult, customMessage = null) {
   const btnContinue = $('btn-continue');
   const btnExtract = $('btn-extract');
   const btnReturnHome = $('btn-return-home');
-  const btnSkip = $('btn-skip-recruit');
   const discardWrap = $('result-discard-wrap');
   const diffWrap = $('result-difficulty-wrap');
 
-  btnSkip.classList.add('hidden');
+  $('btn-skip-recruit')?.classList.add('hidden');
   discardWrap.classList.add('hidden');
   $('result-squad-preview')?.classList.add('hidden');
   diffWrap?.classList.add('hidden');
