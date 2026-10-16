@@ -1986,16 +1986,8 @@ function setSpeed(s) {
   document.querySelectorAll('.speed').forEach(b => b.classList.toggle('active', Number(b.dataset.speed) === s));
 }
 
-// Big arrow above the arena showing who triggers abilities first (it's rolled, so make it obvious).
-function showFirstBanner(side) {
-  const b = $('first-banner');
-  b.className = `first-banner ${side}`;
-  b.innerHTML = side === 'player'
-    ? '<span class="fb-text">YOU TRIGGER FIRST</span><span class="fb-arrow">➜</span>'
-    : '<span class="fb-arrow">⬅</span><span class="fb-text">ENEMY TRIGGERS FIRST</span>';
-  void b.offsetWidth; // restart the pop-in animation
-  b.classList.add('pop');
-}
+// Triggers first arrow removed per user request
+function showFirstBanner(side) {}
 
 async function startBattle() {
   if (state.inBattle) return;
@@ -2027,7 +2019,6 @@ async function startBattle() {
   setSpeed(state.speed > 4 ? 1 : state.speed);
 
   const firstSide = rollFirstSide();
-  showFirstBanner(firstSide);
   view.log(`🎲 ${firstSide === 'player' ? 'Your abilities' : 'Enemy abilities'} trigger first (${state.modifiers.playerStartsPct}% chance you start)`);
   const battle = new Battle(participants, state.enemy, view, {
     firstSide, maxTeam: { player: teamSlots(), enemy: Math.max(enemySlots(), state.enemy.length) },
@@ -2286,14 +2277,15 @@ function showResult(result, participants, defeatedEnemy, battleDifficulty) {
   const cards = $('result-cards');
   const btn = $('btn-continue');
   cards.innerHTML = '';
-  title.className = result;
-  btn.classList.remove('hidden');
-  btn.disabled = false;
-  $('btn-skip-recruit').classList.add('hidden');
-  $('btn-extract').classList.add('hidden');
-  $('btn-return-home').classList.add('hidden');
-  $('result-discard-wrap').classList.add('hidden');
-  $('result-squad-preview').classList.add('hidden');
+  if (btn) {
+    btn.classList.remove('hidden');
+    btn.disabled = false;
+  }
+  $('btn-skip-recruit')?.classList.add('hidden');
+  $('btn-extract')?.classList.add('hidden');
+  $('btn-return-home')?.classList.add('hidden');
+  $('result-discard-wrap')?.classList.add('hidden');
+  $('result-squad-preview')?.classList.add('hidden');
   $('result-difficulty-wrap')?.classList.add('hidden');
   $('result-xp-debrief')?.classList.add('hidden');
 
@@ -2958,10 +2950,10 @@ $('btn-evac-base').addEventListener('click', () => {
       $('result-difficulty-wrap')?.classList.add('hidden');
       $('result-discard-wrap')?.classList.add('hidden');
       $('result-squad-preview')?.classList.add('hidden');
-      $('btn-continue').classList.add('hidden');
-      $('btn-extract').classList.add('hidden');
-      $('btn-skip-recruit').classList.add('hidden');
-      $('btn-return-home').classList.remove('hidden');
+      $('btn-continue')?.classList.add('hidden');
+      $('btn-extract')?.classList.add('hidden');
+      $('btn-skip-recruit')?.classList.add('hidden');
+      $('btn-return-home')?.classList.remove('hidden');
       $('btn-return-home').onclick = () => {
         $('result-overlay').classList.add('hidden');
         showHome();
