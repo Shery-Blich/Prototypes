@@ -156,12 +156,18 @@ const state = {
   enemy: [],         // [{id, atkBonus, hpBonus}]
   speed: 1,
   inBattle: false,
-  screen: 'home',    // 'home' | 'prep' | 'battle'
-  extractCountdown: null, // null = inactive, 2 = 2 battles left, 1 = 1 battle left
+  screen: 'home',    // 'home' | 'prep' | 'battle' | 'map'
+  extractCountdown: null, // legacy extraction countdown
   previewKey: null,  // selected prep card: 'p<rosterUid>' or 'e<index>'
   modifiers: null,   // gameplay modifiers, see MODIFIER_DEFAULTS
   battlePreviewKey: null, // selected battle card: 'b<battle unit uid>'
   paused: false,     // battle is paused while a battle preview is open
+  combatStep: 0,     // step count in battle for Balatro speed acceleration
+  map: {
+    currentNode: 'start',
+    visitedNodes: ['start'],
+    pendingNode: null,
+  },
   runStats: {
     cardsPlayed: 0,
     levelsCleared: 0,
@@ -461,6 +467,7 @@ function showHome() {
   stopIdleCycle();
 
   $('home-screen').classList.remove('hidden');
+  $('map-screen')?.classList.add('hidden');
   $('prep-screen').classList.add('hidden');
   $('battle-screen').classList.add('hidden');
   $('result-overlay').classList.add('hidden');
@@ -529,10 +536,6 @@ function renderHome() {
           atkBonus,
           hpBonus,
         });
-        const tag = document.createElement('div');
-        tag.className = 'stash-loadout-tag';
-        tag.textContent = '✓ SELECTED (REMOVE)';
-        el.appendChild(tag);
 
         el.addEventListener('click', () => {
           state.selectedStashUids.delete(c.uid);
@@ -738,14 +741,18 @@ function startExpedition() {
   const initialTeamSize = Math.min(teamSlots(), state.roster.length);
   state.team = state.roster.slice(0, initialTeamSize).map(c => c.uid);
 
-  state.battleNum = 1;
+  state.battleNum = 0;
   state.wins = 0;
   state.ties = 0;
   state.losses = 0;
   state.difficulty = 'easy';
   state.nextDifficulty = 'easy';
   state.extractCountdown = null;
-  state.enemy = generateEnemy(1, 'easy');
+  state.map = {
+    currentNode: 'start',
+    visitedNodes: ['start'],
+    pendingNode: null,
+  };
 
   // Reset runStats for the new expedition
   state.runStats = {
@@ -753,7 +760,7 @@ function startExpedition() {
     levelsCleared: 0,
   };
 
-  showPrep();
+  showMap();
 }
 
 // ---------- Run setup ----------
@@ -764,14 +771,18 @@ function newRun() {
   state.roster = Array.from({ length: start }, () => makeCharacter(randomCharacterId()));
   const teamSize = Math.max(Math.min(3, teamSlots()), start - campMax());
   state.team = state.roster.slice(0, teamSize).map(c => c.uid);
-  state.battleNum = 1;
+  state.battleNum = 0;
   state.wins = 0;
   state.ties = 0;
   state.losses = 0;
   state.difficulty = 'easy';
   state.nextDifficulty = 'easy';
-  state.enemy = generateEnemy(1, 'easy');
-  showPrep();
+  state.map = {
+    currentNode: 'start',
+    visitedNodes: ['start'],
+    pendingNode: null,
+  };
+  showMap();
 }
 
 function generateEnemy(n, difficulty = state.difficulty || 'easy') {
@@ -925,6 +936,7 @@ function updateHud() {
   if ($('hud-roster')) $('hud-roster').textContent = state.screen === 'home' ? '--' : `${campCount()}/${campMax()}`;
   if ($('hud-stash-count')) $('hud-stash-count').textContent = state.stash ? state.stash.length : 0;
   if ($('btn-evac-base')) $('btn-evac-base').classList.toggle('hidden', state.screen === 'home' || state.inBattle);
+  if ($('btn-view-map')) $('btn-view-map').classList.toggle('hidden', state.screen === 'home' || state.screen === 'map' || state.inBattle || !state.map);
 
   const extractEl = $('hud-extract-status');
   if (extractEl) {
@@ -944,12 +956,362 @@ function updateHud() {
   }
 }
 
+// ─── EXPEDITION MAP DEFINITIONS ──────────────────────────────────────────────
+// Topology matching the reference image: 9 diamond tiles in an isometric grid.
+export const MAP_NODES = {
+  start: {
+    id: 'start',
+    type: 'start',
+    name: 'Expedition Start',
+    x: 590, y: 355,
+    col: 6, row: 2,
+    color: '#fdf8ea',
+    icon: 'start',
+    label: 'Start (Base Departure)',
+    neighbors: ['b1_easy'],
+  },
+  b1_easy: {
+    id: 'b1_easy',
+    type: 'battle',
+    difficulty: 'easy',
+    swords: 1,
+    name: 'Border Skirmish',
+    x: 505, y: 260,
+    col: 5, row: 1,
+    color: '#fbc05c',
+    icon: 'sword',
+    label: 'Easy Battle (1 Sword)',
+    neighbors: ['start', 'b2_easy', 'b3_med'],
+  },
+  b2_easy: {
+    id: 'b2_easy',
+    type: 'battle',
+    difficulty: 'easy',
+    swords: 1,
+    name: 'Desert Ambush',
+    x: 420, y: 355,
+    col: 4, row: 2,
+    color: '#fbc05c',
+    icon: 'sword',
+    label: 'Easy Battle (1 Sword)',
+    neighbors: ['b1_easy', 'b4_med'],
+  },
+  b3_med: {
+    id: 'b3_med',
+    type: 'battle',
+    difficulty: 'medium',
+    swords: 2,
+    name: 'Dune Patrol',
+    x: 420, y: 165,
+    col: 4, row: 0,
+    color: '#f98342',
+    icon: 'swords2',
+    label: 'Medium Battle (2 Swords)',
+    neighbors: ['b1_easy', 'b4_med', 'b_skull'],
+  },
+  b4_med: {
+    id: 'b4_med',
+    type: 'battle',
+    difficulty: 'medium',
+    swords: 2,
+    name: 'Canyon Outpost',
+    x: 335, y: 260,
+    col: 3, row: 1,
+    color: '#f98342',
+    icon: 'swords2',
+    label: 'Medium Battle (2 Swords)',
+    neighbors: ['b2_easy', 'b3_med', 'b5_easy', 'ext_bottom'],
+  },
+  b_skull: {
+    id: 'b_skull',
+    type: 'battle',
+    difficulty: 'hard',
+    swords: 3,
+    name: 'Warlord Stronghold',
+    x: 335, y: 70,
+    col: 3, row: -1,
+    color: '#e0534b',
+    icon: 'skull',
+    label: 'Boss Battle (Skull 💀)',
+    neighbors: ['b3_med', 'b5_easy'],
+  },
+  b5_easy: {
+    id: 'b5_easy',
+    type: 'battle',
+    difficulty: 'easy',
+    swords: 1,
+    name: 'Ruins Crossing',
+    x: 250, y: 165,
+    col: 2, row: 0,
+    color: '#fbc05c',
+    icon: 'sword',
+    label: 'Easy Battle (1 Sword)',
+    neighbors: ['b_skull', 'b4_med', 'ext_top'],
+  },
+  ext_bottom: {
+    id: 'ext_bottom',
+    type: 'extract',
+    name: 'Southern Extraction Point',
+    x: 250, y: 355,
+    col: 2, row: 2,
+    color: '#6cb8eb',
+    icon: 'door',
+    label: 'Extraction Point (Exit 🚪➔)',
+    neighbors: ['b4_med'],
+  },
+  ext_top: {
+    id: 'ext_top',
+    type: 'extract',
+    name: 'Northern Extraction Point',
+    x: 165, y: 70,
+    col: 1, row: -1,
+    color: '#6cb8eb',
+    icon: 'door',
+    label: 'Extraction Point (Exit 🚪➔)',
+    neighbors: ['b5_easy'],
+  },
+};
+
+function canReachExtraction(startId, visitedSet) {
+  const node = MAP_NODES[startId];
+  if (!node) return false;
+  if (node.type === 'extract') return true;
+
+  const visited = new Set(visitedSet);
+  visited.add(startId);
+  const queue = [startId];
+  const seen = new Set([startId]);
+
+  while (queue.length > 0) {
+    const currId = queue.shift();
+    const currNode = MAP_NODES[currId];
+    if (!currNode) continue;
+    if (currNode.type === 'extract') return true;
+
+    for (const nbrId of currNode.neighbors) {
+      if (!visited.has(nbrId) && !seen.has(nbrId)) {
+        seen.add(nbrId);
+        queue.push(nbrId);
+      }
+    }
+  }
+  return false;
+}
+
+function getMapIconSvg(iconType) {
+  if (iconType === 'start') {
+    return `<svg viewBox="0 0 36 36" class="tile-svg"><path d="M23 28 L11 18 L23 8" fill="none" stroke="#2b1408" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
+  if (iconType === 'sword') {
+    return `<svg viewBox="0 0 36 36" class="tile-svg"><line x1="10" y1="26" x2="25" y2="11" stroke="#2b1408" stroke-width="4.5" stroke-linecap="round"/><polygon points="23,9 27,9 27,13" fill="#2b1408"/><line x1="8" y1="21" x2="15" y2="28" stroke="#2b1408" stroke-width="3.5" stroke-linecap="round"/><circle cx="7" cy="29" r="2.5" fill="#2b1408"/></svg>`;
+  }
+  if (iconType === 'swords2') {
+    return `<svg viewBox="0 0 36 36" class="tile-svg"><line x1="8" y1="28" x2="28" y2="8" stroke="#2b1408" stroke-width="4" stroke-linecap="round"/><line x1="8" y1="20" x2="16" y2="28" stroke="#2b1408" stroke-width="3" stroke-linecap="round"/><line x1="28" y1="28" x2="8" y2="8" stroke="#2b1408" stroke-width="4" stroke-linecap="round"/><line x1="28" y1="20" x2="20" y2="28" stroke="#2b1408" stroke-width="3" stroke-linecap="round"/></svg>`;
+  }
+  if (iconType === 'skull') {
+    return `<svg viewBox="0 0 36 36" class="tile-svg"><path d="M8 18 C8 10 12 6 18 6 C24 6 28 10 28 18 C28 22 25 24 23 24 L23 28 C23 29 22 30 21 30 L15 30 C14 30 13 29 13 28 L13 24 C11 24 8 22 8 18 Z" fill="#2b1408"/><circle cx="14" cy="16" r="2.8" fill="#e0534b"/><circle cx="22" cy="16" r="2.8" fill="#e0534b"/><line x1="16" y1="26" x2="16" y2="29" stroke="#e0534b" stroke-width="2" stroke-linecap="round"/><line x1="20" y1="26" x2="20" y2="29" stroke="#e0534b" stroke-width="2" stroke-linecap="round"/></svg>`;
+  }
+  if (iconType === 'door') {
+    return `<svg viewBox="0 0 36 36" class="tile-svg"><line x1="5" y1="29" x2="31" y2="29" stroke="#10324d" stroke-width="3.5" stroke-linecap="round"/><path d="M9 29 L9 11 C9 8 12 6 15 6 L23 6 C26 6 27 8 27 11 L27 16" fill="none" stroke="#10324d" stroke-width="3.5" stroke-linecap="round"/><path d="M9 11 L18 14 L18 29" fill="none" stroke="#10324d" stroke-width="3.5" stroke-linecap="round"/><line x1="14" y1="20" x2="30" y2="20" stroke="#10324d" stroke-width="3.5" stroke-linecap="round"/><polyline points="24,14 30,20 24,26" fill="none" stroke="#10324d" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
+  return '';
+}
+
+function showMap() {
+  state.screen = 'map';
+  state.inBattle = false;
+  $('home-screen').classList.add('hidden');
+  $('prep-screen').classList.add('hidden');
+  $('battle-screen').classList.add('hidden');
+  $('map-screen').classList.remove('hidden');
+  $('result-overlay').classList.add('hidden');
+  $('discard-overlay').classList.add('hidden');
+  updateHud();
+  renderMap();
+}
+
+function renderMap() {
+  const tilesLayer = $('map-tiles-layer');
+  const svg = $('map-connections-svg');
+  if (!tilesLayer || !svg) return;
+
+  tilesLayer.innerHTML = '';
+  svg.innerHTML = '';
+
+  $('map-squad-count').textContent = state.roster ? state.roster.length : 0;
+  $('map-battles-won').textContent = state.wins || 0;
+
+  const btnToPrep = $('btn-map-to-prep');
+  if (btnToPrep) {
+    btnToPrep.classList.toggle('hidden', !state.map?.pendingNode);
+    btnToPrep.onclick = () => showPrep();
+  }
+
+  const currNodeId = state.map ? state.map.currentNode : 'start';
+  const visited = new Set(state.map?.visitedNodes || ['start']);
+  const currNode = MAP_NODES[currNodeId];
+  const reachable = new Set(currNode ? currNode.neighbors.filter(id => !visited.has(id) && canReachExtraction(id, visited)) : []);
+
+  // Hint text
+  const hintEl = $('map-hint');
+  if (hintEl) {
+    if (currNodeId === 'start') {
+      hintEl.textContent = 'Expedition Ready! Click the adjacent Easy Battle (1 Sword) to begin your run.';
+    } else {
+      const hasExtract = [...reachable].some(id => MAP_NODES[id]?.type === 'extract');
+      hintEl.textContent = hasExtract
+        ? 'Extraction Zone in reach! Click an extraction door (🚪➔) to secure your cards, or push into battle.'
+        : 'Select an adjacent battle tile to advance your squad deeper into the desert.';
+    }
+  }
+
+  // 1. Draw connection lines
+  const drawnEdges = new Set();
+  for (const [id, node] of Object.entries(MAP_NODES)) {
+    for (const nId of node.neighbors) {
+      const edgeKey = [id, nId].sort().join('-');
+      if (drawnEdges.has(edgeKey)) continue;
+      drawnEdges.add(edgeKey);
+
+      const target = MAP_NODES[nId];
+      if (!target) continue;
+
+      const isTraversed = visited.has(id) && visited.has(nId);
+      const isActive = (id === currNodeId && reachable.has(nId)) || (nId === currNodeId && reachable.has(id));
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', node.x);
+      line.setAttribute('y1', node.y);
+      line.setAttribute('x2', target.x);
+      line.setAttribute('y2', target.y);
+      line.setAttribute('class', `map-path-line ${isActive ? 'active' : ''} ${isTraversed ? 'cleared' : ''}`);
+      svg.appendChild(line);
+    }
+  }
+
+  // 2. Draw 9 diamond tiles
+  for (const [id, node] of Object.entries(MAP_NODES)) {
+    const isCurrent = (id === currNodeId);
+    const isVisited = visited.has(id);
+    const isReachable = reachable.has(id);
+
+    const el = document.createElement('div');
+    el.className = `map-tile tile-${node.type} tile-${node.id}`
+      + (isReachable ? ' reachable' : '')
+      + (isVisited && !isCurrent ? ' visited' : '')
+      + (isCurrent ? ' player-here' : '');
+
+    el.style.left = `${node.x}px`;
+    el.style.top = `${node.y}px`;
+    el.title = `${node.name} (${node.label})`;
+
+    el.innerHTML = `
+      <div class="tile-inner">
+        ${getMapIconSvg(node.icon)}
+      </div>
+      ${isVisited && !isCurrent && node.type !== 'start' ? '<div class="tile-cleared-badge">✔</div>' : ''}
+      ${isCurrent ? '<div class="tile-player-marker">🤠 YOU</div>' : ''}
+    `;
+
+    if (isReachable) {
+      el.addEventListener('click', () => onTileClick(id));
+    }
+
+    tilesLayer.appendChild(el);
+  }
+}
+
+function onTileClick(nodeId) {
+  const node = MAP_NODES[nodeId];
+  if (!node) return;
+
+  const curr = MAP_NODES[state.map?.currentNode || 'start'];
+  if (!curr || !curr.neighbors.includes(nodeId)) return;
+  if (state.map?.visitedNodes?.includes(nodeId)) return;
+  if (!canReachExtraction(nodeId, state.map?.visitedNodes || ['start'])) return;
+
+  if (node.type === 'extract') {
+    extractFromMap(nodeId);
+    return;
+  }
+
+  if (node.type === 'battle') {
+    state.map.pendingNode = nodeId;
+    state.difficulty = node.difficulty || 'easy';
+    state.nextDifficulty = node.difficulty || 'easy';
+    state.battleNum = (state.battleNum || 0) + 1;
+    state.enemy = generateEnemy(state.battleNum, state.difficulty);
+    audio.beep(520);
+    showPrep();
+  }
+}
+
+function extractFromMap(nodeId) {
+  audio.score();
+  if (!state.map) state.map = { currentNode: nodeId, visitedNodes: [nodeId] };
+  state.map.currentNode = nodeId;
+  if (!state.map.visitedNodes.includes(nodeId)) {
+    state.map.visitedNodes.push(nodeId);
+  }
+
+  const extractedCount = state.roster.length;
+  state.stash.push(...state.roster);
+  saveStash();
+
+  const savedRoster = [...state.roster];
+  state.roster = [];
+  state.team = [];
+  state.inBattle = false;
+  state.map.pendingNode = null;
+  updateHud();
+
+  const title = $('result-title');
+  const text = $('result-text');
+  const cards = $('result-cards');
+  const btnContinue = $('btn-continue');
+  const btnReturnHome = $('btn-return-home');
+
+  $('result-squad-preview')?.classList.add('hidden');
+  $('result-discard-wrap')?.classList.add('hidden');
+
+  title.textContent = 'Extraction Successful! 🚁';
+  title.className = 'win';
+  text.textContent = `You reached the extraction point and safely evacuated! All ${extractedCount} squad cards have been deposited into your Base Stash.`;
+
+  cards.innerHTML = '';
+  for (const c of savedRoster) {
+    const d = CHARACTERS[c.id];
+    const atkBonus = c.atkBonus || 0;
+    const hpBonus = c.hpBonus || 0;
+    const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, { atkBonus, hpBonus });
+    const tag = frontTag();
+    tag.textContent = 'EXTRACTED';
+    tag.style.background = '#38bdf8';
+    tag.style.color = '#082f49';
+    el.appendChild(tag);
+    cards.appendChild(el);
+  }
+
+  btnContinue.classList.add('hidden');
+  btnReturnHome.classList.remove('hidden');
+  btnReturnHome.textContent = 'Return to Home Stash 🏠';
+  btnReturnHome.onclick = () => {
+    $('result-overlay').classList.add('hidden');
+    showHome();
+  };
+
+  const debrief = finalizeRunXp(true);
+  renderDebrief(debrief, 'success');
+  $('result-overlay').classList.remove('hidden');
+}
+
 // ---------- Prep screen ----------
 
 function showPrep() {
   state.screen = 'prep';
   state.inBattle = false;
   $('home-screen').classList.add('hidden');
+  $('map-screen')?.classList.add('hidden');
   $('prep-screen').classList.remove('hidden');
   $('battle-screen').classList.add('hidden');
   $('result-overlay').classList.add('hidden');
@@ -1062,9 +1424,13 @@ function renderPrep() {
   const n = state.team.length;
   const ok = n >= MIN_TEAM && n <= teamSlots();
   $('btn-fight').disabled = !ok;
-  $('fight-hint').textContent = ok
-    ? `${n} character${n > 1 ? 's' : ''} at risk`
-    : `Pick at least ${MIN_TEAM} character${MIN_TEAM > 1 ? 's' : ''}`;
+  const fightHintEl = $('fight-hint');
+  if (fightHintEl) {
+    fightHintEl.textContent = ok
+      ? ''
+      : `Pick at least ${MIN_TEAM} character${MIN_TEAM > 1 ? 's' : ''}`;
+    fightHintEl.classList.toggle('hidden', ok);
+  }
 
   fitRows();
   if (!showAbilityPreview(lineup, state.previewKey, prepUi())) state.previewKey = null;
@@ -1511,7 +1877,8 @@ const view = {
     el.classList.add(cls);
     if (cls === 'ability') {
       el.classList.add('pop-open');
-      const duration = Math.max(700, 1500 / (state.speed || 1));
+      const accel = Math.max(0.28, Math.pow(0.965, state.combatStep || 0));
+      const duration = Math.max(250, (1500 * accel) / (state.speed || 1));
       setTimeout(() => el.classList.remove('pop-open'), duration);
     }
     if (cls !== 'dying') setTimeout(() => el.classList.remove(cls), 600);
@@ -1555,7 +1922,8 @@ const view = {
 
     const ui = { svg: $('effect-arrows'), host: $('battle-screen') };
     const drawn = drawArrows(source, arrows, src.def.trigger, ui);
-    await snakeArrows(drawn, 250, 700);
+    const accel = Math.max(0.28, Math.pow(0.965, state.combatStep || 0));
+    await snakeArrows(drawn, Math.round(250 * accel), Math.round(700 * accel));
     ui.svg.innerHTML = '';
     if (source instanceof Element) {
       source.classList.remove('preview-source');
@@ -1564,7 +1932,10 @@ const view = {
   },
   // Also holds the battle here while it's paused for a preview.
   async wait(ms) {
-    await new Promise(r => setTimeout(r, ms / state.speed));
+    state.combatStep = (state.combatStep || 0) + 1;
+    const accel = Math.max(0.28, Math.pow(0.965, state.combatStep));
+    const effectiveSpeed = (state.speed || 1) / accel;
+    await new Promise(r => setTimeout(r, ms / effectiveSpeed));
     while (state.paused) await new Promise(r => resumeWaiters.push(r));
   },
 };
@@ -1641,7 +2012,9 @@ async function startBattle() {
     state.runStats = { cardsPlayed: 0, levelsCleared: 0 };
   }
   state.runStats.cardsPlayed += participants.length;
+  state.combatStep = 0;
 
+  $('map-screen')?.classList.add('hidden');
   $('prep-screen').classList.add('hidden');
   $('battle-screen').classList.remove('hidden');
   $('battle-player').innerHTML = '';
@@ -1821,42 +2194,54 @@ function renderDebrief(debrief, outcomeType) {
   if (!debriefBox) return;
   debriefBox.classList.remove('hidden');
 
+  const isDefeat = outcomeType === 'defeat';
+  debriefBox.classList.toggle('defeat-mode', isDefeat);
+
+  const header = debriefBox.querySelector('.xp-debrief-header');
+  const grid = debriefBox.querySelector('.xp-debrief-grid');
+  if (header) header.classList.toggle('hidden', isDefeat);
+  if (grid) grid.classList.toggle('hidden', isDefeat);
+
   const badge = $('debrief-outcome-badge');
-  badge.className = `debrief-badge ${outcomeType}`;
-  if (outcomeType === 'success') {
-    badge.textContent = 'Extraction Complete 🚁';
-  } else if (outcomeType === 'evac') {
-    badge.textContent = 'Evacuated 🚨';
-  } else {
-    badge.textContent = 'Squad Destroyed 💀';
+  if (badge) {
+    badge.className = `debrief-badge ${outcomeType}`;
+    if (outcomeType === 'success') {
+      badge.textContent = 'Extraction Complete 🚁';
+    } else if (outcomeType === 'evac') {
+      badge.textContent = 'Evacuated 🚨';
+    } else {
+      badge.textContent = 'Squad Destroyed 💀';
+    }
   }
 
-  $('xp-debrief-cards-count').textContent = debrief.cardsPlayed;
-  $('xp-debrief-cards-val').textContent = `+${debrief.cardsPlayedXp} XP`;
+  if (!isDefeat) {
+    $('xp-debrief-cards-count').textContent = debrief.cardsPlayed;
+    $('xp-debrief-cards-val').textContent = `+${debrief.cardsPlayedXp} XP`;
 
-  $('xp-debrief-levels-count').textContent = debrief.levelsCleared;
-  $('xp-debrief-levels-val').textContent = `+${debrief.levelsClearedXp} XP`;
+    $('xp-debrief-levels-count').textContent = debrief.levelsCleared;
+    $('xp-debrief-levels-val').textContent = `+${debrief.levelsClearedXp} XP`;
 
-  const runCompRow = $('row-debrief-run-comp');
-  if (debrief.isSuccessfulExtraction) {
-    runCompRow.classList.remove('missed');
-    $('xp-debrief-comp-calc').textContent = 'Extracted ✔';
-    $('xp-debrief-comp-val').textContent = `+${debrief.runCompletionXp} XP`;
-  } else {
-    runCompRow.classList.add('missed');
-    $('xp-debrief-comp-calc').textContent = 'Not Extracted ✖';
-    $('xp-debrief-comp-val').textContent = '+0 XP';
+    const runCompRow = $('row-debrief-run-comp');
+    if (debrief.isSuccessfulExtraction) {
+      runCompRow.classList.remove('missed');
+      $('xp-debrief-comp-calc').textContent = 'Extracted ✔';
+      $('xp-debrief-comp-val').textContent = `+${debrief.runCompletionXp} XP`;
+    } else {
+      runCompRow.classList.add('missed');
+      $('xp-debrief-comp-calc').textContent = 'Not Extracted ✖';
+      $('xp-debrief-comp-val').textContent = '+0 XP';
+    }
+
+    const firstRunRow = $('row-debrief-first-run');
+    if (debrief.firstRunXp > 0) {
+      firstRunRow.classList.remove('hidden');
+      $('xp-debrief-first-val').textContent = `+${debrief.firstRunXp} XP`;
+    } else {
+      firstRunRow.classList.add('hidden');
+    }
+
+    $('xp-debrief-total-val').textContent = `+${debrief.totalRunXp} XP`;
   }
-
-  const firstRunRow = $('row-debrief-first-run');
-  if (debrief.firstRunXp > 0) {
-    firstRunRow.classList.remove('hidden');
-    $('xp-debrief-first-val').textContent = `+${debrief.firstRunXp} XP`;
-  } else {
-    firstRunRow.classList.add('hidden');
-  }
-
-  $('xp-debrief-total-val').textContent = `+${debrief.totalRunXp} XP`;
 
   // Animated Level & progress bar fill
   animateDebriefProgressBar(debrief);
@@ -1982,8 +2367,8 @@ function showTotalDefeat(participants) {
     showHome();
   };
 
-  finalizeRunXp(false);
-  $('result-xp-debrief')?.classList.add('hidden');
+  const debrief = finalizeRunXp(false);
+  renderDebrief(debrief, 'defeat');
 }
 
 // Preview player's current squad (team slots and camp) during card recruit selection
@@ -2206,13 +2591,13 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
 
     if (!picks.length) {
       btn.disabled = false;
-      btn.textContent = 'Continue without picking ▶';
+      btn.textContent = 'Continue to Map without picking 🗺️';
     } else if (needDiscard && discards.length !== needDiscard) {
       btn.disabled = true;
       btn.textContent = `Discard ${needDiscard - discards.length} to Continue ▶`;
     } else {
       btn.disabled = false;
-      btn.textContent = `Add ${rewardText} & Continue ▶` + (needDiscard ? ` (discarding ${discardText})` : '');
+      btn.textContent = `Add ${rewardText} & Continue to Map 🗺️` + (needDiscard ? ` (discarding ${discardText})` : '');
     }
   };
 
@@ -2241,7 +2626,7 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
     onPostCardChoice('win');
   };
 
-  skip.textContent = 'Skip ⏭';
+  skip.textContent = 'Skip to Map ⏭';
   skip.onclick = () => onPostCardChoice('win');
   skip.classList.remove('hidden');
   draw();
@@ -2262,12 +2647,12 @@ function onPostCardChoice(lastResult, customMessage = null) {
 
   btnSkip.classList.add('hidden');
   discardWrap.classList.add('hidden');
-  $('result-squad-preview').classList.add('hidden');
+  $('result-squad-preview')?.classList.add('hidden');
+  diffWrap?.classList.add('hidden');
   cards.innerHTML = '';
 
-  // 1. Forced Evacuation Check: <= 2 cards left in camp + slots
+  // 1. Forced Evacuation Check: <= 2 cards left in squad
   if (state.roster.length <= 2) {
-    diffWrap?.classList.add('hidden');
     const survivingCount = state.roster.length;
     if (survivingCount > 0) {
       state.stash.push(...state.roster);
@@ -2276,7 +2661,7 @@ function onPostCardChoice(lastResult, customMessage = null) {
     const savedRoster = [...state.roster];
     state.roster = [];
     state.team = [];
-    state.extractCountdown = null;
+    state.map = null;
     updateHud();
 
     title.textContent = survivingCount === 0 ? 'Squad Wiped Out 💀' : 'Emergency Evacuation 🚨';
@@ -2299,10 +2684,11 @@ function onPostCardChoice(lastResult, customMessage = null) {
     }
 
     btnContinue.classList.add('hidden');
-    btnExtract.classList.add('hidden');
+    btnExtract?.classList.add('hidden');
     btnReturnHome.classList.remove('hidden');
     btnReturnHome.textContent = 'Return to Home Stash 🏠';
     btnReturnHome.onclick = () => {
+      $('result-overlay').classList.add('hidden');
       showHome();
     };
 
@@ -2311,60 +2697,27 @@ function onPostCardChoice(lastResult, customMessage = null) {
     return;
   }
 
-  // 2. Extraction Completion: countdown reaches 0 (was 1 last battle)
-  if (state.extractCountdown === 1) {
-    diffWrap?.classList.add('hidden');
-    const extractedCount = state.roster.length;
-    state.stash.push(...state.roster);
-    saveStash();
-    const savedRoster = [...state.roster];
-    state.roster = [];
-    state.team = [];
-    state.extractCountdown = null;
-    updateHud();
-
-    title.textContent = 'Extraction Successful! 🚁';
-    title.className = 'win';
-    text.textContent = `Extraction chopper arrived! All ${extractedCount} cards from your squad were safely deposited into your Base Stash.`;
-
-    for (const c of savedRoster) {
-      const d = CHARACTERS[c.id];
-      const atkBonus = c.atkBonus || 0;
-      const hpBonus = c.hpBonus || 0;
-      const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, { atkBonus, hpBonus });
-      const tag = frontTag();
-      tag.textContent = 'EXTRACTED';
-      tag.style.background = '#38bdf8';
-      tag.style.color = '#082f49';
-      el.appendChild(tag);
-      cards.appendChild(el);
+  // 2. Victory: update map and continue to map screen
+  if (lastResult === 'win') {
+    if (state.map) {
+      if (state.map.pendingNode) {
+        state.map.currentNode = state.map.pendingNode;
+        if (!state.map.visitedNodes.includes(state.map.currentNode)) {
+          state.map.visitedNodes.push(state.map.currentNode);
+        }
+        state.map.pendingNode = null;
+      }
     }
-
-    btnContinue.classList.add('hidden');
-    btnExtract.classList.add('hidden');
-    btnReturnHome.classList.remove('hidden');
-    btnReturnHome.textContent = 'Return to Home Stash 🏠';
-    btnReturnHome.onclick = () => {
-      showHome();
-    };
-
-    const debrief = finalizeRunXp(true);
-    renderDebrief(debrief, 'success');
+    $('result-overlay').classList.add('hidden');
+    showMap();
     return;
   }
 
-  // Hide debrief while active run continues
-  $('result-xp-debrief')?.classList.add('hidden');
-
-  // 3. Extraction in progress: countdown was 2, now 1 battle left
-  if (state.extractCountdown === 2) {
-    state.extractCountdown = 1;
-    updateHud();
-
-    title.textContent = 'Extraction Inbound 🚁';
-    title.className = lastResult === 'tie' ? 'tie' : 'win';
-    text.textContent = (lastResult === 'tie' ? 'The battle ended in a tie — no cards won. ' : '')
-      + 'Extraction beacon active! Survive 1 more battle to extract all squad cards to Base Stash.';
+  // 3. Tie: player can return to map
+  if (lastResult === 'tie') {
+    title.textContent = 'Draw · Battle Tied ⚖️';
+    title.className = 'tie';
+    text.textContent = customMessage || 'The battle ended in a tie — no cards won. Return to map to regroup.';
 
     for (const c of state.roster) {
       const d = CHARACTERS[c.id];
@@ -2380,118 +2733,16 @@ function onPostCardChoice(lastResult, customMessage = null) {
     }
 
     btnReturnHome.classList.add('hidden');
-
-    if (diffWrap) {
-      diffWrap.classList.remove('hidden');
-      const nextNum = $('next-battle-num');
-      if (nextNum) nextNum.textContent = state.battleNum;
-      renderDifficultyOptions();
-    }
-
+    btnExtract?.classList.add('hidden');
     btnContinue.classList.remove('hidden');
     btnContinue.disabled = false;
-    updateContinueBtnText('final');
+    btnContinue.textContent = 'Return to Map 🗺️';
     btnContinue.onclick = () => {
-      state.difficulty = state.nextDifficulty || 'easy';
-      if (!state.enemy || !state.enemy.length) {
-        state.enemy = generateEnemy(state.battleNum, state.difficulty);
-      }
-      showPrep();
+      $('result-overlay').classList.add('hidden');
+      showMap();
     };
-
-    btnExtract.classList.remove('hidden');
-    btnExtract.disabled = true;
-    btnExtract.textContent = '⏳ Extract in 1 battle';
     return;
   }
-
-  // 4. Extraction not active: offer Continue or Extract Now to Base Stash
-  title.textContent = lastResult === 'win'
-    ? 'Victory Secured'
-    : (lastResult === 'tie' ? 'Draw · Battle Tied ⚖️' : 'Regroup');
-  title.className = lastResult;
-  text.textContent = customMessage
-    ? `${customMessage} Your squad has ${state.roster.length} cards (team: ${state.team.length}, camp: ${campCount()}). Push deeper or extract to Base Stash:`
-    : (lastResult === 'tie'
-      ? `The battle ended in a tie — no cards won. Your squad has ${state.roster.length} cards (team: ${state.team.length}, camp: ${campCount()}). Push deeper or extract to Base Stash:`
-      : `Your squad has ${state.roster.length} cards (team: ${state.team.length}, camp: ${campCount()}). Push deeper or extract to Base Stash:`);
-
-  for (const c of state.roster) {
-    const d = CHARACTERS[c.id];
-    const atkBonus = c.atkBonus || 0;
-    const hpBonus = c.hpBonus || 0;
-    const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, { atkBonus, hpBonus });
-    if (state.team.includes(c.uid)) {
-      const tag = frontTag();
-      tag.textContent = 'TEAM';
-      el.appendChild(tag);
-    }
-    cards.appendChild(el);
-  }
-
-  btnReturnHome.classList.add('hidden');
-
-  if (diffWrap) {
-    diffWrap.classList.remove('hidden');
-    const nextNum = $('next-battle-num');
-    if (nextNum) nextNum.textContent = state.battleNum;
-    renderDifficultyOptions();
-  }
-
-  btnContinue.classList.remove('hidden');
-  btnContinue.disabled = false;
-  updateContinueBtnText('normal');
-  btnContinue.onclick = () => {
-    state.difficulty = state.nextDifficulty || 'easy';
-    if (!state.enemy || !state.enemy.length) {
-      state.enemy = generateEnemy(state.battleNum, state.difficulty);
-    }
-    showPrep();
-  };
-
-  btnExtract.classList.remove('hidden');
-  btnExtract.disabled = false;
-  btnExtract.textContent = '🚁 Extract to Base Stash';
-  btnExtract.onclick = () => {
-    diffWrap?.classList.add('hidden');
-    const extractedCount = state.roster.length;
-    state.stash.push(...state.roster);
-    saveStash();
-    const savedRoster = [...state.roster];
-    state.roster = [];
-    state.team = [];
-    state.extractCountdown = null;
-    updateHud();
-
-    title.textContent = 'Extraction Successful! 🚁';
-    title.className = 'win';
-    text.textContent = `Extraction chopper arrived! All ${extractedCount} cards from your squad were safely deposited into your Base Stash.`;
-
-    cards.innerHTML = '';
-    for (const c of savedRoster) {
-      const d = CHARACTERS[c.id];
-      const atkBonus = c.atkBonus || 0;
-      const hpBonus = c.hpBonus || 0;
-      const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, { atkBonus, hpBonus });
-      const tag = frontTag();
-      tag.textContent = 'EXTRACTED';
-      tag.style.background = '#38bdf8';
-      tag.style.color = '#082f49';
-      el.appendChild(tag);
-      cards.appendChild(el);
-    }
-
-    btnContinue.classList.add('hidden');
-    btnExtract.classList.add('hidden');
-    btnReturnHome.classList.remove('hidden');
-    btnReturnHome.textContent = 'Return to Home Stash 🏠';
-    btnReturnHome.onclick = () => {
-      showHome();
-    };
-
-    const debrief = finalizeRunXp(true);
-    renderDebrief(debrief, 'success');
-  };
 }
 
 function renderDifficultyOptions() {
@@ -2602,6 +2853,7 @@ function startIdleCycle(manual) {
 
 function updatePreviewBattleBtn() {
   const b = $('btn-preview-battle');
+  if (!b) return;
   b.textContent = cycling ? '■ Stop preview' : '▶ Preview battle';
   b.classList.toggle('active', cycling);
 }
@@ -2610,7 +2862,7 @@ for (const ev of ['mousemove', 'pointerdown', 'keydown', 'wheel', 'touchstart'])
   window.addEventListener(ev, resetIdle, { passive: true, capture: true });
 }
 
-$('btn-preview-battle').addEventListener('click', () => {
+$('btn-preview-battle')?.addEventListener('click', () => {
   if (cycling) { stopIdleCycle(); resetIdle(); }
   else startIdleCycle(true);
 });
@@ -2633,14 +2885,18 @@ function startStarterPackExpedition() {
   const initialTeamSize = Math.min(teamSlots(), state.roster.length);
   state.team = state.roster.slice(0, initialTeamSize).map(c => c.uid);
 
-  state.battleNum = 1;
+  state.battleNum = 0;
   state.wins = 0;
   state.ties = 0;
   state.losses = 0;
   state.difficulty = 'easy';
   state.nextDifficulty = 'easy';
   state.extractCountdown = null;
-  state.enemy = generateEnemy(1, 'easy');
+  state.map = {
+    currentNode: 'start',
+    visitedNodes: ['start'],
+    pendingNode: null,
+  };
 
   state.runStats = {
     cardsPlayed: 0,
@@ -2648,7 +2904,7 @@ function startStarterPackExpedition() {
   };
 
   audio.score();
-  showPrep();
+  showMap();
 }
 
 $('btn-go-expedition').addEventListener('click', startExpedition);
@@ -2715,6 +2971,12 @@ $('btn-evac-base').addEventListener('click', () => {
     } else {
       showHome();
     }
+  }
+});
+
+$('btn-view-map')?.addEventListener('click', () => {
+  if (state.screen !== 'home' && state.screen !== 'map' && !state.inBattle) {
+    showMap();
   }
 });
 

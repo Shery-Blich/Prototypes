@@ -51,23 +51,47 @@
       </div>
     </section>
 
+    <!-- MAP SCREEN -->
+    <section id="map-screen" class="screen hidden">
+      <div class="map-header panel">
+        <div class="map-title-row">
+          <div>
+            <h1>🗺️ Expedition Map</h1>
+            <p class="hint" id="map-hint">Click an adjacent tile to advance. Reach an Extraction Point (🚪➔) to secure your squad!</p>
+          </div>
+          <div class="map-actions-cluster">
+            <span class="map-stat-pill">Squad: <b id="map-squad-count">0</b></span>
+            <span class="map-stat-pill">Battles Won: <b id="map-battles-won">0</b></span>
+            <button id="btn-map-to-prep" class="btn btn-primary hidden">⚔ Back to Prep</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="map-viewport panel">
+        <div id="map-container" class="map-container">
+          <svg id="map-connections-svg" class="map-connections-svg"></svg>
+          <div id="map-tiles-layer" class="map-tiles-layer"></div>
+        </div>
+      </div>
+
+      <div class="map-legend panel">
+        <div class="map-legend-items">
+          <span class="legend-item"><span class="legend-swatch swatch-start"></span> Start</span>
+          <span class="legend-item"><span class="legend-swatch swatch-easy"></span> Easy (1 Sword)</span>
+          <span class="legend-item"><span class="legend-swatch swatch-med"></span> Medium (2 Swords)</span>
+          <span class="legend-item"><span class="legend-swatch swatch-hard"></span> Boss (Skull)</span>
+          <span class="legend-item"><span class="legend-swatch swatch-ext"></span> Extraction Door</span>
+          <span class="legend-item"><span class="legend-player-pin">🤠</span> Current Position</span>
+        </div>
+      </div>
+    </section>
+
     <!-- PREP SCREEN -->
     <section id="prep-screen" class="screen hidden">
       <svg id="preview-arrows" class="preview-arrows"></svg>
       <div class="prep-header-bar">
-        <div class="prep-control-left">
-          <button id="btn-fight" class="btn btn-primary">⚔ Fight</button>
-          <span id="fight-hint" class="hint"></span>
-        </div>
-        <div class="prep-control-right">
-          <div id="prep-difficulty-picker" class="prep-difficulty-picker">
-            <span class="hint" style="font-size:11px;">Difficulty:</span>
-            <button type="button" class="btn btn-tiny diff-pill" data-diff="easy">🟢 Easy</button>
-            <button type="button" class="btn btn-tiny diff-pill" data-diff="medium">🟡 Medium</button>
-            <button type="button" class="btn btn-tiny diff-pill" data-diff="hard">🔴 Hard</button>
-          </div>
-          <button id="btn-preview-battle" class="btn">▶ Preview battle</button>
-        </div>
+        <button id="btn-fight" class="btn btn-primary">⚔ Fight</button>
+        <span id="fight-hint" class="hint hidden"></span>
       </div>
 
       <div class="arena prep-arena">
@@ -77,7 +101,7 @@
         </div>
         <div class="vs">VS</div>
         <div class="side side-enemy panel-enemy">
-          <div class="side-label">ENEMY <span id="prep-difficulty-badge" class="diff-badge badge-easy">🟢 Easy</span></div>
+          <div class="side-label">ENEMY</div>
           <div id="enemy-preview" class="row row-enemy"></div>
         </div>
       </div>
@@ -85,7 +109,7 @@
       <div id="preview-info" class="preview-info hidden"></div>
 
       <div id="camp-panel" class="panel">
-        <h2>Your Camp<b id="camp-count" style="display:none;"></b></h2>
+        <h2>Available<b id="camp-count" style="display:none;"></b></h2>
         <div id="roster" class="row row-roster"></div>
       </div>
     </section>
@@ -168,14 +192,6 @@
           <div id="result-discard" class="row row-result"></div>
         </div>
 
-        <!-- DIFFICULTY SELECTION (for next battle) -->
-        <div id="result-difficulty-wrap" class="result-difficulty-wrap hidden">
-          <div class="difficulty-header">
-            <span class="diff-title">🎯 Next Battle Difficulty (Battle <b id="next-battle-num">2</b>)</span>
-          </div>
-          <div id="difficulty-options" class="difficulty-options-row"></div>
-        </div>
-
         <!-- EXTRACTION XP & LEVEL UP SUMMARY (when an expedition concludes) -->
         <div id="result-xp-debrief" class="result-xp-debrief hidden">
           <div class="xp-debrief-header">
@@ -229,8 +245,7 @@
 
         <div class="result-actions">
           <button id="btn-skip-recruit" class="btn hidden">Skip ⏭</button>
-          <button id="btn-continue" class="btn btn-primary">Continue ▶</button>
-          <button id="btn-extract" class="btn btn-extract hidden">🚁 Extract in 2 battles</button>
+          <button id="btn-continue" class="btn btn-primary">Continue to Map 🗺️</button>
           <button id="btn-return-home" class="btn btn-primary hidden">Return to Home Stash 🏠</button>
         </div>
       </div>
@@ -239,6 +254,10 @@
 
   <!-- FLOATING BUTTONS AT BOTTOM-LEFT CORNER -->
   <div class="floating-corner-cluster">
+    <button id="btn-view-map" class="btn-floating-corner btn-map-corner hidden" title="View Expedition Map">
+      <span class="corner-btn-icon">🗺️</span>
+      <span class="corner-btn-label">Expedition Map</span>
+    </button>
     <button id="btn-evac-base" class="btn-floating-corner btn-evac-corner hidden" title="Return to Home Stash with surviving cards">
       <span class="corner-btn-icon">🏠</span>
       <span class="corner-btn-label">Evac to Base</span>

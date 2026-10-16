@@ -16,8 +16,8 @@ export const TRIGGERS = {
 export const CLASSES = {
   rotator:  { label: 'Rotator',  emoji: '🦅', color: '#0ea5e9' },   // sky-blue
   dps:      { label: 'Warrior',  emoji: '⚔️', color: '#ef4444' },   // red
-  warlock:  { label: 'Warlock',  emoji: '🦎', color: '#a855f7' },   // purple
-  support:  { label: 'Support',  emoji: '🦙', color: '#f59e0b' },   // amber
+  warlock:  { label: 'Warlock',  emoji: '🥀', color: '#a855f7' },   // purple
+  support:  { label: 'Support',  emoji: '💪', color: '#f59e0b' },   // amber
   tank:     { label: 'Healer',   emoji: '💚', color: '#10b981' },   // emerald / green
   cage:     { label: 'Cage',     emoji: '⛓️', color: '#eab308' },   // gold / locked cage
   summoner: { label: 'Summoner', emoji: '🐛', color: '#22c55e' },
