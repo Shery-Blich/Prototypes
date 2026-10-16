@@ -11,10 +11,6 @@
   <div id="app">
     <header class="hud">
       <div class="hud-stat hud-level-stat" id="hud-level-wrap" title="Meta-Progression Level & Cumulative XP">🎖️ Level <b id="hud-level">0</b> <span class="hud-xp-sub">(<span id="hud-xp-curr">0</span>/<span id="hud-xp-target">191</span> XP)</span></div>
-      <div id="trigger-legend" class="trigger-legend"></div>
-      <div id="class-legend" class="class-legend"></div>
-      <button id="btn-evac-base" class="btn btn-small hidden" title="Return to Home Stash with surviving cards">🏠 Evac to Base</button>
-      <button id="btn-open-editor" class="btn btn-small" title="Visually edit characters, stats, and abilities">🎨 Card Editor</button>
     </header>
 
     <!-- HOME SCREEN (BASE & STASH) -->
@@ -25,6 +21,7 @@
             <h1>🏕️ Base Camp & Stash</h1>
           </div>
           <div class="home-actions">
+            <button id="btn-starter-expedition" class="btn btn-starter" title="Start expedition with free 4 starter cards without using your stash!">🎁 Expedition with Starter Pack</button>
             <button id="btn-auto-loadout" class="btn">Auto-pick</button>
             <button id="btn-clear-loadout" class="btn">Clear</button>
             <button id="btn-restock-stash" class="btn btn-small" title="Generate 20 fresh random cards">Restock +20</button>
@@ -35,6 +32,11 @@
           <span class="loadout-pill">Expedition Loadout: <b id="loadout-count">0</b> / <b id="loadout-max">15</b> cards</span>
           <span class="loadout-pill stash-pill">In Stash: <b id="stash-count">20</b> cards</span>
         </div>
+      </div>
+
+      <!-- SELECTED LOADOUT WINDOW (NO HEADER TEXT, HIGHER IN SCREEN) -->
+      <div id="home-selected-panel" class="panel home-selected-panel">
+        <div id="selected-loadout-cards" class="row row-stash row-selected-loadout"></div>
       </div>
 
       <!-- HOME LEVELS PROGRESS BAR WITH MYSTERY CARD SILHOUETTE -->
@@ -154,15 +156,12 @@
         <p id="result-text"></p>
         <div id="result-cards" class="row row-result"></div>
 
-        <!-- SQUAD PREVIEW (when picking up cards after battle) -->
-        <div id="result-squad-preview" class="result-squad-preview hidden">
-          <div class="squad-preview-header">
+        <!-- SQUAD PREVIEW DROPDOWN (when picking up cards after battle) -->
+        <details id="result-squad-preview" class="result-squad-preview hidden">
+          <summary class="squad-dropdown-summary">
             <span class="squad-preview-label">Your Squad Overview</span>
-            <span class="squad-preview-meta">
-              <span class="squad-pill">Team: <b id="preview-team-count">0</b>/<b id="preview-team-max">5</b></span>
-              <span class="squad-pill">Camp: <b id="preview-camp-count">0</b>/<b id="preview-camp-max">10</b></span>
-            </span>
-          </div>
+            <span class="squad-dropdown-arrow">▼</span>
+          </summary>
           <div class="squad-preview-sections">
             <div class="squad-section">
               <div class="squad-section-title">
@@ -178,7 +177,7 @@
               <div id="preview-camp-slots" class="row row-squad-preview row-camp-preview"></div>
             </div>
           </div>
-        </div>
+        </details>
 
         <div id="result-discard-wrap" class="result-discard-wrap hidden">
           <p id="result-discard-label"></p>
@@ -255,11 +254,21 @@
     </div>
   </div>
 
-  <!-- FLOATING BUTTON AT BOTTOM-LEFT CORNER -->
-  <button id="btn-open-modifiers" class="btn-floating-corner" title="Open Gameplay Modifiers & Card Progression">
-    <span class="corner-btn-icon">⚙️</span>
-    <span class="corner-btn-label">Modifiers & Progression</span>
-  </button>
+  <!-- FLOATING BUTTONS AT BOTTOM-LEFT CORNER -->
+  <div class="floating-corner-cluster">
+    <button id="btn-evac-base" class="btn-floating-corner btn-evac-corner hidden" title="Return to Home Stash with surviving cards">
+      <span class="corner-btn-icon">🏠</span>
+      <span class="corner-btn-label">Evac to Base</span>
+    </button>
+    <button id="btn-open-editor" class="btn-floating-corner btn-editor-corner" title="Visually edit characters, stats, and abilities">
+      <span class="corner-btn-icon">🎨</span>
+      <span class="corner-btn-label">Card Editor</span>
+    </button>
+    <button id="btn-open-modifiers" class="btn-floating-corner" title="Open Gameplay Modifiers & Card Progression">
+      <span class="corner-btn-icon">⚙️</span>
+      <span class="corner-btn-label">Modifiers & Progression</span>
+    </button>
+  </div>
 
   <!-- GAMEPLAY MODIFIERS & CARD PROGRESSION MODAL -->
   <div id="modifiers-modal" class="editor-modal-backdrop hidden">
@@ -273,6 +282,7 @@
           </div>
         </div>
         <div class="editor-modal-actions">
+          <button id="btn-modal-open-editor" class="btn btn-small" title="Open Visual Card Editor">🎨 Card Editor</button>
           <button id="btn-close-modifiers" class="btn btn-small">✕ Close</button>
         </div>
       </div>
@@ -326,6 +336,11 @@
               <button class="btn btn-small" data-step="campMax" data-dir="1">+</button>
               <button class="btn btn-small" data-reset="campMax">Reset</button>
               <span id="mod-campMax-desc" class="hint"></span>
+            </div>
+            <div class="modifier modifier-action">
+              <span class="mod-name">🔄 Reset Progression</span>
+              <button type="button" id="mod-reset-progression" class="btn btn-small btn-danger">Reset to First 4 Cards & Level 0</button>
+              <span class="hint" id="mod-reset-desc">Resets all cards back to the initial 4 Starter Pack cards, and resets level to 0.</span>
             </div>
           </div>
         </div>

@@ -129,8 +129,18 @@ function resetProgression() {
   saveProgression();
   state.stash = STARTER_PACK_IDS.map(id => makeCharacter(id));
   saveStash();
+  state.roster = [];
+  state.team = [];
+  state.extractCountdown = null;
+  state.battleNum = 1;
+  state.wins = 0;
+  state.ties = 0;
+  state.losses = 0;
   if (state.selectedStashUids) state.selectedStashUids.clear();
-  renderHome();
+  renderProgressionPanel();
+  renderModifiers();
+  if (state.screen === 'home') renderHome();
+  else showHome();
 }
 
 const state = {
@@ -465,14 +475,6 @@ function showHome() {
     if (!stashUids.has(uid)) state.selectedStashUids.delete(uid);
   }
 
-  // If no cards selected yet and stash has cards, auto-select up to loadout limit
-  if (state.selectedStashUids.size === 0 && state.stash.length > 0) {
-    const max = maxExpeditionLoadout();
-    for (let i = 0; i < Math.min(state.stash.length, max); i++) {
-      state.selectedStashUids.add(state.stash[i].uid);
-    }
-  }
-
   updateHud();
   renderModifiers();
   renderHome();
@@ -495,50 +497,83 @@ function renderHome() {
     ? `Select at least ${MIN_TEAM} card`
     : `⚔️ Go Expedition (${currentCount} cards)`;
 
-  const container = $('stash-cards');
-  container.innerHTML = '';
+  const selectedContainer = $('selected-loadout-cards');
+  const stashContainer = $('stash-cards');
+  if (selectedContainer) selectedContainer.innerHTML = '';
+  if (stashContainer) stashContainer.innerHTML = '';
 
-  if (state.stash.length === 0) {
-    container.innerHTML = '<div class="hint" style="padding:20px;font-size:15px;">Your stash is empty! Click "Restock +20" above to generate cards.</div>';
-    return;
-  }
+  const selectedCards = [];
+  const unselectedCards = [];
 
   for (const c of state.stash) {
     if (!c || !c.id) continue;
-    const d = CHARACTERS[c.id];
-    if (!d) continue;
-    const isSelected = state.selectedStashUids.has(c.uid);
-    const atkBonus = c.atkBonus || 0;
-    const hpBonus = c.hpBonus || 0;
-    const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, {
-      cls: 'stash-card clickable' + (isSelected ? ' selected' : ''),
-      atkBonus,
-      hpBonus,
-    });
-
-    if (isSelected) {
-      const tag = document.createElement('div');
-      tag.className = 'stash-loadout-tag';
-      tag.textContent = '✓ LOADOUT';
-      el.appendChild(tag);
+    if (state.selectedStashUids && state.selectedStashUids.has(c.uid)) {
+      selectedCards.push(c);
+    } else {
+      unselectedCards.push(c);
     }
+  }
 
-    el.addEventListener('click', () => {
-      if (state.selectedStashUids.has(c.uid)) {
-        state.selectedStashUids.delete(c.uid);
-        audio.beep(400);
-      } else {
-        if (state.selectedStashUids.size >= maxExpeditionLoadout()) {
-          audio.beep(250);
-          return;
-        }
-        state.selectedStashUids.add(c.uid);
-        audio.beep(550);
+  // 1. Render Selected Cards Window (Higher on screen, no header text)
+  if (selectedContainer) {
+    if (selectedCards.length === 0) {
+      selectedContainer.innerHTML = '<span class="hint selected-empty-hint">Selected expedition squad will appear here. Click cards from your stash below to choose them.</span>';
+    } else {
+      for (const c of selectedCards) {
+        const d = CHARACTERS[c.id];
+        if (!d) continue;
+        const atkBonus = c.atkBonus || 0;
+        const hpBonus = c.hpBonus || 0;
+        const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, {
+          cls: 'stash-card clickable selected',
+          atkBonus,
+          hpBonus,
+        });
+        const tag = document.createElement('div');
+        tag.className = 'stash-loadout-tag';
+        tag.textContent = '✓ SELECTED (CLICK TO REMOVE)';
+        el.appendChild(tag);
+
+        el.addEventListener('click', () => {
+          state.selectedStashUids.delete(c.uid);
+          audio.beep(400);
+          renderHome();
+        });
+        selectedContainer.appendChild(el);
       }
-      renderHome();
-    });
+    }
+  }
 
-    container.appendChild(el);
+  // 2. Render Stash Cards (Lower on screen)
+  if (stashContainer) {
+    if (state.stash.length === 0) {
+      stashContainer.innerHTML = '<div class="hint" style="padding:20px;font-size:15px;">Your stash is empty! Click "Restock +20" above to generate cards, or use "Expedition with Starter Pack".</div>';
+    } else if (unselectedCards.length === 0) {
+      stashContainer.innerHTML = '<div class="hint" style="padding:20px;font-size:14px;color:#94a3b8;">All stash cards are currently in your selected loadout window above.</div>';
+    } else {
+      for (const c of unselectedCards) {
+        const d = CHARACTERS[c.id];
+        if (!d) continue;
+        const atkBonus = c.atkBonus || 0;
+        const hpBonus = c.hpBonus || 0;
+        const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, {
+          cls: 'stash-card clickable',
+          atkBonus,
+          hpBonus,
+        });
+
+        el.addEventListener('click', () => {
+          if (state.selectedStashUids.size >= maxExpeditionLoadout()) {
+            audio.beep(250);
+            return;
+          }
+          state.selectedStashUids.add(c.uid);
+          audio.beep(550);
+          renderHome();
+        });
+        stashContainer.appendChild(el);
+      }
+    }
   }
 
   renderProgressionPanel();
@@ -677,15 +712,15 @@ function initProgressionEvents() {
     audio.beep(460);
   });
   $('btn-reset-progression')?.addEventListener('click', () => {
-    if (confirm('Reset all XP, levels, and card unlocks back to the 4-card Starter Pack?')) {
+    if (confirm('Reset all cards to the first 4 (Claw Strike, Healer Doe, Thick Skin, Death Curse) and reset Level to 0?')) {
       resetProgression();
       audio.explosion();
     }
   });
-  $('hud-level-wrap')?.addEventListener('click', () => {
-    if (state.screen === 'home') {
-      const panel = document.querySelector('.progression-panel');
-      if (panel) panel.scrollIntoView({ behavior: 'smooth' });
+  $('mod-reset-progression')?.addEventListener('click', () => {
+    if (confirm('Reset all cards to the first 4 (Claw Strike, Healer Doe, Thick Skin, Death Curse) and reset Level to 0?')) {
+      resetProgression();
+      audio.explosion();
     }
   });
 }
@@ -800,13 +835,17 @@ const TIPS = {
 };
 
 function renderTriggerLegend() {
-  $('trigger-legend').innerHTML = Object.entries(TRIGGERS)
+  const el = $('trigger-legend');
+  if (!el) return;
+  el.innerHTML = Object.entries(TRIGGERS)
     .map(([key, t]) => `<span class="legend-item" data-trigger="${key}"><span class="trig">${t.emoji}</span> ${t.name}</span>`)
     .join('');
 }
 
 function renderClassLegend() {
-  $('class-legend').innerHTML = Object.entries(CLASSES)
+  const el = $('class-legend');
+  if (!el) return;
+  el.innerHTML = Object.entries(CLASSES)
     .map(([key, c]) =>
       `<span class="class-legend-item" style="background:${c.color}22;color:${c.color};border:1px solid ${c.color}44">${c.label}</span>`)
     .join('');
@@ -1098,9 +1137,10 @@ function showAbilityPreview(lineup, key, ui) {
   else if (!anyTarget) extra += ' No valid target in this position.';
   if (effects.some(fx => fx.random && fx.targets.some(Boolean))) extra += ' <span class="pv-rand">?</span> = one of these, picked at random.';
   const trig = TRIGGERS[def.trigger];
-  if (def.trigger === 'death') extra = ' Shown as if it dies in its current slot.' + extra;
-  info.innerHTML = withTriggerTips(`<b>${def.emoji} ${def.name}</b> (${slot}): ${def.text} <span class="hint">${trig.emoji} ${trig.name}: ${trig.note}${extra}</span>`);
-  info.classList.remove('hidden');
+  if (info) {
+    info.innerHTML = '';
+    info.classList.add('hidden');
+  }
   drawArrows(self.el, arrows, def.trigger, ui);
   return true;
 }
@@ -1678,6 +1718,83 @@ function finalizeRunXp(isSuccessfulExtraction) {
   };
 }
 
+function animateDebriefProgressBar(debrief) {
+  const bar = $('debrief-xp-bar');
+  const lvlEl = $('debrief-lvl-num');
+  const numsEl = $('debrief-xp-nums');
+  if (!bar || !lvlEl || !numsEl) return;
+
+  const prevLvl = debrief.prevLevel;
+  const newLvl = debrief.newLevel;
+  const prevXp = debrief.prevTotalXp;
+  const newXp = debrief.newTotalXp;
+
+  const prevCurrThresh = getXpThresholdForLevel(prevLvl);
+  const prevNextThresh = getXpThresholdForLevel(prevLvl + 1);
+  const prevSpan = Math.max(1, prevNextThresh - prevCurrThresh);
+  const prevProgress = Math.max(0, prevXp - prevCurrThresh);
+  const prevPct = Math.min(100, Math.max(0, Math.round((prevProgress / prevSpan) * 100)));
+
+  const newCurrThresh = getXpThresholdForLevel(newLvl);
+  const newNextThresh = getXpThresholdForLevel(newLvl + 1);
+  const newSpan = Math.max(1, newNextThresh - newCurrThresh);
+  const newProgress = Math.max(0, newXp - newCurrThresh);
+  const newPct = Math.min(100, Math.max(0, Math.round((newProgress / newSpan) * 100)));
+
+  // Start at initial progression state
+  lvlEl.textContent = prevLvl;
+  numsEl.textContent = `${prevXp} / ${prevNextThresh} XP (${Math.max(0, prevNextThresh - prevXp)} XP to next)`;
+  bar.style.transition = 'none';
+  bar.style.width = prevPct + '%';
+
+  // Animate filling after brief delay
+  setTimeout(() => {
+    if (debrief.levelsGained === 0) {
+      bar.style.transition = 'width 1.2s cubic-bezier(0.2, 0.8, 0.25, 1)';
+      bar.style.width = newPct + '%';
+      animateXpNumbers(numsEl, prevXp, newXp, prevNextThresh, 1200);
+    } else {
+      // Step 1: fill to 100% of current level
+      bar.style.transition = 'width 0.8s cubic-bezier(0.2, 0.8, 0.25, 1)';
+      bar.style.width = '100%';
+      animateXpNumbers(numsEl, prevXp, prevNextThresh, prevNextThresh, 800, () => {
+        audio.score();
+        lvlEl.textContent = newLvl;
+        lvlEl.classList.add('pop');
+        setTimeout(() => lvlEl.classList.remove('pop'), 600);
+
+        // Reset to 0% and animate to new percentage in new level
+        bar.style.transition = 'none';
+        bar.style.width = '0%';
+        void bar.offsetWidth; // force reflow
+
+        setTimeout(() => {
+          bar.style.transition = 'width 0.9s cubic-bezier(0.2, 0.8, 0.25, 1)';
+          bar.style.width = newPct + '%';
+          animateXpNumbers(numsEl, newCurrThresh, newXp, newNextThresh, 900);
+        }, 60);
+      });
+    }
+  }, 250);
+}
+
+function animateXpNumbers(el, fromXp, toXp, nextThresh, duration, onComplete) {
+  const start = performance.now();
+  const step = now => {
+    const elapsed = now - start;
+    const progress = Math.min(1, elapsed / duration);
+    const curr = Math.round(fromXp + (toXp - fromXp) * progress);
+    const needed = Math.max(0, nextThresh - curr);
+    el.textContent = `${curr} / ${nextThresh} XP (${needed} XP to next)`;
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      if (onComplete) onComplete();
+    }
+  };
+  requestAnimationFrame(step);
+}
+
 function renderDebrief(debrief, outcomeType) {
   const debriefBox = $('result-xp-debrief');
   if (!debriefBox) return;
@@ -1720,15 +1837,8 @@ function renderDebrief(debrief, outcomeType) {
 
   $('xp-debrief-total-val').textContent = `+${debrief.totalRunXp} XP`;
 
-  // Level & progress bar
-  $('debrief-lvl-num').textContent = debrief.newLevel;
-  const currThresh = getXpThresholdForLevel(debrief.newLevel);
-  const nextThresh = getXpThresholdForLevel(debrief.newLevel + 1);
-  const span = Math.max(1, nextThresh - currThresh);
-  const progressInLvl = Math.max(0, debrief.newTotalXp - currThresh);
-  const pct = Math.min(100, Math.max(0, Math.round((progressInLvl / span) * 100)));
-  $('debrief-xp-bar').style.width = pct + '%';
-  $('debrief-xp-nums').textContent = `${debrief.newTotalXp} / ${nextThresh} XP (${Math.max(0, nextThresh - debrief.newTotalXp)} XP to next)`;
+  // Animated Level & progress bar fill
+  animateDebriefProgressBar(debrief);
 
   // Celebration for unlocks
   const unlockBox = $('debrief-unlocks-box');
@@ -1859,11 +1969,12 @@ function showTotalDefeat(participants) {
 function renderSquadPreview() {
   const previewWrap = $('result-squad-preview');
   if (!previewWrap) return;
+  if (previewWrap.tagName === 'DETAILS') previewWrap.removeAttribute('open');
 
-  $('preview-team-count').textContent = state.team.length;
-  $('preview-team-max').textContent = teamSlots();
-  $('preview-camp-count').textContent = campCount();
-  $('preview-camp-max').textContent = campMax();
+  if ($('preview-team-count')) $('preview-team-count').textContent = state.team.length;
+  if ($('preview-team-max')) $('preview-team-max').textContent = teamSlots();
+  if ($('preview-camp-count')) $('preview-camp-count').textContent = campCount();
+  if ($('preview-camp-max')) $('preview-camp-max').textContent = campMax();
 
   // Team slots preview (slot 0 is front, displayed on right)
   const teamRow = $('preview-team-slots');
@@ -2011,12 +2122,7 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
     skip.classList.remove('hidden');
     const needDiscard = Math.max(0, picks.length - room);
     if (discards.length > needDiscard) discards.length = needDiscard;
-    const roomText = `Room: ${room} (camp ${campCount()}/${campMax()}, team ${state.team.length}/${teamSlots()}).`;
-
-    const sourceLabel = fromEnemy ? 'from defeated enemy team' : 'random recruitable pool';
-    const buffInfo = keepBuffs ? ' · Enemy buffs kept ⭐' : '';
-    text.textContent = `Difficulty reward: pick up to ${maxPicks} card${maxPicks === 1 ? '' : 's'} (${sourceLabel}${buffInfo}). Currently ${picks.length}/${maxPicks} selected. ${roomText}`
-      + (needDiscard ? ` Discard ${needDiscard} of yours to make room.` : '');
+    text.textContent = '';
 
     cards.innerHTML = '';
     candidates.forEach((cand, i) => {
@@ -2521,7 +2627,33 @@ $('btn-fight').addEventListener('click', startBattle);
 $('btn-skip').addEventListener('click', () => { closeBattlePreview(); setSpeed(1000); });
 document.querySelectorAll('.speed').forEach(b => b.addEventListener('click', () => setSpeed(Number(b.dataset.speed))));
 
+function startStarterPackExpedition() {
+  // Free 4 starter cards without taking anything from stash
+  const starterCards = STARTER_PACK_IDS.map(id => makeCharacter(id));
+  state.roster = starterCards;
+  const initialTeamSize = Math.min(teamSlots(), state.roster.length);
+  state.team = state.roster.slice(0, initialTeamSize).map(c => c.uid);
+
+  state.battleNum = 1;
+  state.wins = 0;
+  state.ties = 0;
+  state.losses = 0;
+  state.difficulty = 'easy';
+  state.nextDifficulty = 'easy';
+  state.extractCountdown = null;
+  state.enemy = generateEnemy(1, 'easy');
+
+  state.runStats = {
+    cardsPlayed: 0,
+    levelsCleared: 0,
+  };
+
+  audio.score();
+  showPrep();
+}
+
 $('btn-go-expedition').addEventListener('click', startExpedition);
+$('btn-starter-expedition')?.addEventListener('click', startStarterPackExpedition);
 
 $('btn-auto-loadout').addEventListener('click', () => {
   if (!state.selectedStashUids) state.selectedStashUids = new Set();
@@ -2610,6 +2742,7 @@ function closeEditorModal() {
 }
 
 $('btn-open-editor')?.addEventListener('click', openEditorModal);
+$('btn-modal-open-editor')?.addEventListener('click', openEditorModal);
 $('btn-close-editor')?.addEventListener('click', closeEditorModal);
 
 // ---------- Modifiers & Progression Modal ----------
