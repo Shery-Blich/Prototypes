@@ -2089,3 +2089,62 @@ details.result-squad-preview[open] summary.squad-dropdown-summary {
   transition: opacity 0.3s ease, transform 0.4s ease;
 }
 .worm-pit.rise .worm-sand, .worm-pit.sink .worm-sand { opacity: 1; transform: scaleY(1); }
+
+/* ═══════════ IN-ARENA RECRUIT (after a win) ═══════════ */
+#btn-recruit {
+  font-size: 16px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 10px 40px; border-radius: 10px; color: #fbf1df;
+  background: linear-gradient(135deg, #6b4a2b 0%, #4a321d 100%);
+  border: 1.5px solid #c9a97f;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#btn-recruit.recruit-has-picks {
+  background: linear-gradient(135deg, #f2a541 0%, #d9822b 60%, #b9651c 100%);
+  border-color: #fde68a; color: #2b1606;
+  box-shadow: 0 4px 18px rgba(242, 165, 65, 0.5);
+}
+#btn-recruit:hover:not(:disabled) { transform: translateY(-2px) scale(1.03); }
+
+.recruit-label {
+  align-self: center;
+  font-size: 22px; font-weight: 900; letter-spacing: 0.04em;
+  color: #fde68a; text-shadow: 0 2px 10px rgba(242, 165, 65, 0.6);
+  animation: recruit-pulse 1.4s ease-in-out infinite alternate;
+}
+.recruit-label .recruit-sub {
+  display: block; text-align: center;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #c9a97f; text-shadow: none;
+}
+@keyframes recruit-pulse { to { transform: scale(1.06); } }
+
+/* Selectable enemy cards: a small arrow above, corner brackets around */
+.card.recruitable { cursor: pointer; }
+.card.recruitable::after {
+  content: '▼'; position: absolute; left: 50%; top: -30px; transform: translateX(-50%);
+  font-size: 16px; color: #c9a97f; pointer-events: none;
+  animation: recruit-bob 0.9s ease-in-out infinite alternate;
+}
+.card.recruitable.recruit-picked::after { color: #fde68a; text-shadow: 0 0 8px #f2a541; }
+@keyframes recruit-bob { to { transform: translate(-50%, 5px); } }
+
+.recruit-corners {
+  /* corner brackets: four L-shaped corners drawn with gradients */
+  content: ''; position: absolute; inset: -9px; border-radius: 0; opacity: 0.45;
+  pointer-events: none;
+  --c: #c9a97f; --l: 16px; --w: 3px;
+  background:
+    linear-gradient(var(--c), var(--c)) top left / var(--l) var(--w),
+    linear-gradient(var(--c), var(--c)) top left / var(--w) var(--l),
+    linear-gradient(var(--c), var(--c)) top right / var(--l) var(--w),
+    linear-gradient(var(--c), var(--c)) top right / var(--w) var(--l),
+    linear-gradient(var(--c), var(--c)) bottom left / var(--l) var(--w),
+    linear-gradient(var(--c), var(--c)) bottom left / var(--w) var(--l),
+    linear-gradient(var(--c), var(--c)) bottom right / var(--l) var(--w),
+    linear-gradient(var(--c), var(--c)) bottom right / var(--w) var(--l);
+  background-repeat: no-repeat;
+  transition: opacity 0.15s ease, inset 0.15s ease;
+}
+.card.recruitable:hover > .recruit-corners { opacity: 0.85; }
+.card.recruit-picked > .recruit-corners { --c: #fde68a; opacity: 1; inset: -6px; filter: drop-shadow(0 0 4px #f2a541); }
+.card.recruitable.recruit-picked { transform: translateY(-4px); }

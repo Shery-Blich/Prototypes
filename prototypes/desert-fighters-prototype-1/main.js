@@ -1834,7 +1834,7 @@ const view = {
         if (!el) {
           el = cardEl(u.id, u.atk, u.hp, { cls: 'selectable combat-card', atkBonus: u.atkBonus || 0, hpBonus: u.hpBonus || 0 });
           el.addEventListener('click', (e) => {
-            if (el.classList.contains('dead')) return;
+            if (recruiting || el.classList.contains('dead')) return;
             const isPop = el.classList.contains('pop-open');
             document.querySelectorAll('.arena .card.pop-open').forEach(c => c.classList.remove('pop-open'));
             if (!isPop) el.classList.add('pop-open');
@@ -2022,6 +2022,8 @@ async function startBattle() {
   cardMap.clear();
   lastRects.clear();
   $('effect-arrows').innerHTML = '';
+  $('recruit-bar').classList.add('hidden');
+  recruiting = false;
   closeBattlePreview();
   setSpeed(state.speed > 4 ? 1 : state.speed);
 
@@ -2044,22 +2046,20 @@ async function startBattle() {
   const eaten = noise.player > noise.enemy ? 'player' : noise.enemy > noise.player ? 'enemy' : null;
   if (outcome !== 'lose' && eaten) outcome = eaten === 'player' ? 'lose' : 'win';
 
-  // A won combat: the squad recovers and picks rewards first, the worm eats the enemy after.
-  pendingWorm = null;
-  if (eaten && outcome === 'win') pendingWorm = battle;
-  else if (eaten) await playWormSequence(battle, eaten);
+  // A won combat: the squad recovers and recruits in the arena first, the worm eats the enemy after.
+  if (eaten && outcome !== 'win') await playWormSequence(battle, eaten);
   if (outcome === 'win') await playReviveSequence(battle);
 
   currentBattle = null;
-  showResult(outcome, participants, defeatedEnemy, battleDifficulty, { combat: result.outcome, eaten, noise });
+  showResult(outcome, participants, defeatedEnemy, battleDifficulty, { combat: result.outcome, eaten, noise, battle });
 }
 
 // ---------- Giant Worm & Noise ----------
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// Battle whose louder enemy the worm eats once the player has picked rewards
-let pendingWorm = null;
+// True while the player picks enemy cards to recruit in the arena after a win
+let recruiting = false;
 
 function setNoiseCounter(side, total, pop = false) {
   const el = $(`noise-${side}`);
@@ -2446,9 +2446,11 @@ function showResult(result, participants, defeatedEnemy, battleDifficulty, info 
     state.wins++;
     if (!state.runStats) state.runStats = { cardsPlayed: 0, levelsCleared: 0 };
     state.runStats.levelsCleared += 1;
-    title.textContent = 'Victory!';
     audio.score();
-    showVictoryRewards(defeatedEnemy, battleDifficulty);
+    updateHud();
+    // Recruiting happens in the arena, not in the result pop-up
+    startRecruitPhase(info.battle, battleDifficulty, info.eaten === 'enemy');
+    return;
   } else if (result === 'tie') {
     state.ties = (state.ties || 0) + 1;
     audio.beep(480, 250);
@@ -2599,212 +2601,125 @@ function renderSquadPreview() {
   previewWrap.classList.remove('hidden');
 }
 
-// Victory Reward:
-// Pick X cards as allowed by the battle difficulty (Easy: 1, Medium: 2, Hard: 3).
-// Modifier `rewardFromEnemy`:
-//   - true: candidate cards come from the defeated enemy team that had lost.
-//   - false: candidate cards are rolled randomly from the recruitable character pool.
-function showVictoryRewards(defeatedEnemy, battleDifficulty) {
+// After a win the enemy cards come back up in the arena with base stats, and the player picks
+// which to recruit right there. Pass/Recruit then lets the worm eat the rest (if the enemy was
+// louder) and returns to the map on its own.
+function startRecruitPhase(battle, battleDifficulty, wormEatsEnemy) {
   const diff = DIFFICULTIES[battleDifficulty] || DIFFICULTIES.easy;
-  const pickCount = diff.pickCount || 1;
-  const fromEnemy = Boolean(state.modifiers.rewardFromEnemy);
   const keepBuffs = Boolean(state.modifiers.keepEnemyBuffs);
+  recruiting = true;
+  state.inBattle = true;
+  updateHud();
 
-  const title = $('result-title');
-  const text = $('result-text');
-  const cards = $('result-cards');
-  const btn = $('btn-continue');
-
-  btn.classList.remove('hidden');
-  btn.disabled = false;
-  $('result-difficulty-wrap')?.classList.add('hidden');
-
-  let candidates = [];
-  if (fromEnemy) {
-    // Cards from the enemy team that had lost
-    candidates = (defeatedEnemy && defeatedEnemy.length > 0)
-      ? defeatedEnemy.map(e => ({
-          id: e.id,
-          source: 'enemy',
-          atkBonus: keepBuffs ? (e.atkBonus || 0) : 0,
-          hpBonus: keepBuffs ? (e.hpBonus || 0) : 0,
-        }))
-      : Array.from({ length: pickCount }, () => ({
-          id: randomCharacterId(),
-          source: 'enemy',
-          atkBonus: 0,
-          hpBonus: 0,
-        }));
-  } else {
-    // Random cards from recruitable pool (offer a selection pool of at least 3 cards)
-    const poolCount = Math.max(3, pickCount + 1);
-    const buffedEnemies = (defeatedEnemy || []).filter(e => (e.atkBonus || 0) > 0 || (e.hpBonus || 0) > 0);
-    candidates = Array.from({ length: poolCount }, () => {
-      let atkBonus = 0;
-      let hpBonus = 0;
-      if (keepBuffs && buffedEnemies.length > 0) {
-        const sample = buffedEnemies[Math.floor(Math.random() * buffedEnemies.length)];
-        atkBonus = sample.atkBonus || 0;
-        hpBonus = sample.hpBonus || 0;
-      }
-      return {
-        id: randomCharacterId(),
-        source: 'random',
-        atkBonus,
-        hpBonus,
-      };
-    });
+  // Dead enemies stand back up with base stats as recruit candidates
+  const enemyTeam = battle.teams.enemy;
+  enemyTeam.push(...battle.graves.enemy);
+  battle.graves.enemy.length = 0;
+  battle.lingering = battle.lingering.filter(l => l.u.side !== 'enemy');
+  const candidates = enemyTeam.filter(u => !u.def.token);
+  for (const u of candidates) {
+    u.atkBonus = keepBuffs ? (u.atkBonus || 0) : 0;
+    u.hpBonus = keepBuffs ? (u.hpBonus || 0) : 0;
+    u.atk = u.def.atk + u.atkBonus;
+    u.hp = u.def.hp + u.hpBonus;
+    u.shield = false;
+    u.dead = false;
   }
+  // Rebuild the enemy cards so their buff badges match the recruit stats
+  for (const u of candidates) cardMap.get(u.uid)?.remove(), cardMap.delete(u.uid);
+  view.render(battle);
 
-  const maxPicks = Math.min(pickCount, candidates.length);
-  const picks = [];
-  const discards = [];
   const room = (campMax() - campCount()) + (teamSlots() - state.team.length);
-  const nameOf = cand => {
-    const d = CHARACTERS[cand.id];
-    const bonus = ((cand.atkBonus || 0) > 0 || (cand.hpBonus || 0) > 0)
-      ? ` (+${cand.atkBonus || 0}/+${cand.hpBonus || 0})`
-      : '';
-    return `${d.emoji} ${d.name}${bonus}`;
-  };
-  const ownNameOf = c => {
-    const d = CHARACTERS[c.id];
-    const bonus = ((c.atkBonus || 0) > 0 || (c.hpBonus || 0) > 0)
-      ? ` (+${c.atkBonus || 0}/+${c.hpBonus || 0})`
-      : '';
-    return `${d.emoji} ${d.name}${bonus}`;
-  };
+  const maxPicks = Math.max(0, Math.min(diff.pickCount || 1, candidates.length, room));
+  const picks = [];
 
-  const toggle = (list, v, max) => {
-    const i = list.indexOf(v);
-    if (i >= 0) { list.splice(i, 1); return; }
-    if (max <= 0) return;
-    if (list.length >= max) list.shift();
-    list.push(v);
-  };
+  const side = document.querySelector('#battle-screen .side-enemy');
+  const label = document.createElement('div');
+  label.className = 'recruit-label';
+  side.insertBefore(label, $('battle-enemy'));
 
-  title.textContent = 'Victory!';
-  title.className = 'win';
+  const bar = $('recruit-bar');
+  const btn = $('btn-recruit');
+  bar.classList.remove('hidden');
+  btn.disabled = false;
 
   const draw = () => {
-    btn.classList.remove('hidden');
-    const needDiscard = Math.max(0, picks.length - room);
-    if (discards.length > needDiscard) discards.length = needDiscard;
-    text.textContent = '';
+    label.innerHTML = maxPicks
+      ? `Recruit? <span class="recruit-sub">pick up to ${maxPicks} · ${picks.length}/${maxPicks}</span>`
+      : `Recruit? <span class="recruit-sub">no room in your squad</span>`;
+    for (const u of candidates) {
+      cardMap.get(u.uid)?.classList.toggle('recruit-picked', picks.includes(u));
+    }
+    btn.textContent = picks.length ? `Recruit (${picks.length})` : 'Pass';
+    btn.classList.toggle('recruit-has-picks', picks.length > 0);
+  };
 
-    cards.innerHTML = '';
-    candidates.forEach((cand, i) => {
-      const d = CHARACTERS[cand.id];
-      const isPicked = picks.includes(i);
-      const atkBonus = cand.atkBonus || 0;
-      const hpBonus = cand.hpBonus || 0;
-      const el = cardEl(cand.id, d.atk + atkBonus, d.hp + hpBonus, {
-        cls: 'reward-option' + (isPicked ? ' picked' : ''),
-        atkBonus,
-        hpBonus,
-      });
-      const tag = document.createElement('div');
-      tag.className = 'front-tag';
-      let tagLabel = fromEnemy ? 'DEFEATED ENEMY' : 'RANDOM REWARD';
-      if (atkBonus > 0 || hpBonus > 0) {
-        tagLabel += ' ⭐';
+  for (const u of candidates) {
+    const el = cardMap.get(u.uid);
+    if (!el) continue;
+    el.classList.add('recruitable');
+    const corners = document.createElement('div');
+    corners.className = 'recruit-corners';
+    el.appendChild(corners);
+    if (!maxPicks) continue;
+    el.addEventListener('click', () => {
+      if (!recruiting) return;
+      const i = picks.indexOf(u);
+      if (i >= 0) picks.splice(i, 1);
+      else {
+        if (picks.length >= maxPicks) picks.shift();
+        picks.push(u);
       }
-      tag.textContent = isPicked ? 'PICKED ✔' : tagLabel;
-      tag.style.background = isPicked ? '#22c55e' : (fromEnemy ? '#f97316' : '#c8642c');
-      tag.style.color = isPicked ? '#052e16' : '#ffffff';
-      el.appendChild(tag);
-      el.addEventListener('click', () => {
-        toggle(picks, i, maxPicks);
-        draw();
-      });
-      cards.appendChild(el);
+      audio.beep(picks.includes(u) ? 720 : 520);
+      draw();
+    });
+  }
+  draw();
+  // Center the label over the enemy cards (the row is packed toward the VS side)
+  const cardEls = candidates.map(u => cardMap.get(u.uid)).filter(Boolean);
+  if (cardEls.length) {
+    const left = Math.min(...cardEls.map(e => e.getBoundingClientRect().left));
+    const right = Math.max(...cardEls.map(e => e.getBoundingClientRect().right));
+    const sideLeft = side.getBoundingClientRect().left;
+    label.style.alignSelf = 'flex-start';
+    label.style.marginLeft = `${Math.max(0, (left + right) / 2 - sideLeft - label.offsetWidth / 2)}px`;
+  }
+  $('turn-label').textContent = '🏆 Victory! Recruit from the enemy team';
+
+  btn.onclick = async () => {
+    if (!recruiting) return;
+    recruiting = false;
+    btn.disabled = true;
+    bar.classList.add('hidden');
+    label.remove();
+    candidates.forEach(u => {
+      const el = cardMap.get(u.uid);
+      el?.classList.remove('recruitable', 'recruit-picked');
+      el?.querySelector('.recruit-corners')?.remove();
     });
 
-    renderSquadPreview();
-
-    $('result-discard-wrap').classList.toggle('hidden', !needDiscard);
-    $('result-discard-label').textContent = `Discard ${needDiscard} of yours (${discards.length}/${needDiscard} picked):`;
-    if (needDiscard) {
-      const own = $('result-discard');
-      own.innerHTML = '';
-      for (const c of state.roster) {
-        const d = CHARACTERS[c.id];
-        const atkBonus = c.atkBonus || 0;
-        const hpBonus = c.hpBonus || 0;
-        const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, {
-          cls: 'discard-option' + (discards.includes(c.uid) ? ' discarding' : ''),
-          atkBonus,
-          hpBonus,
-        });
-        if (state.team.includes(c.uid)) {
-          const tag = frontTag();
-          tag.textContent = 'TEAM';
-          el.appendChild(tag);
-        }
-        el.addEventListener('click', () => { toggle(discards, c.uid, needDiscard); draw(); });
-        own.appendChild(el);
-      }
-    }
-
-    const rewardText = picks.length === 1 ? nameOf(candidates[picks[0]]) : `${picks.length} cards`;
-    const discardText = discards.length === 1
-      ? ownNameOf(state.roster.find(r => r.uid === discards[0]))
-      : `${discards.length} cards`;
-
-    if (!picks.length) {
-      btn.disabled = false;
-      btn.textContent = 'Continue to Map without picking 🗺️';
-    } else if (needDiscard && discards.length !== needDiscard) {
-      btn.disabled = true;
-      btn.textContent = `Discard ${needDiscard - discards.length} to Continue ▶`;
-    } else {
-      btn.disabled = false;
-      btn.textContent = `Add ${rewardText} & Continue to Map 🗺️` + (needDiscard ? ` (discarding ${discardText})` : '');
-    }
-  };
-
-  btn.onclick = () => {
-    if (!picks.length) {
-      onPostCardChoice('win');
-      return;
-    }
-    const freed = [];
-    for (const uid of discards) {
-      state.roster = state.roster.filter(r => !uid || r.uid !== uid);
-      const slot = state.team.indexOf(uid);
-      if (slot >= 0) { state.team[slot] = null; freed.push(slot); }
-    }
-    const teamSize = () => state.team.filter(u => u !== null).length;
-    for (const i of picks) {
-      const cand = candidates[i];
-      const recruit = makeCharacter(cand.id, cand.atkBonus || 0, cand.hpBonus || 0);
-      const inCamp = state.roster.length - teamSize();
-      if (inCamp < campMax()) { /* goes to camp */ }
-      else if (freed.length) state.team[freed.shift()] = recruit.uid;
-      else state.team.push(recruit.uid);
+    // Recruits join the squad: into the camp first, the team when the camp is full
+    for (const u of picks) {
+      const recruit = makeCharacter(u.id, u.atkBonus || 0, u.hpBonus || 0);
+      if (campCount() >= campMax()) state.team.push(recruit.uid);
       state.roster.push(recruit);
+      view.float(u, '🤝 Joined!', 'revive');
     }
-    state.team = state.team.filter(u => u !== null);
+    if (picks.length) {
+      audio.score();
+      await sleep(900);
+      battle.teams.enemy = enemyTeam.filter(u => !picks.includes(u));
+      view.render(battle);
+      await sleep(300);
+    }
+
+    if (wormEatsEnemy && battle.teams.enemy.length) await playWormSequence(battle, 'enemy');
+    state.inBattle = false;
     onPostCardChoice('win');
   };
-
-  draw();
 }
 
 function onPostCardChoice(lastResult, customMessage = null) {
-  // Back to the combat screen to watch the worm eat the louder enemy, then on to the map.
-  if (pendingWorm) {
-    const battle = pendingWorm;
-    pendingWorm = null;
-    $('result-overlay').classList.add('hidden');
-    state.inBattle = true;
-    updateHud();
-    playWormSequence(battle, 'enemy').then(() => {
-      state.inBattle = false;
-      onPostCardChoice(lastResult, customMessage);
-    });
-    return;
-  }
   updateHud();
 
   const title = $('result-title');
