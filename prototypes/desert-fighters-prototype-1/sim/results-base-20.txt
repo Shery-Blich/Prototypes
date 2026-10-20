@@ -1,0 +1,35 @@
+
+Desert Fighters balance sim · 20000 games · pool=base (20 cards) · slots=3 · hp+0 atk+0 · order=best · 48.9s
+
+Overall:  player WIN  33%   fight won  63%   quieter  55%   won-fight-but-too-loud  30%   equal noise  18%
+          avg clashes/fight 3.92   avg cards played 2.56   avg noise player 5.7 / enemy 6.6
+
+ΔWin  = win rate when this card is in the player's hand, minus the overall win rate (positive = good card for the player)
+Played= how often the player chose to actually field it · Front= how often it was put in front · Loud= won the fight but lost on noise
+AsEnemy = how often the PLAYER LOSES when this card is on the enemy team (higher = scarier as an enemy)
+
+ ΔWin  Win  Played Front Loud AsEnemy  hp/atk/noise  trig    name          ability
++26.8   60%   99%   49%   18%   82%     5/ 1/ 1      attack  Trample Share                          When 🗡️ give HP to the friend behind equal to this ATK.
++21.0   54%   98%   41%   14%   80%     4/ 1/ 1      start   Iron Hide                              When 🏁 give the friend behind +2 HP.
++18.4   51%   97%   16%   29%   76%     1/ 2/ 1      start   Grace Aura                             When 🏁 give +2/+1 to the two friends ahead.
++14.9   48%   97%   34%   19%   76%     3/ 1/ 1      hurt    Hex Scales                             When 💢 deal damage equal to this card's HP to a random enemy.
+ +7.6   41%   96%   39%   20%   77%     2/ 2/ 1      start   Venom Sight                            When 🏁 halve the ATK of the highest-ATK enemy (rounded down).
+ +6.5   40%   97%   42%   21%   77%     3/ 2/ 1      hurt    Stormwing                              When 💢 push the highest-HP friend to the front.
+ +5.8   39%   97%   41%   18%   73%     3/ 1/ 1      hurt    Thick Skin                             When 💢 give a random friend +1 HP.
+ +3.0   36%   96%   40%   20%   68%     2/ 1/ 1      attack  Healer Doe                             When 🗡️ give HP to the friend behind equal to this ATK.
+ +0.1   33%   90%   43%   37%   66%     2/ 1/ 2      death   Final Gift                             When 💀 give a random friend +2/+2.
+ -1.7   31%   90%   31%   36%   80%     1/ 3/ 2      start   Claw Strike                            When 🏁 deal 3 damage to a random enemy.
+ -3.0   30%   87%   38%   39%   66%     2/ 2/ 2      death   Death Curse                            When 💀 reduce the first enemy's ATK by its current HP.
+ -3.5   30%   86%   33%   42%   63%     5/ 1/ 2      death   Last Stand                             When 💀 give +2 HP to the friend behind.
+ -7.1   26%   81%   29%   37%   62%     2/ 3/ 2      hurt    Retaliate                              When 💢 deal half the damage taken back to the attacker.
+ -9.4   24%   80%   31%   52%   63%     1/ 5/ 3      death   Death Roar                             When 💀 deal 1 damage to ALL enemies.
+-10.6   22%   82%   26%   56%   68%     3/ 3/ 3      attack  Frenzy                                 When 🗡️ gain +1 ATK.
+-11.1   22%   71%   28%   26%   55%     1/ 2/ 2      start   Swiftbeak                              When 🏁 push the first enemy to last.
+-13.0   20%   70%   30%   26%   55%     1/ 2/ 2      hurt    Pain Share                             When 💢 give ATK to the friend behind equal to this remaining HP.
+-13.9   19%   67%   29%   24%   50%     1/ 2/ 2      attack  Curse Bite                             When 🗡️ set the first enemy's ATK equal to its current HP.
+-15.4   18%   69%   28%   26%   55%     1/ 2/ 2      death   Deathfeather                           When 💀 bring the highest-ATK friend forward.
+-15.6   17%   57%   20%   31%   49%     1/ 3/ 3      attack  Tailwind                               When 🗡️ bring the lowest-HP enemy to the front.
+
+(* = candidate card from sim/cards.js, not in the prototype yet)
+
+wrote /tmp/claude-0/-home-claude/28fc795b-2734-5dc7-8b3d-3b2c5c2756a2/scratchpad/base.json
