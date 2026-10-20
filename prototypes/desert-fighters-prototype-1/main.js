@@ -16,7 +16,7 @@ import {
   makeCharacter,
   randomCharacterId,
 } from './characters.js';
-import { Battle } from './battle.js';
+import { Battle, WORM_RULES, wormBiteDamage } from './battle.js';
 import { generateEncounter } from './encounters.js';
 import { SimpleAudio } from '/src/shared/utils.js';
 import { initEditor } from './editor.js';
@@ -35,6 +35,33 @@ const campCount = () => state.roster.length - state.team.length;
 
 const $ = id => document.getElementById(id);
 const audio = new SimpleAudio();
+
+// Sword clash: a short metallic noise burst plus two ringing partials (WebAudio, no asset needed)
+const sfx = {
+  ctx: null,
+  ensure() { try { this.ctx ??= new (window.AudioContext || window.webkitAudioContext)(); if (this.ctx.state === 'suspended') this.ctx.resume(); } catch { this.ctx = null; } return this.ctx; },
+  swordClash(volume = 0.5) {
+    const ctx = this.ensure(); if (!ctx) return;
+    const t = ctx.currentTime;
+    const out = ctx.createGain(); out.gain.value = volume; out.connect(ctx.destination);
+    // metallic scrape: filtered white noise
+    const len = Math.floor(ctx.sampleRate * 0.25);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3800; bp.Q.value = 1.2;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
+    src.connect(bp); bp.connect(hp); hp.connect(out);
+    src.start(t);
+    // ringing blades
+    for (const [f, dur, g] of [[2650, 0.5, 0.18], [4120, 0.38, 0.12], [6330, 0.22, 0.06]]) {
+      const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f * (0.98 + Math.random() * 0.04);
+      const e = ctx.createGain(); e.gain.setValueAtTime(g, t); e.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(e); e.connect(out); o.start(t); o.stop(t + dur);
+    }
+  },
+};
 
 export const DIFFICULTIES = {
   easy: {
@@ -879,12 +906,12 @@ function cardEl(id, atk, hp, opts = {}) {
   const noise = opts.noise ?? def.noise ?? 1;
 
   el.innerHTML = `
-    <div class="noise-badge" title="Noise: every time this card attacks it fills the Giant Worm's meter. When the meter fills, the Worm bites the LOUDEST card on the field for 2× its noise.">🔊<b class="noise-val">${noise}</b></div>
+    <div class="stat noise noise-badge" title="Noise: every time this card attacks it fills the Giant Worm's meter. When the meter fills, the Worm bites the LOUDEST card on the field for 2× its noise.">🔊 <b class="noise-val">${noise}</b></div>
     ${clsDef ? `<div class="class-badge" data-class="${cls}" title="${classLabel}" style="background:${clsDef.color}22;color:${clsDef.color};border:1px solid ${clsDef.color}55"><span class="class-badge-emoji">${classEmoji}</span><span class="class-badge-label">${classLabel}</span></div>` : ''}
     ${buffBadge}
     <div class="card-emoji">${def.emoji}</div>
     <div class="card-name">${def.name}</div>
-    <div class="card-text">${def.text ? withTriggerTips(def.text) : '<i>Summoned token</i>'}</div>
+    <div class="card-text">${def.text ? withTriggerTips(def.text) : (def.token ? '<i>Summoned token</i>' : '<i>No ability</i>')}</div>
     <div class="card-stats">
       <span class="stat atk${(opts.atkBonus || 0) > 0 ? ' stat-up' : ''}">⚔ <b class="atk-val">${atk}</b></span>
       <span class="shield-icon trig" data-tip="shield">🛡</span>
@@ -1789,6 +1816,36 @@ function setPaused(p) {
 
 const isOverSlot = el => el instanceof Element && el.classList.contains('over-slot');
 
+// Global pacing multiplier for combat waits (1 = the original timings)
+const PACE = 1.6;
+
+// Milliseconds scaled by the speed buttons (used by the view's own animations)
+const paced = ms => state.speed >= 1000 ? 0 : (ms * PACE) / Math.min(state.speed || 1, 8);
+
+// Flies `count` copies of `glyph` from a card to a target element, staggered; resolves when the last lands.
+async function flyGlyphs(fromEl, toEl, glyph, count, cls = 'fly-noise') {
+  if (!fromEl || !toEl || state.speed >= 1000) return;
+  const a = fromEl.getBoundingClientRect(), b = toEl.getBoundingClientRect();
+  const sx = a.left + a.width / 2 + window.scrollX, sy = a.top + 14 + window.scrollY;
+  const tx = b.left + b.width / 2 + window.scrollX, ty = b.top + b.height / 2 + window.scrollY;
+  const dur = paced(650), gap = paced(110);
+  const anims = [];
+  for (let i = 0; i < count; i++) {
+    const g = document.createElement('div');
+    g.className = cls; g.textContent = glyph;
+    g.style.left = `${sx}px`; g.style.top = `${sy}px`;
+    document.body.appendChild(g);
+    const spread = (i - (count - 1) / 2) * 14;
+    const anim = g.animate([
+      { transform: 'translate(-50%, -50%) scale(0.6)', opacity: 0 },
+      { transform: `translate(calc(-50% + ${spread}px), -90%) scale(1.3)`, opacity: 1, offset: 0.25 },
+      { transform: `translate(calc(-50% + ${tx - sx}px), calc(-50% + ${ty - sy}px)) scale(0.7)`, opacity: 0.9 },
+    ], { duration: dur, delay: i * gap, easing: 'cubic-bezier(0.3, 0.7, 0.4, 1)', fill: 'forwards' });
+    anims.push(anim.finished.then(() => g.remove()).catch(() => g.remove()));
+  }
+  await Promise.all(anims);
+}
+
 const view = {
   render(battle) {
     clearBattlePreview();
@@ -1841,28 +1898,64 @@ const view = {
     f.className = `float ${cls}`;
     f.innerHTML = withTriggerTips(text);
     el.appendChild(f);
-    setTimeout(() => f.remove(), 1100);
+    setTimeout(() => f.remove(), cls === 'dmg' ? 2200 : 1100);
     if (cls === 'dmg') audio.hit();
     else if (cls === 'buff') audio.beep(760);
   },
-  noise(u, amount, total) {
-    this.float(u, `+${amount}🔊`, 'noise');
+  // Step 1 of an attack: the two front cards lunge and the blades ring
+  async clash(uPlayer, uEnemy) {
+    this.flash(uPlayer, 'lunge-right');
+    this.flash(uEnemy, 'lunge-left');
+    sfx.swordClash();
+    await this.wait(200);
+  },
+  async noise(u, amount, total, meter, next) {
     setNoiseCounter(u.side, total, true);
     audio.beep(u.side === 'player' ? 300 : 260, 90);
+    const n = Math.max(1, Math.min(8, Math.abs(amount)));
+    await flyGlyphs(cardMap.get(u.uid), $('worm-meter'), '🔊', n);
+    setWormMeter(meter, next, true);
   },
   wormMeter(meter, next) {
     setWormMeter(meter, next, true);
   },
-  // The Worm surfaces under the loudest card and bites it (the battle applies the damage after)
+  // The Worm surfaces under the loudest card, chomps it and sinks back (~2s at 1x).
+  // The battle applies the damage right after this resolves.
   async wormBite(target, dmg, battle) {
     if (state.speed >= 1000) return;
     const el = cardMap.get(target.uid);
     const screen = $('battle-screen');
     const meterEl = $('worm-meter');
     meterEl?.classList.add('full');
+    const d = ms => new Promise(r => setTimeout(r, paced(ms)));
+
+    let pit = null;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      const w = r.width + 24, h = r.height + 40;
+      pit = document.createElement('div');
+      pit.className = 'worm-pit mini';
+      pit.style.left = `${r.left + r.width / 2 - w / 2 + window.scrollX}px`;
+      pit.style.top = `${r.bottom + 18 - h + window.scrollY}px`;
+      pit.style.width = `${w}px`;
+      pit.style.height = `${h}px`;
+      pit.innerHTML = `
+        <div class="worm">
+          <div class="worm-mouth"><div class="worm-teeth"></div><div class="worm-throat"></div></div>
+          <div class="worm-body"></div>
+        </div>
+        <div class="worm-sand"></div>`;
+      document.body.appendChild(pit);
+      void pit.offsetWidth;
+    }
     screen.classList.add('shake');
     audio.beep(180, 220);
-    await this.wait(350);
+    await d(350);                        // tremble
+    screen.classList.remove('shake');
+    pit?.classList.add('rise');          // surface under the card
+    await d(600);
+    pit?.classList.add('chomp');         // bite
+    audio.explosion();
     if (el) {
       el.classList.remove('worm-bitten');
       void el.offsetWidth;
@@ -1871,12 +1964,14 @@ const view = {
       f.className = 'float worm';
       f.textContent = `🪱 -${dmg}`;
       el.appendChild(f);
-      setTimeout(() => f.remove(), 1200);
+      setTimeout(() => f.remove(), 2200);
       setTimeout(() => el.classList.remove('worm-bitten'), 900);
     }
-    audio.explosion();
-    await this.wait(400);
-    screen.classList.remove('shake');
+    await d(500);
+    pit?.classList.remove('rise', 'chomp');
+    pit?.classList.add('sink');          // back into the sand
+    await d(550);
+    pit?.remove();
     meterEl?.classList.remove('full');
   },
   flash(u, cls) {
@@ -1943,9 +2038,10 @@ const view = {
   // Also holds the battle here while it's paused for a preview.
   async wait(ms) {
     state.combatStep = (state.combatStep || 0) + 1;
-    const accel = Math.max(0.28, Math.pow(0.965, state.combatStep));
+    // Fights speed up gently as they go on, but never below 60% of the base pace
+    const accel = Math.max(0.6, Math.pow(0.975, state.combatStep));
     const effectiveSpeed = (state.speed || 1) / accel;
-    await new Promise(r => setTimeout(r, ms / effectiveSpeed));
+    await new Promise(r => setTimeout(r, (ms * PACE) / effectiveSpeed));
     while (state.paused) await new Promise(r => resumeWaiters.push(r));
   },
 };
@@ -2039,6 +2135,7 @@ async function startBattle() {
   setNoiseCounter('player', 0);
   setNoiseCounter('enemy', 0);
   setWormMeter(0, battle.worm.next);
+  $('battle-camp')?.classList.add('hidden');
   const result = await battle.run();
   await view.wait(500);
   closeBattlePreview();
@@ -2159,9 +2256,20 @@ async function playWormSequence(battle, side) {
 
 // The player survived: dead cards come back with base stats, and every card drops its
 // combat buffs, so it's clear both deaths and buffs only lasted for this combat.
+// The battle units are restored too, so later renders (recruit phase, worm) show them alive.
 async function playReviveSequence(battle) {
   const units = battle.display('player').filter(u => u.rosterUid != null);
   if (!units.length) return;
+  const restoreUnits = () => {
+    for (const u of units) {
+      u.atk = u.def.atk + (u.atkBonus || 0);
+      u.hp = u.def.hp + (u.hpBonus || 0);
+      u.shield = false; u.dead = false;
+    }
+    const back = battle.graves.player.splice(0);
+    battle.teams.player.push(...back.filter(u => u.rosterUid != null));
+    battle.lingering = battle.lingering.filter(l => l.u.side !== 'player');
+  };
   $('turn-label').textContent = '✨ Your squad recovers...';
   await sleep(500);
 
@@ -2184,6 +2292,7 @@ async function playReviveSequence(battle) {
     audio.beep(wasDead ? 880 : 660);
     await sleep(350);
   }
+  restoreUnits();
   $('turn-label').textContent = '✨ Deaths and buffs only last for the combat';
   await sleep(1400);
 }
@@ -2644,9 +2753,12 @@ function startRecruitPhase(battle, battleDifficulty, wormEatsEnemy) {
   for (const u of candidates) cardMap.get(u.uid)?.remove(), cardMap.delete(u.uid);
   view.render(battle);
 
-  const room = (campMax() - campCount()) + (teamSlots() - state.team.length);
-  const maxPicks = Math.max(0, Math.min(diff.pickCount || 1, candidates.length, room));
+  // Room in the squad; when it's full the player can mark one of their own cards to be replaced
+  const room = Math.max(0, campMax() - campCount()) + Math.max(0, teamSlots() - state.team.length);
+  const maxPicks = Math.max(0, Math.min(diff.pickCount || 1, candidates.length));
   const picks = [];
+  const replaced = [];   // roster cards (team or camp) the player gives up for a recruit
+  const capacity = () => room + replaced.length;
 
   const side = document.querySelector('#battle-screen .side-enemy');
   const label = document.createElement('div');
@@ -2658,15 +2770,44 @@ function startRecruitPhase(battle, battleDifficulty, wormEatsEnemy) {
   bar.classList.remove('hidden');
   btn.disabled = false;
 
+  // Camp cards (roster not in the team) are shown under the squad so they can be replaced too
+  const campRow = $('battle-camp');
+  const ownEls = new Map(); // roster card -> element
+  if (campRow) {
+    campRow.innerHTML = '';
+    const campCards = state.roster.filter(c => !state.team.includes(c.uid));
+    for (const c of campCards) {
+      const d = CHARACTERS[c.id];
+      const el = cardEl(c.id, d.atk + (c.atkBonus || 0), d.hp + (c.hpBonus || 0), { cls: 'camp-card', atkBonus: c.atkBonus || 0, hpBonus: c.hpBonus || 0 });
+      const tag = document.createElement('div');
+      tag.className = 'front-tag camp-tag';
+      tag.textContent = 'CAMP';
+      el.appendChild(tag);
+      campRow.appendChild(el);
+      ownEls.set(c, el);
+    }
+    campRow.classList.toggle('hidden', !campCards.length);
+  }
+  for (const u of battle.teams.player) {
+    const c = state.roster.find(r => r.uid === u.rosterUid);
+    const el = cardMap.get(u.uid);
+    if (c && el) ownEls.set(c, el);
+  }
+
   const draw = () => {
+    const need = picks.length - capacity();
     label.innerHTML = maxPicks
       ? `Recruit? <span class="recruit-sub">pick up to ${maxPicks} · ${picks.length}/${maxPicks}</span>`
-      : `Recruit? <span class="recruit-sub">no room in your squad</span>`;
-    for (const u of candidates) {
-      cardMap.get(u.uid)?.classList.toggle('recruit-picked', picks.includes(u));
+        + (need > 0 ? `<span class="recruit-warn">Squad is full: click ${need === 1 ? 'one of your cards' : `${need} of your cards`} to replace</span>` : '')
+      : `Recruit? <span class="recruit-sub">no candidates</span>`;
+    for (const u of candidates) cardMap.get(u.uid)?.classList.toggle('recruit-picked', picks.includes(u));
+    for (const [c, el] of ownEls) {
+      el.classList.toggle('replace-marked', replaced.includes(c));
+      el.classList.toggle('replaceable', picks.length > 0 && (need > 0 || replaced.includes(c)));
     }
     btn.textContent = picks.length ? `Recruit (${picks.length})` : 'Pass';
     btn.classList.toggle('recruit-has-picks', picks.length > 0);
+    btn.disabled = need > 0;
   };
 
   for (const u of candidates) {
@@ -2685,10 +2826,26 @@ function startRecruitPhase(battle, battleDifficulty, wormEatsEnemy) {
         if (picks.length >= maxPicks) picks.shift();
         picks.push(u);
       }
+      // Dropping picks frees replacements
+      while (replaced.length && picks.length <= room + replaced.length - 1) replaced.pop();
       audio.beep(picks.includes(u) ? 720 : 520);
       draw();
     });
   }
+  // Own cards: mark / unmark for replacement
+  const onOwnClick = (c) => (e) => {
+    if (!recruiting || !picks.length) return;
+    e.stopPropagation();
+    const i = replaced.indexOf(c);
+    if (i >= 0) replaced.splice(i, 1);
+    else if (picks.length > capacity()) replaced.push(c);
+    else return;
+    audio.beep(i >= 0 ? 520 : 440);
+    draw();
+  };
+  const ownHandlers = [];
+  for (const [c, el] of ownEls) { const h = onOwnClick(c); el.addEventListener('click', h, true); ownHandlers.push([el, h]); }
+
   draw();
   // Center the label over the enemy cards (the row is packed toward the VS side)
   const cardEls = candidates.map(u => cardMap.get(u.uid)).filter(Boolean);
@@ -2702,7 +2859,7 @@ function startRecruitPhase(battle, battleDifficulty, wormEatsEnemy) {
   $('turn-label').textContent = '🏆 Victory! Recruit from the enemy team';
 
   btn.onclick = async () => {
-    if (!recruiting) return;
+    if (!recruiting || picks.length > capacity()) return;
     recruiting = false;
     btn.disabled = true;
     bar.classList.add('hidden');
@@ -2712,11 +2869,25 @@ function startRecruitPhase(battle, battleDifficulty, wormEatsEnemy) {
       el?.classList.remove('recruitable', 'recruit-picked');
       el?.querySelector('.recruit-corners')?.remove();
     });
+    for (const [el, h] of ownHandlers) { el.removeEventListener('click', h, true); el.classList.remove('replaceable'); }
 
-    // Recruits join the squad: into the camp first, the team when the camp is full
+    // Replaced cards leave the squad
+    if (replaced.length) {
+      for (const c of replaced) {
+        const el = ownEls.get(c);
+        if (el) { el.classList.add('discarding'); const f = document.createElement('div'); f.className = 'float dmg'; f.textContent = '👋 Replaced'; el.appendChild(f); }
+        state.roster = state.roster.filter(r => r !== c);
+        state.team = state.team.filter(uid => uid !== c.uid);
+      }
+      audio.beep(380, 200);
+      await sleep(900);
+      for (const c of replaced) ownEls.get(c)?.remove();
+    }
+
+    // Recruits join the squad: the team if it has a free slot, otherwise the camp
     for (const u of picks) {
       const recruit = makeCharacter(u.id, u.atkBonus || 0, u.hpBonus || 0);
-      if (campCount() >= campMax()) state.team.push(recruit.uid);
+      if (state.team.length < teamSlots()) state.team.push(recruit.uid);
       state.roster.push(recruit);
       view.float(u, '🤝 Joined!', 'revive');
     }
@@ -2729,6 +2900,7 @@ function startRecruitPhase(battle, battleDifficulty, wormEatsEnemy) {
     }
 
     if (wormEatsEnemy && battle.teams.enemy.length) await playWormSequence(battle, 'enemy');
+    campRow?.classList.add('hidden');
     state.inBattle = false;
     onPostCardChoice('win');
   };
@@ -3171,3 +3343,6 @@ loadProgression();
 state.stash = loadStash();
 initProgressionEvents();
 showHome();
+
+// Prep screen: show the Worm threshold so the player can plan their order around it
+document.querySelectorAll('#prep-worm-threshold, .prep-worm-every').forEach(el => { el.textContent = WORM_RULES.every; });

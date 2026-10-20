@@ -99,7 +99,11 @@
           <div class="side-label">YOU</div>
           <div id="team-slots" class="row row-team"></div>
         </div>
-        <div class="vs">VS</div>
+        <div class="vs-col">
+          <div class="vs">VS</div>
+          <div class="worm-meter prep-worm" title="The Giant Worm's meter. Every attack adds the attacker's noise to it. Each time it fills, the Worm bites the LOUDEST card on the field (either team) for 2× its noise.">🪱 bites at <b id="prep-worm-threshold">6</b><span class="worm-sep">🔊</span></div>
+          <div class="prep-worm-hint">then every <span class="prep-worm-every">6</span> more · bites the loudest card for 2× its noise</div>
+        </div>
         <div class="side side-enemy panel-enemy">
           <div class="side-label">ENEMY</div>
           <div id="enemy-preview" class="row row-enemy"></div>
@@ -135,10 +139,11 @@
           <div class="side-label">YOU</div>
           <div id="noise-player" class="noise-counter" title="Noise your team has made so far (feeds the Worm meter in the middle).">🔊 <b>0</b></div>
           <div id="battle-player" class="row"></div>
+          <div id="battle-camp" class="row row-camp hidden"></div>
         </div>
         <div class="vs-col">
-          <div class="vs">VS</div>
           <div id="worm-meter" class="worm-meter" title="The Giant Worm's meter. Every attack adds the attacker's noise. When it reaches the threshold, the Worm bites the loudest card on the field (either team) for 2× its noise.">🪱 <b class="worm-now">0</b><span class="worm-sep">/</span><span class="worm-next">6</span></div>
+          <div class="vs">VS</div>
         </div>
         <div class="side side-enemy">
           <div class="side-label">ENEMY</div>

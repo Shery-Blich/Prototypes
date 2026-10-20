@@ -493,19 +493,19 @@ export const BASE_CHARACTERS = {
   },
 
 
-  // ── PLAIN CARDS (no ability): the power ladder is visible in the numbers.
+  // ── PLAIN CARDS (no ability, no class): the power ladder is visible in the numbers.
   //    Rule of thumb for a "fair" plain card: noise ≈ (hp + atk) / 2 − 2  (hp already includes the +2 base)
-  plain_jackal:   { class: 'dps',  name: 'Jackal',   emoji: '🐕', atk: 2,  hp: 4,  noise: 1, text: '' },
-  plain_hyena:    { class: 'dps',  name: 'Hyena',    emoji: '🐺', atk: 3,  hp: 5,  noise: 2, text: '' },
-  plain_warthog:  { class: 'dps',  name: 'Warthog',  emoji: '🐗', atk: 4,  hp: 6,  noise: 3, text: '' },
-  plain_falcon:   { class: 'dps',  name: 'Falcon',   emoji: '🦅', atk: 5,  hp: 3,  noise: 2, text: '' },
-  plain_lion:     { class: 'dps',  name: 'Jaguar',   emoji: '🐈‍⬛', atk: 8,  hp: 4,  noise: 3, text: '' },
-  plain_owl:      { class: 'dps',  name: 'Owl',      emoji: '🦉', atk: 4,  hp: 3,  noise: 0, text: '' },
-  plain_sloth:    { class: 'tank', name: 'Sloth',    emoji: '🦥', atk: 1,  hp: 6,  noise: 0, text: '' },
-  plain_camel:    { class: 'tank', name: 'Camel',    emoji: '🐪', atk: 1,  hp: 7,  noise: 1, text: '' },
-  plain_hippo:    { class: 'tank', name: 'Buffalo',  emoji: '🐃', atk: 2,  hp: 8,  noise: 2, text: '' },
-  plain_elephant: { class: 'tank', name: 'Elephant', emoji: '🐘', atk: 2,  hp: 10, noise: 3, text: '' },
-  plain_behemoth: { class: 'dps',  name: 'Behemoth', emoji: '🦏', atk: 10, hp: 12, noise: 10, text: '' },
+  plain_jackal:   { name: 'Jackal',   emoji: '🐕', atk: 2,  hp: 4,  noise: 1, text: '' },
+  plain_hyena:    { name: 'Hyena',    emoji: '🐺', atk: 3,  hp: 5,  noise: 2, text: '' },
+  plain_warthog:  { name: 'Warthog',  emoji: '🐗', atk: 4,  hp: 6,  noise: 3, text: '' },
+  plain_falcon:   { name: 'Falcon',   emoji: '🦅', atk: 5,  hp: 3,  noise: 2, text: '' },
+  plain_lion:     { name: 'Jaguar',   emoji: '🐈‍⬛', atk: 8,  hp: 4,  noise: 3, text: '' },
+  plain_owl:      { name: 'Owl',      emoji: '🦉', atk: 4,  hp: 3,  noise: 0, text: '' },
+  plain_sloth:    { name: 'Sloth',    emoji: '🦥', atk: 1,  hp: 6,  noise: 0, text: '' },
+  plain_camel:    { name: 'Camel',    emoji: '🐪', atk: 1,  hp: 7,  noise: 1, text: '' },
+  plain_hippo:    { name: 'Buffalo',  emoji: '🐃', atk: 2,  hp: 8,  noise: 2, text: '' },
+  plain_elephant: { name: 'Elephant', emoji: '🐘', atk: 2,  hp: 10, noise: 3, text: '' },
+  plain_behemoth: { name: 'Behemoth', emoji: '🦏', atk: 10, hp: 12, noise: 10, text: '' },
 
   // ── Special Cage Card (0 ATK, 2 HP)
   cage: {

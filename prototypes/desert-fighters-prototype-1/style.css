@@ -581,7 +581,8 @@ body {
   font-weight: 900; font-size: 20px; pointer-events: none; white-space: nowrap;
   animation: float-up 1.1s ease-out forwards; text-shadow: 0 2px 4px #000; z-index: 5;
 }
-.float.dmg { color: #f87171; }
+.float.dmg { color: #f87171; font-size: 40px; animation: float-up-slow 2.1s ease-out forwards; text-shadow: 0 3px 6px #000, 0 0 14px rgba(248, 113, 113, 0.6); }
+@keyframes float-up-slow { 0% { transform: translate(-50%, 0) scale(0.6); opacity: 0; } 12% { transform: translate(-50%, -6px) scale(1.15); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(-50%, -54px) scale(1); opacity: 0; } }
 .float.buff { color: #4ade80; font-size: 16px; }
 .float.blocked { color: #f2a541; font-size: 15px; }
 .float.ability { top: -6px; font-size: 18px; }
@@ -1981,15 +1982,13 @@ details.result-squad-preview[open] summary.squad-dropdown-summary {
 
 /* ═══════════ DESERT FIGHTERS: NOISE & GIANT WORM ═══════════ */
 
-/* Noise stat (top-left of every card) */
-.noise-badge {
-  position: absolute; top: 4px; left: 5px; z-index: 10;
-  display: inline-flex; align-items: center; gap: 1px;
-  height: 20px; padding: 0 5px 0 3px; border-radius: 9999px;
-  background: #0c2a4d; border: 1px solid #3b82f6; color: #93c5fd;
-  font-size: 10px; line-height: 1; cursor: help;
+/* Noise stat: same box as ATK / HP, blue, top-left of every card */
+.stat.noise, .noise-badge {
+  position: absolute; top: 5px; left: 5px; z-index: 10;
+  background: #0c2a4d; color: #bfdbfe; border: 1px solid rgba(96, 165, 250, 0.45);
+  cursor: help;
 }
-.noise-badge .noise-val { color: #bfdbfe; font-size: 11px; font-weight: 800; }
+.stat.noise b, .noise-badge .noise-val { color: #dbeafe; }
 
 /* Team noise counter, centered above each battle team */
 .noise-counter {
@@ -2015,10 +2014,37 @@ details.result-squad-preview[open] summary.squad-dropdown-summary {
 @keyframes noise-loud { to { box-shadow: 0 0 46px rgba(147, 197, 253, 1); } }
 
 .float.noise { color: #60a5fa; font-size: 16px; top: 52%; }
-.float.worm { color: #fb7185; font-size: 22px; font-weight: 900; top: 40%; text-shadow: 0 0 10px rgba(251, 113, 133, 0.9); }
+.float.worm { color: #fb7185; font-size: 40px; font-weight: 900; top: 36%; animation: float-up-slow 2.1s ease-out forwards; text-shadow: 0 3px 6px #000, 0 0 14px rgba(251, 113, 133, 0.9); }
+
+/* Noise glyphs flying from a card to the Worm meter */
+.fly-noise { position: absolute; z-index: 80; pointer-events: none; font-size: 22px; filter: drop-shadow(0 0 6px #60a5fa); }
+
+/* Mini worm that surfaces under the bitten card */
+.worm-pit.mini { z-index: 70; }
+.worm-pit.mini .worm { transition-duration: 0.55s; }
+.worm-pit.mini .worm-mouth { transform-origin: 50% 90%; transition: transform 0.18s ease; }
+.worm-pit.mini.chomp .worm-mouth { animation: worm-chomp 0.45s ease; }
+@keyframes worm-chomp { 0% { transform: scaleY(1); } 30% { transform: scaleY(1.25) translateY(-6%); } 60% { transform: scaleY(0.55); } 100% { transform: scaleY(1); } }
+.worm-pit.mini .worm-body { background-size: 100% 14px, 100% 100%; }
+
+/* Prep screen: worm threshold under the VS */
+.prep-worm { font-size: 14px; }
+.prep-worm b { font-size: 17px; }
+.prep-worm-hint { font-size: 11px; color: #c9a77a; text-align: center; max-width: 150px; line-height: 1.3; }
+
+/* Camp row shown under the squad during the recruit phase */
+.row-camp { margin-top: 12px; opacity: 0.92; flex-wrap: wrap; justify-content: flex-start; gap: 8px; }
+#battle-camp > .card { zoom: calc(var(--card-zoom, 1) * 0.72); flex-shrink: 0; }
+/* The full meter scales up: keep it clear of the team labels */
+.worm-meter.full { z-index: 20; }
+.camp-tag { background: #4a321d; color: #e8d3b0; }
+.card.replaceable { cursor: pointer; box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.55), 0 0 16px rgba(251, 191, 36, 0.35); }
+.card.replace-marked { outline: 3px solid #f87171; filter: saturate(0.6) brightness(0.8); }
+.card.replace-marked::after { content: '↔ REPLACE'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-12deg); background: #7f1d1d; color: #fecaca; font-weight: 900; font-size: 12px; padding: 3px 8px; border-radius: 6px; pointer-events: none; }
+.recruit-warn { display: block; font-size: 12px; color: #fbbf24; margin-top: 2px; }
 
 /* Giant Worm meter between the teams: fills toward the next bite */
-.vs-col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.vs-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 14px; align-self: stretch; padding-top: 6px; }
 .worm-meter {
   --fill: 0%;
   position: relative; display: inline-flex; align-items: center; gap: 3px;

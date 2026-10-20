@@ -94,18 +94,15 @@ export class Battle {
 
   // Front attackers make noise after their damage is dealt; it fills the shared worm meter
   async makeNoise(units) {
-    let any = false;
     for (const u of units) {
       if (!u.noise) continue;
       this.noise[u.side] += u.noise;
       this.worm.meter += u.noise;
-      this.view.noise?.(u, u.noise, this.noise[u.side]);
       this.view.log(`🔊 ${u.name} (${u.side}) makes ${u.noise} noise · team total ${this.noise[u.side]}`);
-      any = true;
-    }
-    if (any) {
+      // The view animates the noise travelling from the card to the meter, then shows the new value
+      if (this.view.noise) await this.view.noise(u, u.noise, this.noise[u.side], this.worm.meter, this.worm.next);
       this.view.wormMeter?.(this.worm.meter, this.worm.next);
-      await this.view.wait(350);
+      await this.view.wait(300);
     }
     await this.wormCheck();
   }
@@ -138,7 +135,7 @@ export class Battle {
       this.flushFloats();
       this.view.render(this);
       this.view.wormMeter?.(w.meter, w.next);
-      await this.view.wait(450);
+      await this.view.wait(500);
     }
   }
 
@@ -442,20 +439,25 @@ export class Battle {
       return;
     }
 
-    // 2. Both cards attack each other at the same time!
-    this.view.flash(uPlayer, 'lunge-right');
-    this.view.flash(uEnemy, 'lunge-left');
-    await this.view.wait(250);
-
+    // 2. Both cards attack each other at the same time (the damage is simultaneous: both hits land
+    //    even if one card dies). Visually it's told in steps: clash, enemy takes damage, player takes
+    //    damage, then each side's noise flies to the Worm meter.
     const playerDmg = uPlayer.atk;
     const enemyDmg = uEnemy.atk;
 
+    if (this.view.clash) await this.view.clash(uPlayer, uEnemy);
+    else { this.view.flash(uPlayer, 'lunge-right'); this.view.flash(uEnemy, 'lunge-left'); }
+    await this.view.wait(250);
+
     this.applyDamage(uEnemy, playerDmg, uPlayer);
+    this.flushFloats();
+    await this.view.wait(550);
+
     this.applyDamage(uPlayer, enemyDmg, uEnemy);
     this.flushFloats();
-    await this.view.wait(300);
+    await this.view.wait(550);
 
-    // Both front cards attacked: their noise is added to their team's total
+    // Both front cards attacked: their noise is added to their team's total (player first)
     await this.makeNoise([uPlayer, uEnemy]);
 
     // 3. Hurt triggers are applied in side priority order
