@@ -2037,14 +2037,17 @@ async function startBattle() {
   await view.wait(500);
   closeBattlePreview();
 
-  // The Giant Worm eats the louder team, whoever won the fight.
+  // The Giant Worm eats the louder team. Losing the fight always loses the fighters;
+  // otherwise being louder loses, and a louder enemy hands you the win.
   const noise = result.noise || { player: 0, enemy: 0 };
   let outcome = result.outcome;
-  let eaten = null;
-  if (noise.player > noise.enemy) { eaten = 'player'; outcome = 'lose'; }
-  else if (noise.enemy > noise.player) { eaten = 'enemy'; outcome = 'win'; }
+  const eaten = noise.player > noise.enemy ? 'player' : noise.enemy > noise.player ? 'enemy' : null;
+  if (outcome !== 'lose' && eaten) outcome = eaten === 'player' ? 'lose' : 'win';
 
-  if (eaten) await playWormSequence(battle, eaten);
+  // A won combat: the squad recovers and picks rewards first, the worm eats the enemy after.
+  pendingWorm = null;
+  if (eaten && outcome === 'win') pendingWorm = battle;
+  else if (eaten) await playWormSequence(battle, eaten);
   if (outcome === 'win') await playReviveSequence(battle);
 
   currentBattle = null;
@@ -2054,6 +2057,9 @@ async function startBattle() {
 // ---------- Giant Worm & Noise ----------
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Battle whose louder enemy the worm eats once the player has picked rewards
+let pendingWorm = null;
 
 function setNoiseCounter(side, total, pop = false) {
   const el = $(`noise-${side}`);
@@ -2786,6 +2792,19 @@ function showVictoryRewards(defeatedEnemy, battleDifficulty) {
 }
 
 function onPostCardChoice(lastResult, customMessage = null) {
+  // Back to the combat screen to watch the worm eat the louder enemy, then on to the map.
+  if (pendingWorm) {
+    const battle = pendingWorm;
+    pendingWorm = null;
+    $('result-overlay').classList.add('hidden');
+    state.inBattle = true;
+    updateHud();
+    playWormSequence(battle, 'enemy').then(() => {
+      state.inBattle = false;
+      onPostCardChoice(lastResult, customMessage);
+    });
+    return;
+  }
   updateHud();
 
   const title = $('result-title');
@@ -2937,7 +2956,6 @@ function updateContinueBtnText(mode = 'normal') {
 // The "Preview battle" button starts the same cycle right away; that one keeps going while the
 // mouse moves and stops on a click, key, scroll or a second press of the button.
 
-const IDLE_MS = 5000;
 const CYCLE_MS = 2500;
 let idleTimer = null;
 let cycleTimer = null;
@@ -2948,8 +2966,7 @@ function resetIdle(e) {
   if (e?.target?.closest?.('#btn-preview-battle')) return; // the button handles its own clicks
   if (manualCycle && e?.type === 'mousemove') return;
   stopIdleCycle();  // any input stops the cycle, leaving the current preview shown
-  if (state.inBattle) return;
-  idleTimer = setTimeout(() => startIdleCycle(false), IDLE_MS);
+  // Ability previews no longer auto-play when idle: they only show when a card is clicked.
 }
 
 function stopIdleCycle() {
