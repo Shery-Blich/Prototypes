@@ -1,0 +1,47 @@
+
+Desert Fighters balance sim · 6000 games · pool=base (31 cards) · slots=3 · hp+0 · noise-rule=worm · enemies=random · hand=all · order=best · 7.0s
+
+Overall:  player WIN  78%   fight won  78%   quieter 100%   won-fight-but-too-loud   0%   equal noise  14%
+          avg clashes/fight 4.39   avg cards played 2.48   avg noise player 6.3 / enemy 7.2
+
+Worm:     every 6 noise, bite noise2 · bites/fight 1.91 · fights with a bite  95% · fights where the worm KILLED something  89%
+          bites on player  27% / enemy  73% · kills: player cards 0.37/fight, enemy cards 1.07/fight
+
+ΔWin  = win rate when this card is in the player's hand, minus the overall win rate (positive = good card for the player)
+Played= how often the player chose to actually field it · Front= how often it was put in front · Loud= won the fight but lost on noise
+AsEnemy = how often the PLAYER LOSES when this card is on the enemy team (higher = scarier as an enemy)
+
+ ΔWin  Win  Played Front Loud AsEnemy  hp/atk/noise  trig    name          ability
++13.1   91%   98%   20%    0%   31%     3/ 2/ 1      start   Grace Aura                             When 🏁 give +2/+1 to the two friends ahead.
++11.7   89%   97%   33%    0%   41%     5/ 1/ 1      hurt    Hex Scales                             When 💢 deal damage equal to this card's HP to a random enemy.
++10.8   88%   96%   30%    0%   30%     6/ 1/ 1      start   Iron Hide                              When 🏁 give the friend behind +2 HP.
++10.1   88%   99%   47%    0%   32%     3/ 4/ 0      -       Owl                                    (no ability)
+ +8.8   86%   98%   42%    0%   29%     7/ 1/ 1      attack  Trample Share                          When 🗡️ give HP to the friend behind equal to this ATK.
+ +7.6   85%   95%   36%    0%   27%     7/ 1/ 1      -       Camel                                  (no ability)
+ +7.5   85%   96%   37%    0%   34%     4/ 2/ 1      start   Venom Sight                            When 🏁 halve the ATK of the highest-ATK enemy (rounded down).
+ +7.3   85%   96%   38%    0%   33%     5/ 2/ 1      hurt    Stormwing                              When 💢 push the highest-HP friend to the front.
+ +2.8   80%   83%   36%    0%   25%     5/ 3/ 2      -       Hyena                                  (no ability)
+ +2.8   80%   79%   27%    0%   22%     8/ 2/ 2      -       Buffalo                                (no ability)
+ +2.7   80%   95%   35%    0%   23%     4/ 2/ 1      -       Jackal                                 (no ability)
+ +2.3   80%   93%   37%    0%   27%     5/ 1/ 1      hurt    Thick Skin                             When 💢 give a random friend +1 HP.
+ +1.8   79%  100%   33%    0%   25%     6/ 1/ 0      -       Sloth                                  (no ability)
+ +1.1   79%   73%   39%    0%   16%     4/ 8/ 3      -       Jaguar                                 (no ability)
+ +1.0   79%   95%   42%    0%   21%     4/ 1/ 1      attack  Healer Doe                             When 🗡️ give HP to the friend behind equal to this ATK.
+ +0.8   78%   82%   31%    0%   19%     4/ 2/ 2      death   Death Curse                            When 💀 reduce the first enemy's ATK by its current HP.
+ +0.7   78%   85%   34%    0%   24%     4/ 1/ 2      death   Final Gift                             When 💀 give a random friend +2/+2.
+ +0.7   78%   83%   40%    0%   21%     3/ 5/ 2      -       Falcon                                 (no ability)
+ -2.0   76%   74%   28%    0%   18%     7/ 1/ 2      death   Last Stand                             When 💀 give +2 HP to the friend behind.
+ -2.2   75%   69%   34%    0%   13%     6/ 4/ 3      -       Warthog                                (no ability)
+ -2.6   75%   67%   34%    0%   13%     5/ 3/ 3      attack  Frenzy                                 When 🗡️ gain +1 ATK.
+ -3.8   74%   80%   35%    0%   17%     4/ 3/ 2      hurt    Retaliate                              When 💢 deal half the damage taken back to the attacker.
+ -4.1   73%   69%   37%    0%   18%     3/ 5/ 3      death   Death Roar                             When 💀 deal 1 damage to ALL enemies.
+ -6.3   71%   61%   28%    0%   12%    10/ 2/ 3      -       Elephant                               (no ability)
+ -6.6   71%   86%   30%    0%   42%     3/ 3/ 2      start   Claw Strike                            When 🏁 deal 3 damage to a random enemy.
+ -7.4   70%   73%   25%    0%   15%     3/ 2/ 2      start   Swiftbeak                              When 🏁 push the first enemy to last.
+ -7.9   70%   76%   33%    0%   17%     3/ 2/ 2      hurt    Pain Share                             When 💢 give ATK to the friend behind equal to this remaining HP.
+-10.0   68%   57%   25%    0%   11%    12/10/10      -       Behemoth                               (no ability)
+-10.4   67%   62%   31%    0%   15%     3/ 3/ 3      attack  Tailwind                               When 🗡️ bring the lowest-HP enemy to the front.
+-14.3   63%   71%   29%    0%   14%     3/ 2/ 2      death   Deathfeather                           When 💀 bring the highest-ATK friend forward.
+-19.1   58%   67%   27%    0%    9%     3/ 2/ 2      attack  Curse Bite                             When 🗡️ set the first enemy's ATK equal to its current HP.
+
+(* = candidate card from sim/cards.js, not in the prototype yet)

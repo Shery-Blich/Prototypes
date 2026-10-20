@@ -2,6 +2,20 @@ import { CHARACTERS, TRIGGERS } from './characters.js';
 
 const MAX_TURNS = 120;
 
+// ─── The Giant Worm ──────────────────────────────────────────────────────────
+// Noise is ATTENTION. Every front attack adds the attacker's noise to ONE shared meter.
+// Each time the meter crosses a threshold the Worm surfaces and bites the LOUDEST card on
+// the field (either side; ties -> closest to the front -> enemy side) for `bite` damage.
+//   bite: a number, or 'noise' (= target's noise) or 'noise2' (= 2x target's noise).
+// Pass `opts.worm = null` to a Battle to turn the worm off (legacy: no mid-fight bites).
+export const WORM_RULES = { every: 6, bite: 'noise2' };
+
+export function wormBiteDamage(target, bite = WORM_RULES.bite) {
+  if (bite === 'noise')  return Math.max(0, target.noise);
+  if (bite === 'noise2') return Math.max(0, 2 * target.noise);
+  return Number(bite) || 0;
+}
+
 let battleUid = 100000;
 
 function makeUnit(id, side, atkBonus = 0, hpBonus = 0, rosterUid = null) {
@@ -42,6 +56,10 @@ export class Battle {
     this.pendingDead = [];
     // Team noise from front attacks: the louder team gets eaten by the Giant Worm
     this.noise = { player: 0, enemy: 0 };
+    // Shared worm meter (see WORM_RULES). `rules` is null when the worm is off.
+    const rules = opts.worm === undefined ? WORM_RULES : opts.worm;
+    this.worm = { rules, meter: 0, next: rules ? rules.every : Infinity, bites: 0, kills: { player: 0, enemy: 0 }, bitten: { player: 0, enemy: 0 } };
+    this.wormUnit = { uid: -1, name: 'Giant Worm', emoji: '🪱', side: 'worm', hp: Infinity, atk: 0, noise: 0, shield: false, def: { name: 'Giant Worm', trigger: null, text: '' } };
     this.api = this.makeApi();
   }
 
@@ -74,17 +92,54 @@ export class Battle {
     await this.view.wait(300);
   }
 
-  // Front attackers make noise after their damage is dealt
+  // Front attackers make noise after their damage is dealt; it fills the shared worm meter
   async makeNoise(units) {
     let any = false;
     for (const u of units) {
       if (!u.noise) continue;
       this.noise[u.side] += u.noise;
+      this.worm.meter += u.noise;
       this.view.noise?.(u, u.noise, this.noise[u.side]);
       this.view.log(`🔊 ${u.name} (${u.side}) makes ${u.noise} noise · team total ${this.noise[u.side]}`);
       any = true;
     }
-    if (any) await this.view.wait(350);
+    if (any) {
+      this.view.wormMeter?.(this.worm.meter, this.worm.next);
+      await this.view.wait(350);
+    }
+    await this.wormCheck();
+  }
+
+  // The loudest living card on the field; ties go to the front-most card, then to the enemy
+  wormTarget() {
+    const alive = [...this.teams.enemy, ...this.teams.player].filter(x => x.hp > 0)
+      .map(x => ({ x, slot: this.teams[x.side].indexOf(x) }));
+    if (!alive.length) return null;
+    alive.sort((a, b) => b.x.noise - a.x.noise || a.slot - b.slot || (a.x.side === 'enemy' ? -1 : 1));
+    return alive[0].x;
+  }
+
+  // Each time the meter crosses a threshold, the Worm bites the loudest card. Hurt/death
+  // triggers from the bite are resolved by the caller (clash) like any other damage.
+  async wormCheck() {
+    const w = this.worm;
+    if (!w.rules) return;
+    while (w.meter >= w.next) {
+      w.next += w.rules.every;
+      const t = this.wormTarget();
+      if (!t) break;
+      const dmg = wormBiteDamage(t, w.rules.bite);
+      this.view.turn?.(`🪱 The Giant Worm bites ${t.name}!`);
+      await this.view.wormBite?.(t, dmg, this);
+      this.applyDamage(t, dmg, this.wormUnit);
+      w.bites++; w.bitten[t.side]++;
+      if (t.hp <= 0) w.kills[t.side]++;
+      this.view.log(`🪱 The Giant Worm bites ${t.name} (${t.side}) for ${dmg} · next bite at ${w.next} noise`);
+      this.flushFloats();
+      this.view.render(this);
+      this.view.wormMeter?.(w.meter, w.next);
+      await this.view.wait(450);
+    }
   }
 
   isLingering(u) { return this.lingering.some(l => l.u === u); }
@@ -362,7 +417,7 @@ export class Battle {
       outcome = 'tie';
       this.view.turn('⚖️ Battle Tied!');
     }
-    return { outcome, noise: { ...this.noise } };
+    return { outcome, noise: { ...this.noise }, worm: { meter: this.worm.meter, bites: this.worm.bites, kills: { ...this.worm.kills }, bitten: { ...this.worm.bitten } } };
   }
 
   async clash(sidesInOrder) {

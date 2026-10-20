@@ -133,13 +133,16 @@
       <div class="arena">
         <div class="side side-player">
           <div class="side-label">YOU</div>
-          <div id="noise-player" class="noise-counter" title="Your team's noise. The louder team gets eaten by the Giant Worm!">🔊 <b>0</b></div>
+          <div id="noise-player" class="noise-counter" title="Noise your team has made so far (feeds the Worm meter in the middle).">🔊 <b>0</b></div>
           <div id="battle-player" class="row"></div>
         </div>
-        <div class="vs">VS</div>
+        <div class="vs-col">
+          <div class="vs">VS</div>
+          <div id="worm-meter" class="worm-meter" title="The Giant Worm's meter. Every attack adds the attacker's noise. When it reaches the threshold, the Worm bites the loudest card on the field (either team) for 2× its noise.">🪱 <b class="worm-now">0</b><span class="worm-sep">/</span><span class="worm-next">6</span></div>
+        </div>
         <div class="side side-enemy">
           <div class="side-label">ENEMY</div>
-          <div id="noise-enemy" class="noise-counter" title="Enemy team's noise. The louder team gets eaten by the Giant Worm!">🔊 <b>0</b></div>
+          <div id="noise-enemy" class="noise-counter" title="Noise the enemy team has made so far (feeds the Worm meter in the middle).">🔊 <b>0</b></div>
           <div id="battle-enemy" class="row"></div>
         </div>
       </div>

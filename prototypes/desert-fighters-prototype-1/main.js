@@ -17,6 +17,7 @@ import {
   randomCharacterId,
 } from './characters.js';
 import { Battle } from './battle.js';
+import { generateEncounter } from './encounters.js';
 import { SimpleAudio } from '/src/shared/utils.js';
 import { initEditor } from './editor.js';
 
@@ -181,8 +182,8 @@ const MODIFIER_DEFAULTS = {
   playerStartsPct: 50,    // chance (0-100) that the player makes the first attack
   rewardFromEnemy: false, // boolean: true = from defeated enemy team that had lost, false = random cards
   keepEnemyBuffs: false,  // boolean: true = recruited cards keep enemy stat buffs (+ATK/+HP)
-  playerSlots: 5,         // your team slots (1-10)
-  enemySlots: 5,          // enemy team slots (1-10)
+  playerSlots: 3,         // your team slots (1-10) — the design is 'up to 3 cards'
+  enemySlots: 3,          // enemy team slots (1-10)
   campMax: 10,            // characters in camp (0-20)
 };
 
@@ -786,37 +787,10 @@ function newRun() {
 }
 
 function generateEnemy(n, difficulty = state.difficulty || 'easy') {
-  // First battle is always easy
+  // First battle is always easy. Lineups are designed in encounters.js (front card first);
+  // difficulty comes from card choice and placement, never from stat bonuses.
   if (n === 1) difficulty = 'easy';
-
-  let fighterCount = 1;
-  let getFighterStats = () => ({ atkBonus: 0, hpBonus: 0 });
-
-  if (difficulty === 'easy') {
-    // Easy: 1-2 enemy cards (70% 1, 30% 2 - most of the time only 1 slot is occupied)
-    fighterCount = Math.random() < 0.70 ? 1 : 2;
-    getFighterStats = () => ({ atkBonus: 0, hpBonus: 0 });
-  } else if (difficulty === 'medium') {
-    // Medium: 2-3 enemy cards
-    fighterCount = Math.random() < 0.50 ? 2 : 3;
-    getFighterStats = () => ({ atkBonus: 0, hpBonus: 0 });
-  } else if (difficulty === 'hard') {
-    // Hard: 3 cards, and +1 or +2 to attack and defense (randomly) to the enemy cards
-    fighterCount = 3;
-    getFighterStats = () => ({
-      atkBonus: 1 + Math.floor(Math.random() * 2), // +1 or +2
-      hpBonus: 1 + Math.floor(Math.random() * 2),  // +1 or +2
-    });
-  }
-
-  return Array.from({ length: fighterCount }, () => {
-    const stats = getFighterStats();
-    return {
-      id: randomCharacterId(),
-      atkBonus: stats.atkBonus,
-      hpBonus: stats.hpBonus,
-    };
-  });
+  return generateEncounter(difficulty, { maxSlots: enemySlots() });
 }
 
 // The enemy slots modifier changed: refresh opponent with matching size.
@@ -905,7 +879,7 @@ function cardEl(id, atk, hp, opts = {}) {
   const noise = opts.noise ?? def.noise ?? 1;
 
   el.innerHTML = `
-    <div class="noise-badge" title="Noise: added to your team's noise every time this card attacks at the front">🔊<b class="noise-val">${noise}</b></div>
+    <div class="noise-badge" title="Noise: every time this card attacks it fills the Giant Worm's meter. When the meter fills, the Worm bites the LOUDEST card on the field for 2× its noise.">🔊<b class="noise-val">${noise}</b></div>
     ${clsDef ? `<div class="class-badge" data-class="${cls}" title="${classLabel}" style="background:${clsDef.color}22;color:${clsDef.color};border:1px solid ${clsDef.color}55"><span class="class-badge-emoji">${classEmoji}</span><span class="class-badge-label">${classLabel}</span></div>` : ''}
     ${buffBadge}
     <div class="card-emoji">${def.emoji}</div>
@@ -1876,6 +1850,35 @@ const view = {
     setNoiseCounter(u.side, total, true);
     audio.beep(u.side === 'player' ? 300 : 260, 90);
   },
+  wormMeter(meter, next) {
+    setWormMeter(meter, next, true);
+  },
+  // The Worm surfaces under the loudest card and bites it (the battle applies the damage after)
+  async wormBite(target, dmg, battle) {
+    if (state.speed >= 1000) return;
+    const el = cardMap.get(target.uid);
+    const screen = $('battle-screen');
+    const meterEl = $('worm-meter');
+    meterEl?.classList.add('full');
+    screen.classList.add('shake');
+    audio.beep(180, 220);
+    await this.wait(350);
+    if (el) {
+      el.classList.remove('worm-bitten');
+      void el.offsetWidth;
+      el.classList.add('worm-bitten');
+      const f = document.createElement('div');
+      f.className = 'float worm';
+      f.textContent = `🪱 -${dmg}`;
+      el.appendChild(f);
+      setTimeout(() => f.remove(), 1200);
+      setTimeout(() => el.classList.remove('worm-bitten'), 900);
+    }
+    audio.explosion();
+    await this.wait(400);
+    screen.classList.remove('shake');
+    meterEl?.classList.remove('full');
+  },
   flash(u, cls) {
     const el = cardMap.get(u.uid);
     if (!el) return;
@@ -2035,23 +2038,22 @@ async function startBattle() {
   currentBattle = battle;
   setNoiseCounter('player', 0);
   setNoiseCounter('enemy', 0);
+  setWormMeter(0, battle.worm.next);
   const result = await battle.run();
   await view.wait(500);
   closeBattlePreview();
 
-  // The Giant Worm eats the louder team. Losing the fight always loses the fighters;
-  // otherwise being louder loses, and a louder enemy hands you the win.
+  // The Giant Worm already took its bites during the fight (noise = attention, see battle.js).
+  // Winning is simply: the enemy is wiped out and at least one of your cards still stands.
   const noise = result.noise || { player: 0, enemy: 0 };
-  let outcome = result.outcome;
-  const eaten = noise.player > noise.enemy ? 'player' : noise.enemy > noise.player ? 'enemy' : null;
-  if (outcome !== 'lose' && eaten) outcome = eaten === 'player' ? 'lose' : 'win';
+  const outcome = result.outcome;
+  // After a win the worm cleans up the enemy remains (flavour, during the recruit phase)
+  const eaten = outcome === 'win' ? 'enemy' : null;
 
-  // A won combat: the squad recovers and recruits in the arena first, the worm eats the enemy after.
-  if (eaten && outcome !== 'win') await playWormSequence(battle, eaten);
   if (outcome === 'win') await playReviveSequence(battle);
 
   currentBattle = null;
-  showResult(outcome, participants, defeatedEnemy, battleDifficulty, { combat: result.outcome, eaten, noise, battle });
+  showResult(outcome, participants, defeatedEnemy, battleDifficulty, { combat: result.outcome, eaten, noise, worm: result.worm, battle });
 }
 
 // ---------- Giant Worm & Noise ----------
@@ -2060,6 +2062,21 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // True while the player picks enemy cards to recruit in the arena after a win
 let recruiting = false;
+
+// Shared Giant Worm meter between the teams: current noise / next bite threshold
+function setWormMeter(meter, next, pop = false) {
+  const el = $('worm-meter');
+  if (!el) return;
+  el.querySelector('.worm-now').textContent = meter;
+  el.querySelector('.worm-next').textContent = Number.isFinite(next) ? next : '∞';
+  const frac = Number.isFinite(next) ? Math.max(0, Math.min(1, 1 - (next - meter) / (currentBattle?.worm?.rules?.every || 6))) : 0;
+  el.style.setProperty('--fill', `${Math.round(frac * 100)}%`);
+  if (pop) {
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+  }
+}
 
 function setNoiseCounter(side, total, pop = false) {
   const el = $(`noise-${side}`);
@@ -2487,15 +2504,13 @@ function showDefeat(participants, info = {}) {
   if (wiped) state.map = null;
   updateHud();
 
-  const byWorm = info.eaten === 'player';
-  title.textContent = byWorm ? 'Eaten by the Giant Worm 🪱' : 'Combat Lost 💀';
+  title.textContent = 'Combat Lost 💀';
   title.className = 'lose';
-  const noiseLine = info.noise ? ` (Noise: you ${info.noise.player} · enemy ${info.noise.enemy})` : '';
-  const why = byWorm
-    ? (info.combat === 'win'
-      ? `You won the fight, but your squad was louder${noiseLine}, so the Giant Worm ate them.`
-      : `Your squad was louder${noiseLine}, so the Giant Worm ate them.`)
-    : `Your fighters fell in combat${noiseLine}.`;
+  const w = info.worm;
+  const wormLine = w && w.bites
+    ? ` The Giant Worm bit ${w.bites} time${w.bites === 1 ? '' : 's'} (your cards ${w.bitten.player}, enemy ${w.bitten.enemy}).`
+    : '';
+  const why = `Your fighters fell in combat.${wormLine}`;
   text.textContent = wiped
     ? `${why} No cards are left — the expedition is over.`
     : `${why} The ${lostCards.length} card${lostCards.length === 1 ? '' : 's'} that fought ${lostCards.length === 1 ? 'is' : 'are'} lost. The rest of your squad (${state.roster.length}) holds this tile.`;

@@ -364,25 +364,25 @@ export function generateAbilityText(def) {
 export const BASE_CHARACTERS = {
   // ── ROTATOR (birds)
   rotator_start: {
-    class: 'rotator', name: 'Swiftbeak', emoji: '🦅', atk: 2, hp: 1, noise: 2,
+    class: 'rotator', name: 'Swiftbeak', emoji: '🦅', atk: 2, hp: 3, noise: 2,
     trigger: 'start',
     text: 'When 🏁 push the first enemy to last.',
     preset: { type: 'reposition', action: 'push_last', target: 'first_enemy' },
   },
   rotator_attack: {
-    class: 'rotator', name: 'Tailwind', emoji: '🦜', atk: 3, hp: 1, noise: 3,
+    class: 'rotator', name: 'Tailwind', emoji: '🦜', atk: 3, hp: 3, noise: 3,
     trigger: 'attack',
     text: 'When 🗡️ bring the lowest-HP enemy to the front.',
     preset: { type: 'reposition', action: 'bring_front', target: 'lowest_hp_enemy' },
   },
   rotator_hurt: {
-    class: 'rotator', name: 'Stormwing', emoji: '🦢', atk: 2, hp: 3, noise: 1,
+    class: 'rotator', name: 'Stormwing', emoji: '🦢', atk: 2, hp: 5, noise: 1,
     trigger: 'hurt',
     text: 'When 💢 push the highest-HP friend to the front.',
     preset: { type: 'reposition', action: 'bring_front', target: 'highest_hp_friend' },
   },
   rotator_death: {
-    class: 'rotator', name: 'Deathfeather', emoji: '🦩', atk: 2, hp: 1, noise: 2,
+    class: 'rotator', name: 'Deathfeather', emoji: '🦩', atk: 2, hp: 3, noise: 2,
     trigger: 'death',
     text: 'When 💀 bring the highest-ATK friend forward.',
     preset: { type: 'reposition', action: 'bring_front', target: 'highest_atk_friend' },
@@ -390,25 +390,25 @@ export const BASE_CHARACTERS = {
 
   // ── DPS (tigers)
   dps_start: {
-    class: 'dps', name: 'Claw Strike', emoji: '🐯', atk: 3, hp: 1, noise: 2,
+    class: 'dps', name: 'Claw Strike', emoji: '🐯', atk: 3, hp: 3, noise: 2,
     trigger: 'start',
     text: 'When 🏁 deal 3 damage to a random enemy.',
     preset: { type: 'deal_damage', target: 'random_enemy', amount: 3 },
   },
   dps_attack: {
-    class: 'dps', name: 'Frenzy', emoji: '🐆', atk: 3, hp: 3, noise: 3,
+    class: 'dps', name: 'Frenzy', emoji: '🐆', atk: 3, hp: 5, noise: 3,
     trigger: 'attack',
     text: 'When 🗡️ gain +1 ATK.',
     preset: { type: 'buff', target: 'self', atk: 1, hp: 0 },
   },
   dps_hurt: {
-    class: 'dps', name: 'Retaliate', emoji: '🐅', atk: 3, hp: 2, noise: 2,
+    class: 'dps', name: 'Retaliate', emoji: '🐅', atk: 3, hp: 4, noise: 2,
     trigger: 'hurt',
     text: 'When 💢 deal half the damage taken back to the attacker.',
     preset: { type: 'retaliate', fraction: 0.5 },
   },
   dps_death: {
-    class: 'dps', name: 'Death Roar', emoji: '🦁', atk: 5, hp: 1, noise: 3,
+    class: 'dps', name: 'Death Roar', emoji: '🦁', atk: 5, hp: 3, noise: 3,
     trigger: 'death',
     text: 'When 💀 deal 1 damage to ALL enemies.',
     preset: { type: 'deal_damage', target: 'all_enemies', amount: 1 },
@@ -416,25 +416,25 @@ export const BASE_CHARACTERS = {
 
   // ── WARLOCK (snake / scorpion)
   warlock_start: {
-    class: 'warlock', name: 'Venom Sight', emoji: '🐍', atk: 2, hp: 2, noise: 1,
+    class: 'warlock', name: 'Venom Sight', emoji: '🐍', atk: 2, hp: 4, noise: 1,
     trigger: 'start',
     text: 'When 🏁 halve the ATK of the highest-ATK enemy (rounded down).',
     preset: { type: 'debuff', debuffType: 'halve_highest_atk' },
   },
   warlock_attack: {
-    class: 'warlock', name: 'Curse Bite', emoji: '🦂', atk: 2, hp: 1, noise: 2,
+    class: 'warlock', name: 'Curse Bite', emoji: '🦂', atk: 2, hp: 3, noise: 2,
     trigger: 'attack',
     text: 'When 🗡️ set the first enemy\'s ATK equal to its current HP.',
     preset: { type: 'debuff', debuffType: 'set_atk_to_hp' },
   },
   warlock_hurt: {
-    class: 'warlock', name: 'Hex Scales', emoji: '🐊', atk: 1, hp: 3, noise: 1,
+    class: 'warlock', name: 'Hex Scales', emoji: '🐊', atk: 1, hp: 5, noise: 1,
     trigger: 'hurt',
     text: 'When 💢 deal damage equal to this card\'s HP to a random enemy.',
     preset: { type: 'deal_damage', target: 'self_hp_enemy', amount: 0 },
   },
   warlock_death: {
-    class: 'warlock', name: 'Death Curse', emoji: '🦎', atk: 2, hp: 2, noise: 2,
+    class: 'warlock', name: 'Death Curse', emoji: '🦎', atk: 2, hp: 4, noise: 2,
     trigger: 'death',
     text: 'When 💀 reduce the first enemy\'s ATK by its current HP.',
     preset: { type: 'debuff', debuffType: 'reduce_atk_by_hp' },
@@ -442,25 +442,25 @@ export const BASE_CHARACTERS = {
 
   // ── SUPPORT (deers)
   support_start: {
-    class: 'support', name: 'Grace Aura', emoji: '🦌', atk: 2, hp: 1, noise: 1,
+    class: 'support', name: 'Grace Aura', emoji: '🦌', atk: 2, hp: 3, noise: 1,
     trigger: 'start',
     text: 'When 🏁 give +2/+1 to the two friends ahead.',
     preset: { type: 'buff', target: 'two_ahead', atk: 2, hp: 1 },
   },
   support_attack: {
-    class: 'support', name: 'Healer Doe', emoji: '🦙', atk: 1, hp: 2, noise: 1,
+    class: 'support', name: 'Healer Doe', emoji: '🦙', atk: 1, hp: 4, noise: 1,
     trigger: 'attack',
     text: 'When 🗡️ give HP to the friend behind equal to this ATK.',
     preset: { type: 'buff', target: 'friend_behind', dynamic: 'equal_this_atk', atk: 0, hp: 0 },
   },
   support_hurt: {
-    class: 'support', name: 'Pain Share', emoji: '🦘', atk: 2, hp: 1, noise: 2,
+    class: 'support', name: 'Pain Share', emoji: '🦘', atk: 2, hp: 3, noise: 2,
     trigger: 'hurt',
     text: 'When 💢 give ATK to the friend behind equal to this remaining HP.',
     preset: { type: 'buff', target: 'friend_behind', dynamic: 'equal_remaining_hp', atk: 0, hp: 0 },
   },
   support_death: {
-    class: 'support', name: 'Final Gift', emoji: '🐐', atk: 1, hp: 2, noise: 2,
+    class: 'support', name: 'Final Gift', emoji: '🐐', atk: 1, hp: 4, noise: 2,
     trigger: 'death',
     text: 'When 💀 give a random friend +2/+2.',
     preset: { type: 'buff', target: 'random_friend', atk: 2, hp: 2 },
@@ -468,29 +468,44 @@ export const BASE_CHARACTERS = {
 
   // ── TANK (hippo / elephant / camel)
   tank_start: {
-    class: 'tank', name: 'Iron Hide', emoji: '🦛', atk: 1, hp: 4, noise: 1,
+    class: 'tank', name: 'Iron Hide', emoji: '🦛', atk: 1, hp: 6, noise: 1,
     trigger: 'start',
     text: 'When 🏁 give the friend behind +2 HP.',
     preset: { type: 'buff', target: 'friend_behind', atk: 0, hp: 2 },
   },
   tank_attack: {
-    class: 'tank', name: 'Trample Share', emoji: '🐘', atk: 1, hp: 5, noise: 1,
+    class: 'tank', name: 'Trample Share', emoji: '🐘', atk: 1, hp: 7, noise: 1,
     trigger: 'attack',
     text: 'When 🗡️ give HP to the friend behind equal to this ATK.',
     preset: { type: 'buff', target: 'friend_behind', dynamic: 'equal_this_atk', atk: 0, hp: 0 },
   },
   tank_hurt: {
-    class: 'tank', name: 'Thick Skin', emoji: '🐪', atk: 1, hp: 3, noise: 1,
+    class: 'tank', name: 'Thick Skin', emoji: '🐪', atk: 1, hp: 5, noise: 1,
     trigger: 'hurt',
     text: 'When 💢 give a random friend +1 HP.',
     preset: { type: 'buff', target: 'random_friend', atk: 0, hp: 1 },
   },
   tank_death: {
-    class: 'tank', name: 'Last Stand', emoji: '🦬', atk: 1, hp: 5, noise: 2,
+    class: 'tank', name: 'Last Stand', emoji: '🦬', atk: 1, hp: 7, noise: 2,
     trigger: 'death',
     text: 'When 💀 give +2 HP to the friend behind.',
     preset: { type: 'buff', target: 'friend_behind', atk: 0, hp: 2 },
   },
+
+
+  // ── PLAIN CARDS (no ability): the power ladder is visible in the numbers.
+  //    Rule of thumb for a "fair" plain card: noise ≈ (hp + atk) / 2 − 2  (hp already includes the +2 base)
+  plain_jackal:   { class: 'dps',  name: 'Jackal',   emoji: '🐕', atk: 2,  hp: 4,  noise: 1, text: '' },
+  plain_hyena:    { class: 'dps',  name: 'Hyena',    emoji: '🐺', atk: 3,  hp: 5,  noise: 2, text: '' },
+  plain_warthog:  { class: 'dps',  name: 'Warthog',  emoji: '🐗', atk: 4,  hp: 6,  noise: 3, text: '' },
+  plain_falcon:   { class: 'dps',  name: 'Falcon',   emoji: '🦅', atk: 5,  hp: 3,  noise: 2, text: '' },
+  plain_lion:     { class: 'dps',  name: 'Jaguar',   emoji: '🐈‍⬛', atk: 8,  hp: 4,  noise: 3, text: '' },
+  plain_owl:      { class: 'dps',  name: 'Owl',      emoji: '🦉', atk: 4,  hp: 3,  noise: 0, text: '' },
+  plain_sloth:    { class: 'tank', name: 'Sloth',    emoji: '🦥', atk: 1,  hp: 6,  noise: 0, text: '' },
+  plain_camel:    { class: 'tank', name: 'Camel',    emoji: '🐪', atk: 1,  hp: 7,  noise: 1, text: '' },
+  plain_hippo:    { class: 'tank', name: 'Buffalo',  emoji: '🐃', atk: 2,  hp: 8,  noise: 2, text: '' },
+  plain_elephant: { class: 'tank', name: 'Elephant', emoji: '🐘', atk: 2,  hp: 10, noise: 3, text: '' },
+  plain_behemoth: { class: 'dps',  name: 'Behemoth', emoji: '🦏', atk: 10, hp: 12, noise: 10, text: '' },
 
   // ── Special Cage Card (0 ATK, 2 HP)
   cage: {
@@ -508,14 +523,20 @@ export const BASE_CHARACTERS = {
 
 // ─── STARTER PACK & XP UNLOCK CONFIGURATION ──────────────────────────────────
 export const STARTER_PACK_IDS = [
-  'dps_start',       // Claw Strike (🐯)
-  'support_attack',  // Healer Doe (🦙)
-  'tank_hurt',       // Thick Skin (🐪)
-  'warlock_death',   // Death Curse (🦎)
+  // Beginner-friendly: readable numbers, two simple 🏁 abilities that teach positioning.
+  'plain_jackal',    // 🐕 4hp 2atk 1noise
+  'plain_hyena',     // 🐺 5/3/2
+  'plain_camel',     // 🐪 7/1/1  quiet wall
+  'plain_sloth',     // 🦥 6/1/0  silent wall
+  'plain_owl',       // 🦉 3/4/0  silent striker
+  'plain_warthog',   // 🐗 6/4/3  the loud one
+  'plain_hippo',     // 🐃 Buffalo 8/2/2
+  'tank_start',      // 🦛 Iron Hide: 🏁 give the friend behind +2 HP   (teaches "who is behind me")
+  'dps_start',       // 🐯 Claw Strike: 🏁 deal 3 damage to a random enemy
 ];
 
 // First card guaranteed to unlock at Level 1 before transitioning to random unlocks
-export const FIRST_UNLOCK_CARD_ID = 'rotator_start'; // Swiftbeak (🦅)
+export const FIRST_UNLOCK_CARD_ID = 'support_start'; // Grace Aura (🦌): first ability that rewards back-slot placement
 
 export const XP_CONFIG = {
   cardPlayed: 22,

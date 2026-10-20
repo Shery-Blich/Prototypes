@@ -18,7 +18,8 @@
 //   * WIN  = enemy wiped out  AND  player's total noise < enemy's total noise.
 
 import { Battle } from '../battle.js';
-import { CHARACTERS, applyCharacterOverrides } from '../characters.js';
+import { CHARACTERS, applyCharacterOverrides, STARTER_PACK_IDS } from '../characters.js';
+import { generateEncounter, ENCOUNTERS } from '../encounters.js';
 import { CANDIDATE_OVERRIDES, EXCLUDE_IDS } from './cards.js';
 
 // ─── args ─────────────────────────────────────────────────────────────────────
@@ -33,19 +34,21 @@ const POOL     = args.pool || 'all';
 const ORDER    = args.order || 'best';
 const TRIALS   = Number(args.trials || 3);   // fights per arrangement when choosing order
 const SEED     = Number(args.seed || 1);
+// --enemy-set easy|medium|hard : enemies come from the designed lineups in encounters.js (else random from pool)
+// --hand starter|all           : player's 3 cards drawn from the starter pack, or from the whole pool
+const ENEMY_SET = args['enemy-set'] || null;
+const HAND      = args.hand || 'all';
 // --noise-rule  attack : (current) both front cards pay their noise every clash
 //               played : each card pays its noise ONCE, when it is committed to the fight
 //               step   : a card pays its noise each time it steps forward a slot (front slot is free)
 //               death  : a card pays its noise when it dies
-//               worm   : noise is ATTENTION. Both fronts add noise to one shared meter every clash; each time
-//                        it crosses a threshold the Giant Worm bites the LOUDEST card on the field.
+//               worm   : the Giant Worm from battle.js (WORM_RULES): shared meter, bites the loudest card.
 //                        No noise comparison at the end: win = enemy wiped.
 const NOISE_RULE = args['noise-rule'] || 'attack';
-const WORM_EVERY = Number(args['worm-every'] || 8);
+const WORM_EVERY = Number(args['worm-every'] || 6);
 // --worm-bite N | noise | noise2   (damage per bite: fixed, = target's noise, = 2x target's noise)
-const WORM_BITE_ARG = args['worm-bite'] || '4';
-const WORM_BITE  = Number(WORM_BITE_ARG) || 0;
-const biteFor = t => WORM_BITE_ARG === 'noise' ? Math.max(0, t.noise) : WORM_BITE_ARG === 'noise2' ? Math.max(0, 2 * t.noise) : WORM_BITE;
+const WORM_BITE_ARG = args['worm-bite'] || 'noise2';
+
 
 // ─── deterministic RNG (battle.js uses Math.random) ───────────────────────────
 let s = SEED >>> 0 || 1;
@@ -65,31 +68,12 @@ const BASE_IDS = new Set(Object.keys(CHARACTERS).filter(id => !(id in CANDIDATE_
 // ─── one fight ────────────────────────────────────────────────────────────────
 async function fight(playerIds, enemyIds) {
   const mk = ids => ids.map(id => ({ id, hpBonus: HP_BONUS, atkBonus: ATK_BONUS }));
-  const b = new Battle(mk(playerIds), mk(enemyIds), VIEW, { maxTeam: { player: SLOTS, enemy: SLOTS } });
+  const wormOpts = NOISE_RULE === 'worm' ? { every: WORM_EVERY, bite: WORM_BITE_ARG } : null;
+  const b = new Battle(mk(playerIds), mk(enemyIds), VIEW, { maxTeam: { player: SLOTS, enemy: SLOTS }, worm: wormOpts });
   let clashes = 0;
   const origClash = b.clash.bind(b);
   b.clash = (...a) => { clashes++; return origClash(...a); };
-  const worm = { bites: 0, kills: { player: 0, enemy: 0 }, bitten: { player: 0, enemy: 0 } };
-  if (NOISE_RULE === 'worm') {
-    let meter = 0, next = WORM_EVERY;
-    const wormSrc = { name: 'Giant Worm', side: 'worm' };
-    b.makeNoise = async units => {
-      for (const u of units) { b.noise[u.side] += u.noise; meter += u.noise; }
-      while (meter >= next) {
-        next += WORM_EVERY;
-        // Deterministic target: loudest card on the field; ties -> closest to the front; then enemy side.
-        const alive = [...b.teams.enemy, ...b.teams.player].filter(x => x.hp > 0)
-          .map(x => ({ x, slot: b.teams[x.side].indexOf(x) }));
-        if (!alive.length) break;
-        alive.sort((a, c) => c.x.noise - a.x.noise || a.slot - c.slot || (a.x.side === 'enemy' ? -1 : 1));
-        const t = alive[0].x;
-        const wasAlive = t.hp > 0;
-        b.applyDamage(t, biteFor(t), wormSrc);
-        worm.bites++; worm.bitten[t.side]++;
-        if (wasAlive && t.hp <= 0) worm.kills[t.side]++;
-      }
-    };
-  } else if (NOISE_RULE !== 'attack') {
+  if (NOISE_RULE !== 'attack' && NOISE_RULE !== 'worm') {
     b.makeNoise = noop;
     if (NOISE_RULE === 'played') {
       for (const side of ['player', 'enemy']) for (const u of b.teams[side]) b.noise[side] += u.noise;
@@ -110,7 +94,7 @@ async function fight(playerIds, enemyIds) {
   const r = await b.run();
   const fightWon = r.outcome === 'win';
   const quieter  = NOISE_RULE === 'worm' ? true : r.noise.player < r.noise.enemy;
-  return { fightWon, quieter, win: fightWon && quieter, equalNoise: r.noise.player === r.noise.enemy, clashes, noise: r.noise, worm };
+  return { fightWon, quieter, win: fightWon && quieter, equalNoise: r.noise.player === r.noise.enemy, clashes, noise: r.noise, worm: r.worm };
 }
 
 // all ordered arrangements of 1..n cards from hand
@@ -148,13 +132,17 @@ async function playGame(hand, enemy) {
 // ─── run ──────────────────────────────────────────────────────────────────────
 const stat = () => ({ hand: 0, played: 0, win: 0, fightWon: 0, loudLoss: 0, enemyGames: 0, enemyWins: 0, front: 0 });
 const cards = Object.fromEntries(POOL_IDS.map(id => [id, stat()]));
+const LINEUPS = {};
 const W = { bites: 0, fightsBitten: 0, killsP: 0, killsE: 0, bittenP: 0, bittenE: 0, fightsWithKill: 0 };
 const g = { games: 0, win: 0, fightWon: 0, quieter: 0, equalNoise: 0, clashes: 0, loudLoss: 0, pNoise: 0, eNoise: 0, played: 0 };
 
 const t0 = Date.now();
 for (let i = 0; i < GAMES; i++) {
   const draw = n => { const c = [...POOL_IDS], out = []; while (out.length < n) out.push(c.splice(Math.floor(Math.random() * c.length), 1)[0]); return out; };
-  const hand = draw(SLOTS), enemy = draw(SLOTS);
+  const handPool = HAND === 'starter' ? STARTER_PACK_IDS : POOL_IDS;
+  const drawFrom = (pool, n) => { const c = [...pool], out = []; while (out.length < n && c.length) out.push(c.splice(Math.floor(Math.random() * c.length), 1)[0]); return out; };
+  const hand = drawFrom(handPool, SLOTS);
+  const enemy = ENEMY_SET ? generateEncounter(ENEMY_SET, { rng: Math.random, maxSlots: SLOTS }).map(e => e.id) : draw(SLOTS);
   const r = await playGame(hand, enemy);
   g.games++; g.win += r.win; g.fightWon += r.fightWon; g.quieter += r.quieter; g.equalNoise += r.equalNoise;
   g.clashes += r.clashes; g.loudLoss += r.fightWon && !r.quieter; g.pNoise += r.noise.player; g.eNoise += r.noise.enemy; g.played += r.lineup.length;
@@ -165,7 +153,8 @@ for (let i = 0; i < GAMES; i++) {
     if (r.lineup.includes(id)) c.played++;
     if (r.lineup[0] === id) c.front++;
   }
-  for (const id of enemy) { cards[id].enemyGames++; cards[id].enemyWins += !r.win; }
+  for (const id of enemy) { if (cards[id]) { cards[id].enemyGames++; cards[id].enemyWins += !r.win; } }
+  if (ENEMY_SET) { const k = enemy.join(' › '); (LINEUPS[k] ??= { n: 0, loss: 0, clashes: 0 }); LINEUPS[k].n++; LINEUPS[k].loss += !r.win; LINEUPS[k].clashes += r.clashes; }
 }
 const secs = ((Date.now() - t0) / 1000).toFixed(1);
 
@@ -183,9 +172,14 @@ const rows = POOL_IDS.map(id => {
     played: c.played / c.hand, front: c.front / c.hand,
     enemyWin: c.enemyWins / c.enemyGames,
   };
-}).sort((a, b) => b.delta - a.delta);
+}).filter(r => r.hand > 0).sort((a, b) => b.delta - a.delta);
 
-console.log(`\nDesert Fighters balance sim · ${GAMES} games · pool=${POOL} (${POOL_IDS.length} cards) · slots=${SLOTS} · hp+${HP_BONUS} atk+${ATK_BONUS} · noise-rule=${NOISE_RULE} · order=${ORDER} · ${secs}s\n`);
+if (ENEMY_SET) {
+  console.log(`\nEncounter set "${ENEMY_SET}" vs ${HAND} hands · ${GAMES} games  (player-loss rate per designed lineup, front card first)`);
+  for (const [k, v] of Object.entries(LINEUPS).sort((a, b) => b[1].loss / b[1].n - a[1].loss / a[1].n))
+    console.log(`  ${(100 * v.loss / v.n).toFixed(0).padStart(3)}% loss · ${(v.clashes / v.n).toFixed(1)} clashes · ${k.split(' › ').map(id => CHARACTERS[id]?.name || id).join(' › ')}`);
+}
+console.log(`\nDesert Fighters balance sim · ${GAMES} games · pool=${POOL} (${POOL_IDS.length} cards) · slots=${SLOTS} · hp+${HP_BONUS} · noise-rule=${NOISE_RULE} · enemies=${ENEMY_SET || 'random'} · hand=${HAND} · order=${ORDER} · ${secs}s\n`);
 console.log(`Overall:  player WIN ${pct(g.win, g.games)}   fight won ${pct(g.fightWon, g.games)}   quieter ${pct(g.quieter, g.games)}   won-fight-but-too-loud ${pct(g.loudLoss, g.games)}   equal noise ${pct(g.equalNoise, g.games)}`);
 console.log(`          avg clashes/fight ${(g.clashes / g.games).toFixed(2)}   avg cards played ${(g.played / g.games).toFixed(2)}   avg noise player ${(g.pNoise / g.games).toFixed(1)} / enemy ${(g.eNoise / g.games).toFixed(1)}\n`);
 if (NOISE_RULE === 'worm') console.log(`Worm:     every ${WORM_EVERY} noise, bite ${WORM_BITE_ARG} · bites/fight ${(W.bites / g.games).toFixed(2)} · fights with a bite ${pct(W.fightsBitten, g.games)} · fights where the worm KILLED something ${pct(W.fightsWithKill, g.games)}\n          bites on player ${pct(W.bittenP, W.bites)} / enemy ${pct(W.bittenE, W.bites)} · kills: player cards ${(W.killsP / g.games).toFixed(2)}/fight, enemy cards ${(W.killsE / g.games).toFixed(2)}/fight\n`);

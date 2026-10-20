@@ -2015,6 +2015,36 @@ details.result-squad-preview[open] summary.squad-dropdown-summary {
 @keyframes noise-loud { to { box-shadow: 0 0 46px rgba(147, 197, 253, 1); } }
 
 .float.noise { color: #60a5fa; font-size: 16px; top: 52%; }
+.float.worm { color: #fb7185; font-size: 22px; font-weight: 900; top: 40%; text-shadow: 0 0 10px rgba(251, 113, 133, 0.9); }
+
+/* Giant Worm meter between the teams: fills toward the next bite */
+.vs-col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.worm-meter {
+  --fill: 0%;
+  position: relative; display: inline-flex; align-items: center; gap: 3px;
+  padding: 5px 14px; border-radius: 9999px; overflow: hidden;
+  background: linear-gradient(90deg, #7f1d1d var(--fill), #2a1810 var(--fill));
+  border: 2px solid #b45309; color: #fde68a; font-size: 15px; font-weight: 800;
+  box-shadow: 0 0 12px rgba(180, 83, 9, 0.4);
+  transition: background 0.3s ease, transform 0.35s cubic-bezier(0.2, 1.6, 0.4, 1), box-shadow 0.3s ease;
+}
+.worm-meter b { font-size: 18px; color: #fff; min-width: 1ch; text-align: center; }
+.worm-meter .worm-sep { opacity: 0.6; }
+.worm-meter .worm-next { opacity: 0.85; }
+.worm-meter.bump { animation: noise-bump 0.35s ease; }
+.worm-meter.full {
+  transform: scale(1.5);
+  border-color: #f87171; color: #fff;
+  box-shadow: 0 0 34px rgba(248, 113, 113, 0.95);
+  animation: noise-loud 0.4s ease-in-out infinite alternate;
+}
+.card.worm-bitten { animation: worm-bitten 0.9s ease; }
+@keyframes worm-bitten {
+  0%   { transform: translateY(0) rotate(0); filter: none; }
+  20%  { transform: translateY(14px) rotate(-6deg); filter: brightness(0.6) sepia(0.6) hue-rotate(-30deg); }
+  50%  { transform: translateY(-10px) rotate(5deg); filter: brightness(1.3); }
+  100% { transform: translateY(0) rotate(0); filter: none; }
+}
 .float.revive { color: #fde68a; font-size: 14px; }
 
 /* Dead cards wait at the back of the team until the combat ends */
