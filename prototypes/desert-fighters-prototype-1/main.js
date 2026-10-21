@@ -1511,7 +1511,7 @@ function showAbilityPreview(lineup, key, ui) {
     for (const u of fx.targets.filter(Boolean)) {
       anyTarget = true;
       applyPreview(u, fx);
-      arrows.push({ el: u.el, label: effectLabel(fx), cls: (fx.atk || 0) < 0 || (fx.hp || 0) < 0 ? 'harm' : 'help' });
+      arrows.push({ el: u.el, label: effectLabel(fx), cls: fxIsHarm(fx) ? 'harm' : 'help' });
     }
   }
 
@@ -1528,12 +1528,20 @@ function showAbilityPreview(lineup, key, ui) {
   return true;
 }
 
+// Preview arrows that hurt the target are drawn in the "harm" colour
+function fxIsHarm(fx) {
+  return (fx.atk || 0) < 0 || (fx.hp || 0) < 0 || (fx.noiseStat || 0) > 0;
+}
+
 function effectLabel(fx) {
   if (fx.reorder) return fx.reorder === 'push-last' ? '⬇ Last' : '⬆ Front';
   const atk = fx.atk || 0, hp = fx.hp || 0;
   const sign = n => (n > 0 ? `+${n}` : `${n}`);
   let text;
-  if (fx.shield) text = '+🛡';
+  if (fx.noiseStat) return `${sign(fx.noiseStat)} 🔊`;
+  if (fx.biteShare) return `${sign(hp)} ❤ per 🪱`;
+  if (fx.perBite) text = `${sign(atk)} ⚔ per 🪱`;
+  else if (fx.shield) text = '+🛡';
   else if (atk && hp) text = `${sign(atk)}/${sign(hp)}`;
   else if (atk) text = `${sign(atk)} ⚔`;
   else text = `${sign(hp)} ❤`;
@@ -2056,8 +2064,7 @@ const view = {
       const el = cardMap.get(it.unit.uid);
       if (it.fx) {
         applyPreview({ el, atk: it.unit.atk, hp: Math.max(0, it.unit.hp) }, it.fx);
-        const harm = (it.fx.atk || 0) < 0 || (it.fx.hp || 0) < 0;
-        return { el, label: effectLabel(it.fx), cls: harm ? 'harm' : 'help' };
+        return { el, label: effectLabel(it.fx), cls: fxIsHarm(it.fx) ? 'harm' : 'help' };
       }
       el.classList.add('preview-help');
       return { el, label: it.label, cls: 'help' };

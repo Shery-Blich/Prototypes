@@ -224,6 +224,8 @@ export function initEditor(containerEl, options = {}) {
                 <option value="retaliate" ${(editedCard.preset?.type === 'retaliate') ? 'selected' : ''}>🛡️ Retaliate (Deal damage taken back)</option>
                 <option value="shield" ${(editedCard.preset?.type === 'shield') ? 'selected' : ''}>🛡️ Gain Shield (1-time block)</option>
                 <option value="make_noise" ${(editedCard.preset?.type === 'make_noise') ? 'selected' : ''}>🔊 Make Noise (fills the Worm meter)</option>
+                <option value="change_noise" ${(editedCard.preset?.type === 'change_noise') ? 'selected' : ''}>🔉 Change a card's Noise stat (louder / quieter)</option>
+                <option value="bite_share" ${(editedCard.preset?.type === 'bite_share') ? 'selected' : ''}>🪱 Share Worm Bite (first enemy takes the same damage)</option>
                 <option value="custom" ${(editedCard.preset?.type === 'custom') ? 'selected' : ''}>💻 Custom JavaScript Code</option>
               </select>
             </div>
@@ -400,6 +402,7 @@ export function initEditor(containerEl, options = {}) {
               <option value="" ${!p.dynamic ? 'selected' : ''}>Fixed Stats (Use ATK/HP inputs)</option>
               <option value="equal_this_atk" ${p.dynamic === 'equal_this_atk' ? 'selected' : ''}>HP equal to this card's ATK</option>
               <option value="equal_remaining_hp" ${p.dynamic === 'equal_remaining_hp' ? 'selected' : ''}>ATK equal to this remaining HP</option>
+              <option value="per_worm_bite" ${p.dynamic === 'per_worm_bite' ? 'selected' : ''}>Self: ATK/HP inputs × worm bites so far</option>
             </select>
           </div>
         </div>
@@ -485,6 +488,32 @@ export function initEditor(containerEl, options = {}) {
           <input type="number" id="p-noise-amount" min="1" max="20" value="${p.amount ?? 3}" />
         </div>
       `;
+    } else if (p.type === 'change_noise') {
+      box.innerHTML = `
+        <div class="form-grid-2">
+          <div class="form-field">
+            <label>Target</label>
+            <select id="p-cn-target">
+              <option value="friend_behind" ${(p.target ?? 'friend_behind') === 'friend_behind' ? 'selected' : ''}>Friend Behind</option>
+              <option value="friend_ahead" ${p.target === 'friend_ahead' ? 'selected' : ''}>Friend Ahead</option>
+              <option value="self" ${p.target === 'self' ? 'selected' : ''}>Self</option>
+              <option value="first_enemy" ${p.target === 'first_enemy' ? 'selected' : ''}>First Enemy</option>
+              <option value="last_enemy" ${p.target === 'last_enemy' ? 'selected' : ''}>Last Enemy (Back)</option>
+              <option value="attacker" ${p.target === 'attacker' ? 'selected' : ''}>Attacker (On hurt)</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Noise change (negative = quieter)</label>
+            <input type="number" id="p-cn-amount" min="-10" max="10" value="${p.amount ?? -2}" />
+          </div>
+        </div>
+      `;
+    } else if (p.type === 'bite_share') {
+      box.innerHTML = `
+        <p style="font-size:0.8rem;color:#c9a97f;margin:0;">
+          Use with the 🪱 Worm bite trigger. When the Worm bites THIS card, the first enemy takes the same damage.
+        </p>
+      `;
     } else if (p.type === 'shield') {
       box.innerHTML = `
         <p style="font-size:0.8rem;color:#c9a97f;margin:0;">
@@ -543,6 +572,9 @@ export function initEditor(containerEl, options = {}) {
       p.target = containerEl.querySelector('#p-repo-target')?.value || 'first_enemy';
     } else if (type === 'make_noise') {
       p.amount = Number(containerEl.querySelector('#p-noise-amount')?.value) || 1;
+    } else if (type === 'change_noise') {
+      p.target = containerEl.querySelector('#p-cn-target')?.value || 'friend_behind';
+      p.amount = Number(containerEl.querySelector('#p-cn-amount')?.value) || 0;
     } else if (type === 'debuff') {
       p.debuffType = containerEl.querySelector('#p-debuff-type')?.value || 'halve_highest_atk';
     } else if (type === 'custom') {

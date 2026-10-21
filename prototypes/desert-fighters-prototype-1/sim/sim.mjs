@@ -133,6 +133,8 @@ async function playGame(hand, enemy) {
 const stat = () => ({ hand: 0, played: 0, win: 0, fightWon: 0, loudLoss: 0, enemyGames: 0, enemyWins: 0, front: 0 });
 const cards = Object.fromEntries(POOL_IDS.map(id => [id, stat()]));
 const LINEUPS = {};
+const PAIRS = {};       // 'idA|idB' (both in hand) -> { n, win, both: both fielded }
+const WIN_USE = {};     // id -> times fielded in a won fight
 const W = { bites: 0, fightsBitten: 0, killsP: 0, killsE: 0, bittenP: 0, bittenE: 0, fightsWithKill: 0 };
 const g = { games: 0, win: 0, fightWon: 0, quieter: 0, equalNoise: 0, clashes: 0, loudLoss: 0, pNoise: 0, eNoise: 0, played: 0 };
 
@@ -153,6 +155,12 @@ for (let i = 0; i < GAMES; i++) {
     if (r.lineup.includes(id)) c.played++;
     if (r.lineup[0] === id) c.front++;
   }
+  const sorted = [...hand].sort();
+  for (let a = 0; a < sorted.length; a++) for (let b = a + 1; b < sorted.length; b++) {
+    const p = (PAIRS[sorted[a] + '|' + sorted[b]] ??= { n: 0, win: 0, both: 0 });
+    p.n++; p.win += r.win; p.both += r.lineup.includes(sorted[a]) && r.lineup.includes(sorted[b]);
+  }
+  if (r.win) for (const id of r.lineup) WIN_USE[id] = (WIN_USE[id] || 0) + 1;
   for (const id of enemy) { if (cards[id]) { cards[id].enemyGames++; cards[id].enemyWins += !r.win; } }
   if (ENEMY_SET) { const k = enemy.join(' › '); (LINEUPS[k] ??= { n: 0, loss: 0, clashes: 0 }); LINEUPS[k].n++; LINEUPS[k].loss += !r.win; LINEUPS[k].clashes += r.clashes; }
 }
@@ -192,6 +200,33 @@ for (const r of rows) {
   console.log(`${dw}  ${pct(r.winRate, 1)}  ${pct(r.played, 1)}  ${pct(r.front, 1)}  ${pct(r.loudLoss, 1)}  ${pct(r.enemyWin, 1)}    ${String(r.hp).padStart(2)}/${String(r.atk).padStart(2)}/${String(r.noise).padStart(2)}      ${r.trigger.padEnd(6)}  ${(r.base ? '' : '*') + r.name}`.padEnd(100) + r.text);
 }
 console.log('\n(* = candidate card from sim/cards.js, not in the prototype yet)');
+
+// ─── variety ──────────────────────────────────────────────────────────────────
+// Card spread: how far cards sit from average (lower SD / more cards within ±5 = more cards worth taking).
+// Win diversity: exp(entropy) of which cards are fielded in WON fights = "effective number" of winning cards.
+// Synergy: a pair's win rate when both are in hand, minus what their two solo ΔWins predict.
+//   A big positive number means the pair is better together than apart (a real combo).
+{
+  const deltas = rows.map(r => r.delta * 100);
+  const mean = deltas.reduce((a, b) => a + b, 0) / deltas.length;
+  const sd = Math.sqrt(deltas.reduce((a, b) => a + (b - mean) ** 2, 0) / deltas.length);
+  const within = deltas.filter(d => Math.abs(d) <= 5).length;
+  const uses = Object.values(WIN_USE), total = uses.reduce((a, b) => a + b, 0);
+  const effCards = Math.exp(-uses.reduce((a, u) => a + (u / total) * Math.log(u / total), 0));
+  const byId = Object.fromEntries(rows.map(r => [r.id, r]));
+  const MIN_N = Math.max(30, Math.floor(GAMES * 3 / (POOL_IDS.length * (POOL_IDS.length - 1) / 2) * 0.5));
+  const syn = Object.entries(PAIRS).filter(([, p]) => p.n >= MIN_N).map(([k, p]) => {
+    const [a, b] = k.split('|');
+    const expected = baseWin + byId[a].delta + byId[b].delta;
+    return { a, b, n: p.n, syn: (p.win / p.n - expected) * 100, both: p.both / p.n };
+  }).sort((x, y) => y.syn - x.syn);
+  const seAvg = 100 * Math.sqrt(baseWin * (1 - baseWin) / (syn.reduce((a, s) => a + s.n, 0) / (syn.length || 1)));
+  const strong = syn.filter(s => s.syn >= 2.5 * seAvg && s.both >= 0.5);
+  console.log(`\nVariety:  card ΔWin spread SD ${sd.toFixed(1)} · cards within ±5: ${within}/${rows.length} · effective winning cards ${effCards.toFixed(1)}/${rows.length}`);
+  console.log(`          combos: ${syn.length} pairs measured (≥${MIN_N} hands each, ±${seAvg.toFixed(1)} noise) · strong combos (synergy ≥ +${(2.5 * seAvg).toFixed(1)}, fielded together ≥50%): ${strong.length}`);
+  const nm = id => CHARACTERS[id].name;
+  for (const s of syn.slice(0, 8)) console.log(`          ${('+' + s.syn.toFixed(1)).padStart(6)}  together ${pct(s.both, 1)}  ${nm(s.a)} + ${nm(s.b)}`);
+}
 
 if (args.json) {
   const fs = await import('node:fs');

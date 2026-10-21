@@ -146,8 +146,22 @@ export class Battle {
       this.view.render(this);
       this.view.wormMeter?.(w.meter, w.next);
       await this.view.wait(500);
+      await this.fireBiteTriggers(t, dmg, sidesInOrder);
       await this.resolveHurtEvents(sidesInOrder);
       await this.cleanUpDeadAndStepForward(sidesInOrder);
+    }
+  }
+
+  // 🪱 abilities fire after every bite, on both sides (front to back, player side first). The ability
+  // itself decides whose bite counts (ctx.target). The bitten card gets to react even if the bite
+  // killed it: it is still on the field until the clean-up that follows.
+  async fireBiteTriggers(target, damage, sidesInOrder) {
+    for (const side of sidesInOrder) {
+      for (const u of [...this.teams[side]]) {
+        if (u.def.trigger !== 'bite') continue;
+        if (!this.alive(u) && !(u === target && this.teams[side].includes(u))) continue;
+        await this.executeTrigger(u, 'bite', { target, damage });
+      }
     }
   }
 
@@ -249,6 +263,19 @@ export class Battle {
         await b.addNoise(u, amount);
         // Any bite this calls for comes in wormPhase(), once the field has settled
       },
+      // Changes a card's noise STAT (how loud it is to the Worm), not the meter. Floor at 0.
+      changeNoise: async (target, delta, src) => {
+        const newNoise = Math.max(0, target.noise + delta);
+        const applied = newNoise - target.noise;
+        if (applied === 0) return;
+        await b.view.effect(src, [{ unit: target, fx: { noiseStat: applied } }]);
+        target.noise = newNoise;
+        b.view.render(b);
+        b.view.float(target, `${applied > 0 ? '+' : ''}${applied}🔊`, applied > 0 ? 'dmg' : 'buff');
+        b.view.log(`${src.name} makes ${target === src ? 'itself' : target.name} ${applied > 0 ? 'louder' : 'quieter'}: noise ${target.noise}`);
+        await b.view.wait(350);
+      },
+      wormBites: () => b.worm.bites,
       halveAtk: async (target, src) => {
         const newAtk = Math.floor(target.atk / 2);
         const delta = newAtk - target.atk;
@@ -281,8 +308,10 @@ export class Battle {
 
   async executeTrigger(u, trigger, ctx = {}) {
     if (!u || u.def.trigger !== trigger) return;
-    // Death abilities run from beyond the grave; everything else needs a living unit
-    if (trigger !== 'death' && !this.alive(u)) return;
+    // Death abilities run from beyond the grave, and a card bitten to death still reacts to that
+    // bite; everything else needs a living unit
+    const bittenToDeath = trigger === 'bite' && ctx.target === u && this.teams[u.side]?.includes(u);
+    if (trigger !== 'death' && !bittenToDeath && !this.alive(u)) return;
 
     const idx = this.teams[u.side]?.indexOf(u) ?? -1;
     const fullCtx = { index: idx, ...ctx };

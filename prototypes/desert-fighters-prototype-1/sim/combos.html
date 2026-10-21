@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Combo Search</title>
+<style>
+  body { margin: 0; padding: 16px; background: #1f140c; color: #e8d3b0; font: 12px/1.45 ui-monospace, Consolas, monospace; }
+  pre { white-space: pre; overflow-x: auto; }
+  .hint { color: #c9a97f; margin-bottom: 8px; }
+  a { color: #f0b860; }
+</style>
+</head>
+<body>
+<!-- 3-card combo search. Plays EVERY triple of the pool `games` times (against random enemies, same enemies
+     and dice for every triple) on all CPU cores, then ranks cards by how many strong combos they belong to.
+       combos.html?args=--games 250 --trials 2 --workers 8 --seed 1 --pool base --threshold 3 --own 0.6
+     lift      = triple win rate minus what the three cards' solo strengths predict (everything beyond "good cards")
+     strong    = lift >= threshold x the sampling noise (SE) of one triple
+     owns      = a card "owns" a combo when it is fielded in >= `own` of that triple's wins (it is part of the win, not a bystander)
+     orphan    = a card that owns no strong combo -->
+<div class="hint" id="hint">Starting…</div>
+<pre id="out"></pre>
+<script type="module">
+  import { CHARACTERS } from '../characters.js';
+  import { buildPool } from './core.mjs';
+
+  const argList = (new URLSearchParams(location.search).get('args') || '').split(/\s+/).filter(Boolean);
+  const args = Object.fromEntries(argList.map((a, i, arr) =>
+    a.startsWith('--') ? [a.slice(2), (arr[i + 1] && !arr[i + 1].startsWith('--')) ? arr[i + 1] : true] : []
+  ).filter(x => x.length));
+  const cfg = {
+    pool: args.pool || 'base', slots: Number(args.slots || 3), games: Number(args.games || 250), trials: Number(args.trials || 2),
+    seed: Number(args.seed || 1), wormEvery: Number(args['worm-every'] || 6), wormBite: args['worm-bite'] || 'noise2',
+    hpBonus: Number(args['hp-bonus'] || 0), atkBonus: Number(args['atk-bonus'] || 0),
+  };
+  const THRESHOLD = Number(args.threshold || 3), OWN = Number(args.own || 0.6);
+  const WORKERS = Number(args.workers || navigator.hardwareConcurrency || 4);
+  const ONLY = args.only ? String(args.only).split(',') : null;   // --only id1,id2 : triples that contain one of these
+
+  const out = document.getElementById('out'), hint = document.getElementById('hint');
+  const log = (...a) => { out.textContent += a.join(' ') + '\n'; };
+  const pct = (a, b = 1) => b ? (100 * a / b).toFixed(0).padStart(3) + '%' : '  - ';
+  const sg = x => (x > 0 ? '+' : '') + x.toFixed(1);
+  const nm = id => CHARACTERS[id].name;
+
+  const pool = buildPool(cfg.pool);
+  const triples = [];
+  for (let a = 0; a < pool.length; a++) for (let b = a + 1; b < pool.length; b++) for (let c = b + 1; c < pool.length; c++) {
+    const t = [pool[a], pool[b], pool[c]];
+    if (!ONLY || t.some(id => ONLY.includes(id))) triples.push(t);
+  }
+  hint.textContent = `${triples.length} triples × ${cfg.games} games · ${WORKERS} workers · pool=${cfg.pool} (${pool.length} cards) · worm every ${cfg.wormEvery}, bite ${cfg.wormBite}`;
+
+  // ── run on all cores ──
+  const t0 = Date.now();
+  const chunks = Array.from({ length: WORKERS }, () => []);
+  triples.forEach((t, i) => chunks[i % WORKERS].push(t));
+  const progress = new Array(WORKERS).fill(0);
+  const rows = await Promise.all(chunks.map((chunk, workerId) => new Promise((res, rej) => {
+    const w = new Worker('./combos-worker.mjs', { type: 'module' });
+    w.onerror = e => rej(e.message || e);
+    w.onmessage = ({ data }) => {
+      if (data.type === 'progress') {
+        progress[workerId] = data.done;
+        const done = progress.reduce((a, b) => a + b, 0), secs = (Date.now() - t0) / 1000;
+        hint.textContent = `${done}/${triples.length} triples · ${secs.toFixed(0)}s · ETA ${(secs / done * (triples.length - done)).toFixed(0)}s`;
+      } else { res(data.rows); w.terminate(); }
+    };
+    w.postMessage({ cfg, triples: chunk, workerId });
+  }))).then(r => r.flat()).catch(err => { log('ERROR: ' + err); document.body.dataset.done = 'error'; throw err; });
+  const secs = ((Date.now() - t0) / 1000).toFixed(0);
+
+  // ── analysis ──
+  for (const r of rows) r.rate = r.wins / r.games;
+  const base = rows.reduce((a, r) => a + r.rate, 0) / rows.length;
+  const SE = 100 * Math.sqrt(base * (1 - base) / cfg.games);
+  const strongAt = THRESHOLD * SE;
+
+  const card = Object.fromEntries(pool.map(id => [id, { id, n: 0, rate: 0, games: 0, fielded: 0, front: 0, combos: 0, strongIn: 0, best: null, worst: null }]));
+  for (const r of rows) for (const id of r.ids) {
+    const c = card[id]; c.n++; c.rate += r.rate; c.games += r.games; c.fielded += r.fielded[id]; c.front += r.front[id];
+  }
+  for (const c of Object.values(card)) { c.rate /= c.n; c.solo = 100 * (c.rate - base); }
+
+  const pairKey = (a, b) => a < b ? a + '|' + b : b + '|' + a;
+  const pair = {};
+  for (const r of rows) for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) {
+    const p = (pair[pairKey(r.ids[i], r.ids[j])] ??= { ids: [r.ids[i], r.ids[j]], n: 0, rate: 0 });
+    p.n++; p.rate += r.rate;
+  }
+  for (const p of Object.values(pair)) { p.rate /= p.n; p.syn = 100 * (p.rate - base) - card[p.ids[0]].solo - card[p.ids[1]].solo; }
+
+  for (const r of rows) {
+    r.lift = 100 * (r.rate - base) - r.ids.reduce((a, id) => a + card[id].solo, 0);
+    r.pairs = pair[pairKey(r.ids[0], r.ids[1])].syn + pair[pairKey(r.ids[0], r.ids[2])].syn + pair[pairKey(r.ids[1], r.ids[2])].syn;
+    r.three = r.lift - r.pairs;
+    r.owned = r.ids.filter(id => r.wins > 0 && r.fieldedInWins[id] / r.wins >= OWN);
+    r.strong = r.lift >= strongAt;
+    for (const id of r.ids) {
+      const c = card[id];
+      if (r.strong) c.strongIn++;
+      if (!r.owned.includes(id)) continue;
+      if (r.strong) c.combos++;
+      if (!c.best || r.lift > c.best.lift) c.best = r;
+      if (!c.worst || r.lift < c.worst.lift) c.worst = r;
+    }
+  }
+
+  // ── report ──
+  const cards = Object.values(card).sort((a, b) => a.combos - b.combos || a.solo - b.solo);
+  const orphans = cards.filter(c => c.combos === 0);
+  const strong = rows.filter(r => r.strong).sort((a, b) => b.lift - a.lift);
+  const partners = r => r.ids.map(nm).join(' + ');
+  const fielded = r => r.ids.map(id => pct(r.wins ? r.fieldedInWins[id] / r.wins : 0)).join('/');
+
+  log(`Desert Fighters 3-card combo search · ${triples.length} triples × ${cfg.games} games (trials ${cfg.trials}) · pool=${cfg.pool} (${pool.length}) · worm every ${cfg.wormEvery}, bite ${cfg.wormBite} · seed ${cfg.seed} · ${secs}s on ${WORKERS} workers\n`);
+  log(`Base win rate ${pct(base)} · one triple's noise ±${SE.toFixed(1)} · strong combo = lift ≥ +${strongAt.toFixed(1)} (${THRESHOLD}×SE) · a card owns a combo when fielded in ≥ ${pct(OWN)} of its wins`);
+  log(`Strong combos: ${strong.length} of ${rows.length} triples (chance alone would give about ${(rows.length * (THRESHOLD >= 3 ? 0.00135 : 0.0062)).toFixed(0)}) · orphan cards (own none): ${orphans.length}\n`);
+
+  log('Cards ranked by combos owned (fewest first = redesign candidates)');
+  log('combos = strong triples this card is fielded in · in = strong triples it merely appears in · solo = ΔWin from the card alone · played = how often fielded');
+  log(' combos  in   solo  played front  hp/atk/noise  name            best combo (lift, partners)');
+  for (const c of cards) {
+    const d = CHARACTERS[c.id];
+    const best = c.best ? `${sg(c.best.lift)}  ${partners(c.best)}` : '-';
+    log(`${String(c.combos).padStart(5)}  ${String(c.strongIn).padStart(3)}  ${sg(c.solo).padStart(5)}  ${pct(c.fielded, c.games)}  ${pct(c.front, c.games)}   ${String(d.hp).padStart(2)}/${String(d.atk).padStart(2)}/${String(d.noise ?? 1).padStart(2)}      ${nm(c.id).padEnd(15)} ${best}`);
+  }
+
+  log(`\nTop strong combos (lift = beyond solo strength · 3way = beyond the pairs too · win = triple win rate · fielded-in-wins per card)`);
+  log('  lift   3way   win   fielded          cards');
+  for (const r of strong.slice(0, 40)) log(`${sg(r.lift).padStart(6)}  ${sg(r.three).padStart(5)}  ${pct(r.rate)}  ${fielded(r).padEnd(15)}  ${partners(r)}`);
+
+  const pairs = Object.values(pair).sort((a, b) => b.syn - a.syn);
+  log(`\nTop pairs (synergy = pair win rate beyond the two solo strengths, averaged over all ${pool.length - 2} third cards · noise ±${(SE / Math.sqrt(pool.length - 2)).toFixed(1)})`);
+  for (const p of pairs.slice(0, 20)) log(`  ${sg(p.syn).padStart(6)}  ${nm(p.ids[0])} + ${nm(p.ids[1])}`);
+  log(`\nWorst pairs (anti-synergy)`);
+  for (const p of pairs.slice(-8)) log(`  ${sg(p.syn).padStart(6)}  ${nm(p.ids[0])} + ${nm(p.ids[1])}`);
+
+  window.__combos = { cfg, base, SE, strongAt, cards: cards.map(c => ({ ...c, best: c.best?.ids, worst: c.worst?.ids })), pairs, rows: rows.map(r => ({ ids: r.ids, rate: r.rate, lift: r.lift, three: r.three, owned: r.owned })) };
+  const blob = new Blob([JSON.stringify(window.__combos)], { type: 'application/json' });
+  hint.innerHTML = `done in ${secs}s · <a download="combos-${cfg.seed}.json" href="${URL.createObjectURL(blob)}">download JSON</a>`;
+  document.body.dataset.done = '1';
+</script>
+</body>
+</html>

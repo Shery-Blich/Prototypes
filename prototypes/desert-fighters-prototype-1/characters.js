@@ -2,14 +2,15 @@
 // Six classes: rotator (birds), dps (tigers), warlock (snakes/scorpions),
 //              summoner (bugs), support (deers), tank (hippo/elephant/camel)
 // Each card has a `class` property used for the visual outline colour.
-// Triggers: start, attack, hurt, death.
-// Extra API used by these abilities: pushToLast, bringToFront, setAtk, halveAtk
+// Triggers: start, attack, hurt, death, bite (the Giant Worm bit a card).
+// Extra API used by these abilities: pushToLast, bringToFront, setAtk, halveAtk, changeNoise, wormBites
 
 export const TRIGGERS = {
   start:  { emoji: '🏁', label: 'On start',      name: 'Start of match', note: 'Once, after the teams are set and before the first attack.' },
   attack: { emoji: '🗡️', label: 'Before attack', name: 'Before attack',  note: 'Every time it attacks, just before the hit.' },
   hurt:   { emoji: '💢', label: 'On hurt',       name: 'Hurt',            note: 'Every time it takes damage.' },
   death:  { emoji: '💀', label: 'On death',      name: 'Death',           note: 'Once, when it dies.' },
+  bite:   { emoji: '🪱', label: 'On worm bite',  name: 'Worm bite',       note: 'Every time the Giant Worm bites a card. The ability says whose bite counts.' },
 };
 
 // Card text opens with the trigger: "On start 🏁: ...", "Before attack 🗡️: ..."
@@ -122,6 +123,16 @@ export function buildCardLogic(def) {
             const t = api.friendBehind(self);
             const remaining = Math.max(0, self.hp);
             if (t && remaining > 0) await api.buff(t, remaining, 0, self);
+          },
+        };
+      }
+      if (p.dynamic === 'per_worm_bite') {
+        // Scales with how many times the Worm has surfaced this fight (either side)
+        return {
+          preview: ctx => [{ targets: [ctx.self], atk: atkDelta, hp: hpDelta, perBite: true }],
+          async run(api, self) {
+            const n = api.wormBites?.() || 0;
+            if (n > 0) await api.buff(self, atkDelta * n, hpDelta * n, self);
           },
         };
       }
@@ -335,6 +346,38 @@ export function buildCardLogic(def) {
       };
     }
 
+    // Changes a card's noise STAT: louder cards are the Worm's target, quieter ones are safe from it
+    case 'change_noise': {
+      const amount = Number(p.amount) || 0;
+      const pickTarget = (ctx, self, api) => {
+        if (p.target === 'first_enemy') return api ? api.enemiesOf(self)[0] : ctx.enemies[0];
+        if (p.target === 'last_enemy') return api ? api.enemiesOf(self).at(-1) : ctx.enemies.filter(Boolean).at(-1);
+        if (p.target === 'attacker') return api ? (ctx.attacker || api.enemiesOf(self)[0]) : ctx.enemies[0];
+        if (p.target === 'friend_ahead') return api ? api.friendAhead(self) : ctx.ahead;
+        if (p.target === 'self') return self || ctx.self;
+        return api ? api.friendBehind(self) : ctx.behind;   // friend_behind (default)
+      };
+      return {
+        preview: ctx => [{ targets: [pickTarget(ctx)], noiseStat: amount }],
+        async run(api, self, ctx) {
+          const t = pickTarget(ctx || {}, self, api);
+          if (t) await api.changeNoise(t, amount, self);
+        },
+      };
+    }
+
+    // 🪱 only: when the Worm bites THIS card, the first enemy takes the same damage
+    case 'bite_share': {
+      return {
+        preview: ctx => [{ targets: [ctx.enemies[0]], hp: -Math.max(0, 2 * (ctx.self?.noise ?? 1)), biteShare: true }],
+        async run(api, self, ctx) {
+          if (ctx.target !== self || !ctx.damage) return;
+          const enemies = api.enemiesOf(self);
+          if (enemies.length) await api.damage(enemies[0], ctx.damage, self);
+        },
+      };
+    }
+
     case 'shield': {
       return {
         preview: ctx => [{ targets: [ctx.self], shield: true }],
@@ -378,6 +421,10 @@ export function generateAbilityText(def) {
   if (p.type === 'buff') {
     if (p.dynamic === 'equal_this_atk') return `${pre} give HP to the friend behind equal to this ATK.`;
     if (p.dynamic === 'equal_remaining_hp') return `${pre} give ATK to the friend behind equal to this remaining HP.`;
+    if (p.dynamic === 'per_worm_bite') {
+      const parts = [p.atk ? `+${p.atk} ATK` : '', p.hp ? `+${p.hp} HP` : ''].filter(Boolean).join(' and ');
+      return `${pre} gain ${parts || '+0'} for every worm bite so far.`;
+    }
     const atkStr = p.atk ? (p.atk > 0 ? `+${p.atk}` : `${p.atk}`) : '';
     const hpStr = p.hp ? (p.hp > 0 ? `+${p.hp}` : `${p.hp}`) : '';
     const statStr = (atkStr && hpStr) ? `${atkStr}/${hpStr}` : (atkStr ? `${atkStr} ATK` : `${hpStr} HP`);
@@ -408,6 +455,12 @@ export function generateAbilityText(def) {
     if (p.debuffType === 'reduce_atk_by_hp') return `${pre} reduce the first enemy's ATK by its current HP.`;
   }
   if (p.type === 'make_noise') return `${pre} make ${p.amount} noise.`;
+  if (p.type === 'change_noise') {
+    const amt = `${p.amount > 0 ? '+' : ''}${p.amount} noise`;
+    const who = { first_enemy: 'the first enemy', last_enemy: 'the last enemy', attacker: 'the attacker', friend_ahead: 'the friend ahead', self: 'this card' }[p.target] || 'the friend behind';
+    return `${pre} ${who} gets ${amt}.`;
+  }
+  if (p.type === 'bite_share') return `${pre} when bitten, the first enemy takes the same damage.`;
   if (p.type === 'shield') return `${pre} gain 1-time block (Shield).`;
   return def.text || '';
 }
@@ -422,7 +475,7 @@ export const BASE_CHARACTERS = {
     preset: { type: 'reposition', action: 'push_last', target: 'first_enemy' },
   },
   rotator_attack: {
-    class: 'rotator', name: 'Tailwind', emoji: '🦜', atk: 3, hp: 3, noise: 3,
+    class: 'rotator', name: 'Tailwind', emoji: '🦜', atk: 3, hp: 3, noise: 2,
     trigger: 'attack',
     text: 'Before attack 🗡️: bring the lowest-HP enemy to the front.',
     preset: { type: 'reposition', action: 'bring_front', target: 'lowest_hp_enemy' },
@@ -434,7 +487,7 @@ export const BASE_CHARACTERS = {
     preset: { type: 'reposition', action: 'bring_front', target: 'highest_hp_friend' },
   },
   rotator_death: {
-    class: 'rotator', name: 'Deathfeather', emoji: '🦩', atk: 2, hp: 3, noise: 2,
+    class: 'rotator', name: 'Deathfeather', emoji: '🦩', atk: 2, hp: 3, noise: 1,
     trigger: 'death',
     text: 'On death 💀: bring the highest-ATK friend forward.',
     preset: { type: 'reposition', action: 'bring_front', target: 'highest_atk_friend' },
@@ -474,7 +527,7 @@ export const BASE_CHARACTERS = {
     preset: { type: 'debuff', debuffType: 'halve_highest_atk' },
   },
   warlock_attack: {
-    class: 'warlock', name: 'Curse Bite', emoji: '🦂', atk: 2, hp: 3, noise: 2,
+    class: 'warlock', name: 'Curse Bite', emoji: '🦂', atk: 2, hp: 3, noise: 1,
     trigger: 'attack',
     text: 'Before attack 🗡️: set the first enemy\'s ATK equal to its current HP.',
     preset: { type: 'debuff', debuffType: 'set_atk_to_hp' },
@@ -496,8 +549,8 @@ export const BASE_CHARACTERS = {
   support_start: {
     class: 'support', name: 'Grace Aura', emoji: '🦌', atk: 2, hp: 3, noise: 1,
     trigger: 'start',
-    text: 'On start 🏁: give +2/+1 to the two friends ahead.',
-    preset: { type: 'buff', target: 'two_ahead', atk: 2, hp: 1 },
+    text: 'On start 🏁: give +1/+1 to the two friends ahead.',
+    preset: { type: 'buff', target: 'two_ahead', atk: 1, hp: 1 },
   },
   support_attack: {
     class: 'support', name: 'Healer Doe', emoji: '🦙', atk: 1, hp: 4, noise: 1,
@@ -552,10 +605,10 @@ export const BASE_CHARACTERS = {
     preset: { type: 'make_noise', amount: 5 },
   },
   tank_hurt_noise: {
-    class: 'tank', name: 'Rattleback', emoji: '🦔', atk: 1, hp: 6, noise: 0,
+    class: 'tank', name: 'Rattleback', emoji: '🦔', atk: 1, hp: 5, noise: 1,
     trigger: 'hurt',
-    text: 'On hurt 💢: make 3 noise.',
-    preset: { type: 'make_noise', amount: 3 },
+    text: 'On hurt 💢: the attacker gets +2 noise.',   // whoever hits it becomes the Worm's target
+    preset: { type: 'change_noise', target: 'attacker', amount: 2 },
   },
   dps_start_last: {
     class: 'dps', name: 'Ambush Fox', emoji: '🦊', atk: 2, hp: 3, noise: 2,
@@ -564,26 +617,41 @@ export const BASE_CHARACTERS = {
     preset: { type: 'deal_damage', target: 'last_enemy', amount: 5 },
   },
   rotator_attack_quiet: {
-    class: 'rotator', name: 'Sandgrouse', emoji: '🐦', atk: 3, hp: 3, noise: 2,
-    trigger: 'attack',
-    text: 'Before attack 🗡️: bring the quietest (lowest-noise) enemy to the front.',
-    preset: { type: 'reposition', action: 'bring_front', target: 'lowest_noise_enemy' },
+    class: 'warlock', name: 'Sandgrouse', emoji: '🐦', atk: 3, hp: 3, noise: 2,
+    trigger: 'start',
+    text: 'On start 🏁: the last enemy gets +3 noise.',   // marks the enemy back line as the Worm's target
+    preset: { type: 'change_noise', target: 'last_enemy', amount: 3 },
   },
 
 
   // ── PLAIN CARDS (no ability, no class): the power ladder is visible in the numbers.
   //    Rule of thumb for a "fair" plain card: noise ≈ (hp + atk) / 2 − 2  (hp already includes the +2 base)
   plain_jackal:   { name: 'Jackal',   emoji: '🐕', atk: 2,  hp: 4,  noise: 1, text: '' },
-  plain_hyena:    { name: 'Hyena',    emoji: '🐺', atk: 3,  hp: 5,  noise: 2, text: '' },
+  plain_hyena: {   // scavenger: grows with every Worm surfacing
+    class: 'dps', name: 'Hyena', emoji: '🐺', atk: 3, hp: 5, noise: 2,
+    trigger: 'attack',
+    text: 'Before attack 🗡️: gain +1 ATK for every worm bite so far.',
+    preset: { type: 'buff', target: 'self', dynamic: 'per_worm_bite', atk: 1, hp: 0 },
+  },
   plain_warthog:  { name: 'Warthog',  emoji: '🐗', atk: 4,  hp: 6,  noise: 3, text: '' },
   plain_falcon:   { name: 'Falcon',   emoji: '🦅', atk: 5,  hp: 3,  noise: 2, text: '' },
   plain_lion:     { name: 'Jaguar',   emoji: '🐈‍⬛', atk: 8,  hp: 4,  noise: 3, text: '' },
   plain_owl:      { name: 'Owl',      emoji: '🦉', atk: 4,  hp: 3,  noise: 0, text: '' },
   plain_sloth:    { name: 'Sloth',    emoji: '🦥', atk: 1,  hp: 6,  noise: 0, text: '' },
   plain_camel:    { name: 'Camel',    emoji: '🐪', atk: 1,  hp: 7,  noise: 1, text: '' },
-  plain_hippo:    { name: 'Buffalo',  emoji: '🐃', atk: 2,  hp: 8,  noise: 2, text: '' },
-  plain_elephant: { name: 'Elephant', emoji: '🐘', atk: 2,  hp: 10, noise: 3, text: '' },
-  plain_behemoth: { name: 'Behemoth', emoji: '🦏', atk: 10, hp: 12, noise: 10, text: '' },
+  plain_hippo: {   // muffles the loud card behind it so the Worm looks elsewhere
+    class: 'support', name: 'Buffalo', emoji: '🐃', atk: 2, hp: 8, noise: 2,
+    trigger: 'start',
+    text: 'On start 🏁: the friend behind gets -2 noise.',
+    preset: { type: 'change_noise', target: 'friend_behind', amount: -2 },
+  },
+  plain_elephant: {   // lightning rod: loud and huge, and it shares every bite it takes
+    class: 'tank', name: 'Elephant', emoji: '🐘', atk: 2, hp: 9, noise: 3,
+    trigger: 'bite',
+    text: 'On worm bite 🪱: when bitten, the first enemy takes the same damage.',
+    preset: { type: 'bite_share' },
+  },
+  plain_behemoth: { name: 'Behemoth', emoji: '🦏', atk: 10, hp: 12, noise: 7, text: '' },
 
   // ── Special Cage Card (0 ATK, 2 HP)
   cage: {
