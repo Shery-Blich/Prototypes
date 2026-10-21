@@ -2189,6 +2189,8 @@ async function startBattle() {
   const eaten = outcome === 'win' ? 'enemy' : null;
 
   if (outcome === 'win') await playReviveSequence(battle);
+  // A lost combat is told by the worm swallowing your fallen fighters, not a pop-up
+  if (outcome === 'lose') await playWormSequence(battle, 'player');
 
   currentBattle = null;
   showResult(outcome, participants, defeatedEnemy, battleDifficulty, { combat: result.outcome, eaten, noise, worm: result.worm, battle });
@@ -2621,15 +2623,16 @@ function showResult(result, participants, defeatedEnemy, battleDifficulty, info 
   } else {
     state.losses++;
     title.textContent = 'Defeat';
-    audio.explosion();
-    showDefeat(participants, info);
+    // Back to the map on its own; only a wiped-out squad gets the end-of-run window
+    if (!showDefeat(participants, info)) return;
   }
   updateHud();
   $('result-overlay').classList.remove('hidden');
 }
 
-// Defeat: only the cards that fought are lost. The rest of the squad stays on the map,
-// on the tile the combat was fought for. A squad with no cards left ends the expedition.
+// Defeat: only the cards that fought are lost (the worm already ate them in the arena). The rest
+// of the squad goes straight back to the map, on the tile the combat was fought for.
+// A squad with no cards left ends the expedition: returns true when that window should open.
 function showDefeat(participants, info = {}) {
   $('result-squad-preview')?.classList.add('hidden');
   $('result-difficulty-wrap')?.classList.add('hidden');
@@ -2650,6 +2653,11 @@ function showDefeat(participants, info = {}) {
   if (wiped) state.map = null;
   updateHud();
 
+  if (!wiped) {
+    showMap();
+    return false;
+  }
+
   title.textContent = 'Combat Lost 💀';
   title.className = 'lose';
   const w = info.worm;
@@ -2657,9 +2665,7 @@ function showDefeat(participants, info = {}) {
     ? ` The Giant Worm bit ${w.bites} time${w.bites === 1 ? '' : 's'} (your cards ${w.bitten.player}, enemy ${w.bitten.enemy}).`
     : '';
   const why = `Your fighters fell in combat.${wormLine}`;
-  text.textContent = wiped
-    ? `${why} No cards are left — the expedition is over.`
-    : `${why} The ${lostCards.length} card${lostCards.length === 1 ? '' : 's'} that fought ${lostCards.length === 1 ? 'is' : 'are'} lost. The rest of your squad (${state.roster.length}) holds this tile.`;
+  text.textContent = `${why} No cards are left — the expedition is over.`;
 
   for (const p of lostCards) {
     const d = CHARACTERS[p.id];
@@ -2674,28 +2680,17 @@ function showDefeat(participants, info = {}) {
     cards.appendChild(el);
   }
 
-  if (wiped) {
-    btnContinue.classList.add('hidden');
-    btnReturn.classList.remove('hidden');
-    btnReturn.disabled = false;
-    btnReturn.textContent = 'Return to Base Camp 🏠';
-    btnReturn.onclick = () => {
-      $('result-overlay').classList.add('hidden');
-      showHome();
-    };
-    const debrief = finalizeRunXp(false);
-    renderDebrief(debrief, 'defeat');
-    return;
-  }
-
-  btnReturn.classList.add('hidden');
-  btnContinue.classList.remove('hidden');
-  btnContinue.disabled = false;
-  btnContinue.textContent = 'Return to Map 🗺️';
-  btnContinue.onclick = () => {
+  btnContinue.classList.add('hidden');
+  btnReturn.classList.remove('hidden');
+  btnReturn.disabled = false;
+  btnReturn.textContent = 'Return to Base Camp 🏠';
+  btnReturn.onclick = () => {
     $('result-overlay').classList.add('hidden');
-    showMap();
+    showHome();
   };
+  const debrief = finalizeRunXp(false);
+  renderDebrief(debrief, 'defeat');
+  return true;
 }
 
 // Preview player's current squad (team slots and camp) during card recruit selection
