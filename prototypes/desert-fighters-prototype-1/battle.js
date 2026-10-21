@@ -97,7 +97,7 @@ export class Battle {
     for (const u of units) {
       if (u.noise) await this.addNoise(u, u.noise);
     }
-    await this.wormCheck();
+    // The bite itself waits for wormPhase(), once the clash has settled
   }
 
   // Adds `amount` noise from card `u` to its team total and the worm meter (no bite check)
@@ -120,12 +120,18 @@ export class Battle {
     return alive[0].x;
   }
 
-  // Each time the meter crosses a threshold, the Worm bites the loudest card. Hurt/death
-  // triggers from the bite are resolved by the caller (clash) like any other damage.
-  async wormCheck() {
+  // Each time the meter crosses a threshold, the Worm bites the loudest card. It runs after the
+  // dead have left the field, so the loudest card on screen is the one that gets bitten. Each bite
+  // settles (hurt/death triggers, dead step out) before the next, since a hurt trigger can make
+  // more noise.
+  async wormPhase(sidesInOrder) {
     const w = this.worm;
     if (!w.rules) return;
     while (w.meter >= w.next) {
+      // A death ability can kill cards on a side that was already cleaned up: clear those first
+      while ([...this.teams.player, ...this.teams.enemy].some(u => u.hp <= 0)) {
+        await this.cleanUpDeadAndStepForward(sidesInOrder);
+      }
       w.next += w.rules.every;
       const t = this.wormTarget();
       if (!t) break;
@@ -140,6 +146,8 @@ export class Battle {
       this.view.render(this);
       this.view.wormMeter?.(w.meter, w.next);
       await this.view.wait(500);
+      await this.resolveHurtEvents(sidesInOrder);
+      await this.cleanUpDeadAndStepForward(sidesInOrder);
     }
   }
 
@@ -235,12 +243,11 @@ export class Battle {
         await b.view.wait(350);
       },
       // Ability noise: fills the team total and the worm meter like an attack, and can call a bite.
-      // Bite damage lands as hurt events, resolved by whoever ran the ability.
       makeNoise: async (u, amount) => {
         if (!amount) return;
         b.view.float(u, `+${amount}🔊`, 'noise');
         await b.addNoise(u, amount);
-        await b.wormCheck();
+        // Any bite this calls for comes in wormPhase(), once the field has settled
       },
       halveAtk: async (target, src) => {
         const newAtk = Math.floor(target.atk / 2);
@@ -405,6 +412,7 @@ export class Battle {
       }
     }
     await this.cleanUpDeadAndStepForward(sidesInOrder);
+    await this.wormPhase(sidesInOrder);
     await this.buryDead();
 
     let turn = 0;
@@ -448,6 +456,7 @@ export class Battle {
     const uEnemy = this.teams.enemy[0];
     if (!uPlayer || !uEnemy || uPlayer.hp <= 0 || uEnemy.hp <= 0) {
       await this.cleanUpDeadAndStepForward(sidesInOrder);
+      await this.wormPhase(sidesInOrder);
       return;
     }
 
@@ -477,6 +486,9 @@ export class Battle {
 
     // 4. Check for dead units/triggers, then cards step forward a slot
     await this.cleanUpDeadAndStepForward(sidesInOrder);
+
+    // 5. If the noise filled the meter, the Worm bites now that the dead have left the field
+    await this.wormPhase(sidesInOrder);
     await this.view.wait(250);
   }
 }

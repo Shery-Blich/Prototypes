@@ -149,6 +149,10 @@ function saveProgression() {
   setUnlockedIds(progression.unlockedCards);
 }
 
+const resetConfirmText = () =>
+  `Reset to the Starter Pack (${STARTER_PACK_IDS.map(id => CHARACTERS[id]?.name || id).join(', ')}) and Level 0? ` +
+  'Your stash is replaced and every other card is locked again.';
+
 function resetProgression() {
   localStorage.removeItem(PROGRESSION_STORAGE_KEY);
   localStorage.removeItem(STASH_STORAGE_KEY);
@@ -159,6 +163,7 @@ function resetProgression() {
   saveStash();
   state.roster = [];
   state.team = [];
+  state.map = null;          // any expedition in progress ends too
   state.extractCountdown = null;
   state.battleNum = 1;
   state.wins = 0;
@@ -549,29 +554,33 @@ function renderHome() {
     }
   }
 
-  // 1. Render Selected Cards Window (Higher on screen, no header text)
+  // 1. Render Selected Cards Window (Higher on screen, no header text): picked cards fill the
+  //    loadout slots in order, the rest stay as empty slots
   if (selectedContainer) {
-    if (selectedCards.length === 0) {
-      selectedContainer.innerHTML = '';
-    } else {
-      for (const c of selectedCards) {
-        const d = CHARACTERS[c.id];
-        if (!d) continue;
-        const atkBonus = c.atkBonus || 0;
-        const hpBonus = c.hpBonus || 0;
-        const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, {
-          cls: 'stash-card clickable selected',
-          atkBonus,
-          hpBonus,
-        });
+    let filled = 0;
+    for (const c of selectedCards) {
+      const d = CHARACTERS[c.id];
+      if (!d) continue;
+      const atkBonus = c.atkBonus || 0;
+      const hpBonus = c.hpBonus || 0;
+      const el = cardEl(c.id, d.atk + atkBonus, d.hp + hpBonus, {
+        cls: 'stash-card clickable',
+        atkBonus,
+        hpBonus,
+      });
 
-        el.addEventListener('click', () => {
-          state.selectedStashUids.delete(c.uid);
-          audio.beep(400);
-          renderHome();
-        });
-        selectedContainer.appendChild(el);
-      }
+      el.addEventListener('click', () => {
+        state.selectedStashUids.delete(c.uid);
+        audio.beep(400);
+        renderHome();
+      });
+      selectedContainer.appendChild(el);
+      filled++;
+    }
+    for (let i = filled; i < max; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'card empty loadout-slot';
+      selectedContainer.appendChild(slot);
     }
   }
 
@@ -743,13 +752,13 @@ function initProgressionEvents() {
     audio.beep(460);
   });
   $('btn-reset-progression')?.addEventListener('click', () => {
-    if (confirm('Reset all cards to the first 4 (Claw Strike, Healer Doe, Thick Skin, Death Curse) and reset Level to 0?')) {
+    if (confirm(resetConfirmText())) {
       resetProgression();
       audio.explosion();
     }
   });
   $('mod-reset-progression')?.addEventListener('click', () => {
-    if (confirm('Reset all cards to the first 4 (Claw Strike, Healer Doe, Thick Skin, Death Curse) and reset Level to 0?')) {
+    if (confirm(resetConfirmText())) {
       resetProgression();
       audio.explosion();
     }
@@ -2219,19 +2228,16 @@ function setNoiseCounter(side, total, pop = false) {
   }
 }
 
-// Wait, scale up the louder counter, shake the screen, then a worm bursts out of the ground
+// Wait, shake the screen, then a worm bursts out of the ground
 // under the louder team, swallows its cards and sinks back down (~3s).
 async function playWormSequence(battle, side) {
   const row = $(side === 'player' ? 'battle-player' : 'battle-enemy');
-  const counter = $(`noise-${side}`);
   const screen = $('battle-screen');
   $('turn-label').textContent = '🪱 The ground trembles...';
 
   await sleep(700);
-  counter.classList.remove('bump');
-  counter.classList.add('loud');
   audio.beep(200);
-  await sleep(900);
+  await sleep(500);
 
   screen.classList.add('shake');
   audio.explosion();
@@ -2277,7 +2283,6 @@ async function playWormSequence(battle, side) {
   pit.classList.add('sink');
   await sleep(900);
   pit.remove();
-  counter.classList.remove('loud');
   // The eaten team is gone for good
   battle.teams[side].length = 0;
   battle.graves[side].length = 0;
