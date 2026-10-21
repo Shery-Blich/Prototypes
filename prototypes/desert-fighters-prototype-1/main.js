@@ -1816,8 +1816,8 @@ function setPaused(p) {
 
 const isOverSlot = el => el instanceof Element && el.classList.contains('over-slot');
 
-// Global pacing multiplier for combat waits (1 = the original timings)
-const PACE = 1.6;
+// Global pacing multiplier for combat waits (1 = the original timings; 1.6 cut by 30%)
+const PACE = 1.12;
 
 // Milliseconds scaled by the speed buttons (used by the view's own animations)
 const paced = ms => state.speed >= 1000 ? 0 : (ms * PACE) / Math.min(state.speed || 1, 8);
@@ -1844,6 +1844,28 @@ async function flyGlyphs(fromEl, toEl, glyph, count, cls = 'fly-noise') {
     anims.push(anim.finished.then(() => g.remove()).catch(() => g.remove()));
   }
   await Promise.all(anims);
+}
+
+// Marks the card(s) the Worm will bite next: the loudest living card on the field.
+// When several cards share the top noise, each gets a "?" (the bite goes to one of them).
+function markWormTarget(battle) {
+  document.querySelectorAll('.worm-target').forEach(e => e.remove());
+  if (!battle?.worm?.rules || battle.ended || recruiting) return;
+  const alive = [...battle.teams.player, ...battle.teams.enemy].filter(u => u.hp > 0 && !battle.isDead(u));
+  if (!alive.length) return;
+  const top = Math.max(...alive.map(u => u.noise));
+  const tied = alive.filter(u => u.noise === top);
+  for (const u of tied) {
+    const el = cardMap.get(u.uid);
+    if (!el) continue;
+    const m = document.createElement('div');
+    m.className = 'worm-target';
+    m.title = tied.length > 1
+      ? `Tied for loudest (${top} noise): the Worm's next bite lands on one of these`
+      : `Loudest card (${top} noise): the Worm's next bite lands here`;
+    m.innerHTML = `🪱${tied.length > 1 ? '<span class="worm-target-q">?</span>' : ''}`;
+    el.appendChild(m);
+  }
 }
 
 const view = {
@@ -1889,6 +1911,7 @@ const view = {
       });
     }
     fitRows();
+    markWormTarget(battle);
     if (state.battlePreviewKey) showBattlePreview(battle);
   },
   float(u, text, cls) {
@@ -2137,6 +2160,8 @@ async function startBattle() {
   setWormMeter(0, battle.worm.next);
   $('battle-camp')?.classList.add('hidden');
   const result = await battle.run();
+  battle.ended = true;
+  markWormTarget(battle);
   await view.wait(500);
   closeBattlePreview();
 
@@ -2794,6 +2819,20 @@ function startRecruitPhase(battle, battleDifficulty, wormEatsEnemy) {
     if (c && el) ownEls.set(c, el);
   }
 
+  // The label floats (absolute) centered over the enemy cards, its bottom just above their
+  // arrows, so it never pushes the enemy row down out of line with the player's row.
+  const placeLabel = () => {
+    const cardEls = candidates.map(u => cardMap.get(u.uid)).filter(Boolean);
+    const row = $('battle-enemy');
+    if (!cardEls.length || !row) return;
+    const s = side.getBoundingClientRect();
+    const left = Math.min(...cardEls.map(e => e.getBoundingClientRect().left));
+    const right = Math.max(...cardEls.map(e => e.getBoundingClientRect().right));
+    const cardTop = Math.min(...cardEls.map(e => e.getBoundingClientRect().top));
+    label.style.left = `${(left + right) / 2 - s.left - label.offsetWidth / 2}px`;
+    label.style.top = `${cardTop - s.top - 30 - label.offsetHeight}px`;
+  };
+
   const draw = () => {
     const need = picks.length - capacity();
     label.innerHTML = maxPicks
@@ -2808,6 +2847,7 @@ function startRecruitPhase(battle, battleDifficulty, wormEatsEnemy) {
     btn.textContent = picks.length ? `Recruit (${picks.length})` : 'Pass';
     btn.classList.toggle('recruit-has-picks', picks.length > 0);
     btn.disabled = need > 0;
+    placeLabel();
   };
 
   for (const u of candidates) {
@@ -2847,15 +2887,6 @@ function startRecruitPhase(battle, battleDifficulty, wormEatsEnemy) {
   for (const [c, el] of ownEls) { const h = onOwnClick(c); el.addEventListener('click', h, true); ownHandlers.push([el, h]); }
 
   draw();
-  // Center the label over the enemy cards (the row is packed toward the VS side)
-  const cardEls = candidates.map(u => cardMap.get(u.uid)).filter(Boolean);
-  if (cardEls.length) {
-    const left = Math.min(...cardEls.map(e => e.getBoundingClientRect().left));
-    const right = Math.max(...cardEls.map(e => e.getBoundingClientRect().right));
-    const sideLeft = side.getBoundingClientRect().left;
-    label.style.alignSelf = 'flex-start';
-    label.style.marginLeft = `${Math.max(0, (left + right) / 2 - sideLeft - label.offsetWidth / 2)}px`;
-  }
   $('turn-label').textContent = '🏆 Victory! Recruit from the enemy team';
 
   btn.onclick = async () => {
@@ -2871,32 +2902,59 @@ function startRecruitPhase(battle, battleDifficulty, wormEatsEnemy) {
     });
     for (const [el, h] of ownHandlers) { el.removeEventListener('click', h, true); el.classList.remove('replaceable'); }
 
-    // Replaced cards leave the squad
+    // Replaced cards leave the squad. A replaced team card leaves its slot open (null) in both
+    // state.team and the arena row, so a recruit can step into that exact slot.
     if (replaced.length) {
       for (const c of replaced) {
         const el = ownEls.get(c);
         if (el) { el.classList.add('discarding'); const f = document.createElement('div'); f.className = 'float dmg'; f.textContent = '👋 Replaced'; el.appendChild(f); }
         state.roster = state.roster.filter(r => r !== c);
-        state.team = state.team.filter(uid => uid !== c.uid);
+        state.team = state.team.map(uid => uid === c.uid ? null : uid);
+        const i = battle.teams.player.findIndex(u => u.rosterUid === c.uid);
+        if (i >= 0) { cardMap.delete(battle.teams.player[i].uid); battle.teams.player[i] = null; }
       }
       audio.beep(380, 200);
       await sleep(900);
       for (const c of replaced) ownEls.get(c)?.remove();
     }
 
-    // Recruits join the squad: the team if it has a free slot, otherwise the camp
+    // Recruits join the squad: an opened team slot first, then a free team slot, otherwise the camp.
+    // A recruit joining the team crosses over to the player's row in the arena.
+    const joined = [];
     for (const u of picks) {
       const recruit = makeCharacter(u.id, u.atkBonus || 0, u.hpBonus || 0);
-      if (state.team.length < teamSlots()) state.team.push(recruit.uid);
       state.roster.push(recruit);
       view.float(u, '🤝 Joined!', 'revive');
+      const open = state.team.indexOf(null);
+      const toTeam = open >= 0 || state.team.length < teamSlots();
+      if (open >= 0) state.team[open] = recruit.uid;
+      else if (toTeam) state.team.push(recruit.uid);
+      if (toTeam) {
+        const bi = battle.teams.player.indexOf(null);
+        u.side = 'player';
+        u.rosterUid = recruit.uid;
+        if (bi >= 0) battle.teams.player[bi] = u; else battle.teams.player.push(u);
+        joined.push(u);
+      } else if (campRow) {
+        const d = CHARACTERS[recruit.id];
+        const el = cardEl(recruit.id, d.atk + (recruit.atkBonus || 0), d.hp + (recruit.hpBonus || 0), { cls: 'camp-card revived', atkBonus: recruit.atkBonus || 0, hpBonus: recruit.hpBonus || 0 });
+        const tag = document.createElement('div');
+        tag.className = 'front-tag camp-tag';
+        tag.textContent = 'CAMP';
+        el.appendChild(tag);
+        campRow.appendChild(el);
+        campRow.classList.remove('hidden');
+      }
     }
+    state.team = state.team.filter(uid => uid != null);
+    battle.teams.player = battle.teams.player.filter(Boolean);
     if (picks.length) {
       audio.score();
       await sleep(900);
       battle.teams.enemy = enemyTeam.filter(u => !picks.includes(u));
       view.render(battle);
-      await sleep(300);
+      for (const u of joined) cardMap.get(u.uid)?.classList.add('revived');
+      await sleep(600);
     }
 
     if (wormEatsEnemy && battle.teams.enemy.length) await playWormSequence(battle, 'enemy');
