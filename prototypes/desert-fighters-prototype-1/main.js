@@ -1909,7 +1909,7 @@ const view = {
       units.forEach((u, i) => {
         let el = cardMap.get(u.uid);
         if (!el) {
-          el = cardEl(u.id, u.atk, u.hp, { cls: 'selectable combat-card', atkBonus: u.atkBonus || 0, hpBonus: u.hpBonus || 0 });
+          el = cardEl(u.id, u.atk, u.hp, { cls: 'selectable combat-card', atkBonus: u.atkBonus || 0, hpBonus: u.hpBonus || 0, noise: u.noise });
           el.addEventListener('click', (e) => {
             if (recruiting || el.classList.contains('dead')) return;
             const isPop = el.classList.contains('pop-open');
@@ -1922,6 +1922,20 @@ const view = {
         }
         el.querySelector('.atk-val').textContent = u.atk;
         el.querySelector('.hp-val').textContent = Math.max(0, u.hp);
+        // Noise stat can change in combat (louder/quieter abilities): show the live value
+        const noiseEl = el.querySelector('.noise-val');
+        if (noiseEl) {
+          const badge = noiseEl.parentElement;
+          if (noiseEl.textContent !== String(u.noise)) {
+            noiseEl.textContent = u.noise;
+            badge.classList.remove('noise-pop');
+            void badge.offsetWidth;
+            badge.classList.add('noise-pop');
+          }
+          const baseNoise = u.def?.noise ?? 1;
+          badge.classList.toggle('noise-louder', u.noise > baseNoise);
+          badge.classList.toggle('noise-quieter', u.noise < baseNoise);
+        }
         el.classList.toggle('shielded', u.shield);
         el.classList.toggle('front', u === battle.teams[side][0]);
         el.classList.toggle('doomed', battle.isLingering(u));
@@ -2238,19 +2252,22 @@ function setNoiseCounter(side, total, pop = false) {
 }
 
 // Wait, shake the screen, then a worm bursts out of the ground
-// under the louder team, swallows its cards and sinks back down (~3s).
-async function playWormSequence(battle, side) {
+// under the louder team, swallows its cards and sinks back down (~3s, or 1s total when fast).
+async function playWormSequence(battle, side, { fast = false } = {}) {
   const row = $(side === 'player' ? 'battle-player' : 'battle-enemy');
   const screen = $('battle-screen');
+  const wait = (slow, quick) => sleep(fast ? quick : slow);
   $('turn-label').textContent = '🪱 The ground trembles...';
 
-  await sleep(700);
-  audio.beep(200);
-  await sleep(500);
+  if (!fast) {
+    await sleep(700);
+    audio.beep(200);
+    await sleep(500);
+  }
 
   screen.classList.add('shake');
   audio.explosion();
-  await sleep(450);
+  await wait(450, 100);
 
   // The pit is the ground line under the row: the worm rises from its bottom edge.
   const cards = [...row.querySelectorAll(':scope > .card:not(.over-slot)')];
@@ -2264,7 +2281,7 @@ async function playWormSequence(battle, side) {
   const height = box.bottom - box.top + 110;
 
   const pit = document.createElement('div');
-  pit.className = 'worm-pit';
+  pit.className = fast ? 'worm-pit fast' : 'worm-pit';
   pit.style.left = `${(box.left + box.right) / 2 - width / 2 + window.scrollX}px`;
   pit.style.top = `${box.bottom + 24 - height + window.scrollY}px`;
   pit.style.width = `${width}px`;
@@ -2280,24 +2297,24 @@ async function playWormSequence(battle, side) {
 
   pit.classList.add('rise');
   $('turn-label').textContent = `🪱 The Giant Worm eats the ${side === 'player' ? 'loud squad' : 'loud enemies'}!`;
-  await sleep(900);
+  await wait(900, 400);
   screen.classList.remove('shake');
 
   // Swallowed while the worm covers them
   cards.forEach(c => c.classList.add('eaten'));
   audio.hit();
-  await sleep(700);
+  await wait(700, 150);
 
   pit.classList.remove('rise');
   pit.classList.add('sink');
-  await sleep(900);
+  await wait(900, 300);
   pit.remove();
   // The eaten team is gone for good
   battle.teams[side].length = 0;
   battle.graves[side].length = 0;
   battle.lingering = battle.lingering.filter(l => l.u.side !== side);
   view.render(battle);
-  await sleep(400);
+  await wait(400, 50);
 }
 
 // The player survived: dead cards come back with base stats, and every card drops its
@@ -2971,7 +2988,7 @@ function startRecruitPhase(battle, battleDifficulty, wormEatsEnemy) {
       await sleep(600);
     }
 
-    if (wormEatsEnemy && battle.teams.enemy.length) await playWormSequence(battle, 'enemy');
+    if (wormEatsEnemy && battle.teams.enemy.length) await playWormSequence(battle, 'enemy', { fast: true });
     campRow?.classList.add('hidden');
     state.inBattle = false;
     onPostCardChoice('win');

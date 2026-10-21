@@ -300,7 +300,8 @@ export class Battle {
     }
     t.hp -= amount;
     this.view.log(`${src.name} deals ${amount} to ${t.name} (${t.side})`);
-    this.pendingFloats.push([t, `-${amount}`, 'dmg']);
+    // The worm bite already shows its own big "🪱 -N" over the card
+    if (src !== this.wormUnit) this.pendingFloats.push([t, `-${amount}`, 'dmg']);
     if (amount > 0) {
       this.hurtEvents.push({ unit: t, damageAmount: amount, attacker: src });
     }

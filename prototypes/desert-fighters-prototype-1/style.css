@@ -1989,6 +1989,11 @@ details.result-squad-preview[open] summary.squad-dropdown-summary {
   cursor: help;
 }
 .stat.noise b, .noise-badge .noise-val { color: #dbeafe; }
+.noise-badge.noise-louder { background: #4c0519; color: #fda4af; border-color: #fb7185; }
+.noise-badge.noise-louder .noise-val { color: #fecdd3; }
+.noise-badge.noise-quieter { background: #14532d; color: #86efac; border-color: #4ade80; }
+.noise-badge.noise-quieter .noise-val { color: #dcfce7; }
+.noise-badge.noise-pop { animation: noise-bump 0.35s ease; }
 
 /* Team noise counter, centered above each battle team */
 .noise-counter {
@@ -2111,6 +2116,8 @@ details.result-squad-preview[open] summary.squad-dropdown-summary {
 }
 .worm-pit.rise .worm { transform: translateY(0); }
 .worm-pit.sink .worm { transform: translateY(104%); transition: transform 0.85s cubic-bezier(0.6, 0, 0.8, 0.4); }
+.worm-pit.fast .worm { transition-duration: 0.35s; }
+.worm-pit.fast.sink .worm { transition-duration: 0.28s; }
 .worm-mouth {
   position: relative; flex: 0 0 auto;
   width: 100%; aspect-ratio: 2.2 / 1; max-height: 55%;
