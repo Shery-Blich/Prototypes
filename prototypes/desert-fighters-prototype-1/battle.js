@@ -95,16 +95,20 @@ export class Battle {
   // Front attackers make noise after their damage is dealt; it fills the shared worm meter
   async makeNoise(units) {
     for (const u of units) {
-      if (!u.noise) continue;
-      this.noise[u.side] += u.noise;
-      this.worm.meter += u.noise;
-      this.view.log(`🔊 ${u.name} (${u.side}) makes ${u.noise} noise · team total ${this.noise[u.side]}`);
-      // The view animates the noise travelling from the card to the meter, then shows the new value
-      if (this.view.noise) await this.view.noise(u, u.noise, this.noise[u.side], this.worm.meter, this.worm.next);
-      this.view.wormMeter?.(this.worm.meter, this.worm.next);
-      await this.view.wait(300);
+      if (u.noise) await this.addNoise(u, u.noise);
     }
     await this.wormCheck();
+  }
+
+  // Adds `amount` noise from card `u` to its team total and the worm meter (no bite check)
+  async addNoise(u, amount) {
+    this.noise[u.side] += amount;
+    this.worm.meter += amount;
+    this.view.log(`🔊 ${u.name} (${u.side}) makes ${amount} noise · team total ${this.noise[u.side]}`);
+    // The view animates the noise travelling from the card to the meter, then shows the new value
+    if (this.view.noise) await this.view.noise(u, amount, this.noise[u.side], this.worm.meter, this.worm.next);
+    this.view.wormMeter?.(this.worm.meter, this.worm.next);
+    await this.view.wait(300);
   }
 
   // The loudest living card on the field; ties go to the front-most card, then to the enemy
@@ -229,6 +233,14 @@ export class Battle {
         b.view.float(target, `ATK→${target.atk}`, delta < 0 ? 'dmg' : 'buff');
         b.view.log(`${src.name} sets ${target.name}'s ATK to ${target.atk}`);
         await b.view.wait(350);
+      },
+      // Ability noise: fills the team total and the worm meter like an attack, and can call a bite.
+      // Bite damage lands as hurt events, resolved by whoever ran the ability.
+      makeNoise: async (u, amount) => {
+        if (!amount) return;
+        b.view.float(u, `+${amount}🔊`, 'noise');
+        await b.addNoise(u, amount);
+        await b.wormCheck();
       },
       halveAtk: async (target, src) => {
         const newAtk = Math.floor(target.atk / 2);

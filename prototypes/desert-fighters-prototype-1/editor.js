@@ -23,11 +23,11 @@ const QUICK_EMOJIS = [
 const TEST_OPPONENTS = {
   cage: { id: 'cage', name: 'Cage', emoji: '⛓️', class: 'cage', atk: 0, hp: 2, trigger: 'death', text: '0 ATK, 2 HP. Destroy this cage to rescue a captive card if you win combat!' },
   dummy_target: { id: 'dummy_target', name: 'Training Dummy', emoji: '🎯', class: 'tank', atk: 2, hp: 5, trigger: 'start', text: 'Stands firm and absorbs hits.' },
-  rotator_start: { id: 'rotator_start', name: 'Swiftbeak', emoji: '🦅', class: 'rotator', atk: 2, hp: 1, trigger: 'start', text: 'When 🏁 push the first enemy to last.' },
-  support_attack: { id: 'support_attack', name: 'Healer Doe', emoji: '🦙', class: 'support', atk: 1, hp: 2, trigger: 'attack', text: 'When 🗡️ give HP to friend behind equal to this ATK.' },
-  dps_hurt: { id: 'dps_hurt', name: 'Retaliate', emoji: '🐅', class: 'dps', atk: 3, hp: 2, trigger: 'hurt', text: 'When 💢 deal half the damage taken back to attacker.' },
-  tank_hurt: { id: 'tank_hurt', name: 'Thick Skin', emoji: '🐪', class: 'tank', atk: 1, hp: 3, trigger: 'hurt', text: 'When 💢 give a random friend +1 HP.' },
-  dps_attack: { id: 'dps_attack', name: 'Frenzy', emoji: '🐆', class: 'dps', atk: 3, hp: 3, trigger: 'attack', text: 'When 🗡️ gain +1 ATK.' },
+  rotator_start: { id: 'rotator_start', name: 'Swiftbeak', emoji: '🦅', class: 'rotator', atk: 2, hp: 1, trigger: 'start', text: 'On start 🏁: push the first enemy to last.' },
+  support_attack: { id: 'support_attack', name: 'Healer Doe', emoji: '🦙', class: 'support', atk: 1, hp: 2, trigger: 'attack', text: 'Before attack 🗡️: give HP to friend behind equal to this ATK.' },
+  dps_hurt: { id: 'dps_hurt', name: 'Retaliate', emoji: '🐅', class: 'dps', atk: 3, hp: 2, trigger: 'hurt', text: 'On hurt 💢: deal half the damage taken back to attacker.' },
+  tank_hurt: { id: 'tank_hurt', name: 'Thick Skin', emoji: '🐪', class: 'tank', atk: 1, hp: 3, trigger: 'hurt', text: 'On hurt 💢: give a random friend +1 HP.' },
+  dps_attack: { id: 'dps_attack', name: 'Frenzy', emoji: '🐆', class: 'dps', atk: 3, hp: 3, trigger: 'attack', text: 'Before attack 🗡️: gain +1 ATK.' },
 };
 
 export function initEditor(containerEl, options = {}) {
@@ -223,6 +223,7 @@ export function initEditor(containerEl, options = {}) {
                 <option value="debuff" ${(editedCard.preset?.type === 'debuff') ? 'selected' : ''}>☠️ Warlock Debuff Enemy ATK</option>
                 <option value="retaliate" ${(editedCard.preset?.type === 'retaliate') ? 'selected' : ''}>🛡️ Retaliate (Deal damage taken back)</option>
                 <option value="shield" ${(editedCard.preset?.type === 'shield') ? 'selected' : ''}>🛡️ Gain Shield (1-time block)</option>
+                <option value="make_noise" ${(editedCard.preset?.type === 'make_noise') ? 'selected' : ''}>🔊 Make Noise (fills the Worm meter)</option>
                 <option value="custom" ${(editedCard.preset?.type === 'custom') ? 'selected' : ''}>💻 Custom JavaScript Code</option>
               </select>
             </div>
@@ -366,6 +367,7 @@ export function initEditor(containerEl, options = {}) {
             <label>Target</label>
             <select id="p-dmg-target">
               <option value="first_enemy" ${p.target === 'first_enemy' ? 'selected' : ''}>First Enemy (Front)</option>
+              <option value="last_enemy" ${p.target === 'last_enemy' ? 'selected' : ''}>Last Enemy (Back)</option>
               <option value="random_enemy" ${p.target === 'random_enemy' ? 'selected' : ''}>Random Enemy</option>
               <option value="all_enemies" ${p.target === 'all_enemies' ? 'selected' : ''}>ALL Enemies</option>
               <option value="attacker" ${p.target === 'attacker' ? 'selected' : ''}>Attacker</option>
@@ -452,6 +454,7 @@ export function initEditor(containerEl, options = {}) {
             <select id="p-repo-target">
               <option value="first_enemy" ${p.target === 'first_enemy' ? 'selected' : ''}>First Enemy</option>
               <option value="lowest_hp_enemy" ${p.target === 'lowest_hp_enemy' ? 'selected' : ''}>Lowest-HP Enemy</option>
+              <option value="lowest_noise_enemy" ${p.target === 'lowest_noise_enemy' ? 'selected' : ''}>Quietest (Lowest-Noise) Enemy</option>
               <option value="highest_hp_friend" ${p.target === 'highest_hp_friend' ? 'selected' : ''}>Highest-HP Friend</option>
               <option value="highest_atk_friend" ${p.target === 'highest_atk_friend' ? 'selected' : ''}>Highest-ATK Friend</option>
             </select>
@@ -474,6 +477,13 @@ export function initEditor(containerEl, options = {}) {
         <p style="font-size:0.8rem;color:#c9a97f;margin:0;">
           Automatically calculates damage taken in the clash and inflicts half back (rounded down) to the attacker.
         </p>
+      `;
+    } else if (p.type === 'make_noise') {
+      box.innerHTML = `
+        <div class="form-field">
+          <label>Noise Amount</label>
+          <input type="number" id="p-noise-amount" min="1" max="20" value="${p.amount ?? 3}" />
+        </div>
       `;
     } else if (p.type === 'shield') {
       box.innerHTML = `
@@ -531,6 +541,8 @@ export function initEditor(containerEl, options = {}) {
     } else if (type === 'reposition') {
       p.action = containerEl.querySelector('#p-repo-action')?.value || 'push_last';
       p.target = containerEl.querySelector('#p-repo-target')?.value || 'first_enemy';
+    } else if (type === 'make_noise') {
+      p.amount = Number(containerEl.querySelector('#p-noise-amount')?.value) || 1;
     } else if (type === 'debuff') {
       p.debuffType = containerEl.querySelector('#p-debuff-type')?.value || 'halve_highest_atk';
     } else if (type === 'custom') {
@@ -793,7 +805,7 @@ export function initEditor(containerEl, options = {}) {
         atk: 2,
         hp: 2,
         trigger: 'attack',
-        text: 'When 🗡️ gain +1 ATK.',
+        text: 'Before attack 🗡️: gain +1 ATK.',
         token: false,
         preset: { type: 'buff', target: 'self', atk: 1, hp: 0 },
       };

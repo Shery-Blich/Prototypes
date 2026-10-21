@@ -1492,6 +1492,13 @@ function showAbilityPreview(lineup, key, ui) {
       anyTarget = anyTarget || shown > 0;
       continue;
     }
+    if (fx.noise) {
+      // Ability noise flies to the Worm meter (the battle one, or the prep screen's)
+      const meter = [...document.querySelectorAll('#worm-meter, .prep-worm')].find(m => m.offsetParent);
+      if (meter) arrows.push({ el: meter, label: `+${fx.noise}🔊`, cls: 'harm' });
+      anyTarget = true;
+      continue;
+    }
     for (const u of fx.targets.filter(Boolean)) {
       anyTarget = true;
       applyPreview(u, fx);

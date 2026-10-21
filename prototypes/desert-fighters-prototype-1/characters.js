@@ -6,11 +6,26 @@
 // Extra API used by these abilities: pushToLast, bringToFront, setAtk, halveAtk
 
 export const TRIGGERS = {
-  start:  { emoji: '🏁', name: 'Start of match', note: 'Once, after the teams are set and before the first attack.' },
-  attack: { emoji: '🗡️', name: 'Attack',         note: 'Every time it attacks.' },
-  hurt:   { emoji: '💢', name: 'Hurt',            note: 'Every time it takes damage.' },
-  death:  { emoji: '💀', name: 'Death',           note: 'Once, when it dies.' },
+  start:  { emoji: '🏁', label: 'On start',      name: 'Start of match', note: 'Once, after the teams are set and before the first attack.' },
+  attack: { emoji: '🗡️', label: 'Before attack', name: 'Before attack',  note: 'Every time it attacks, just before the hit.' },
+  hurt:   { emoji: '💢', label: 'On hurt',       name: 'Hurt',            note: 'Every time it takes damage.' },
+  death:  { emoji: '💀', label: 'On death',      name: 'Death',           note: 'Once, when it dies.' },
 };
+
+// Card text opens with the trigger: "On start 🏁: ...", "Before attack 🗡️: ..."
+export function triggerPrefix(trigger) {
+  const t = TRIGGERS[trigger] || TRIGGERS.start;
+  return `${t.label} ${t.emoji}:`;
+}
+
+// Rewrites the old "When 🏁 ..." wording (base texts, saved editor overrides) to the trigger prefix
+export function rewordTriggerText(text) {
+  if (!text) return text;
+  return text.replace(/^When\s*(🏁|🗡️|🗡|💢|💀)\s*/u, (_, emoji) => {
+    const key = Object.keys(TRIGGERS).find(k => TRIGGERS[k].emoji.startsWith(emoji) || emoji.startsWith(TRIGGERS[k].emoji));
+    return key ? `${triggerPrefix(key)} ` : _;
+  });
+}
 
 // ─── CLASS META (for the visual badge / background) ──────────────────────────
 export const CLASSES = {
@@ -37,6 +52,15 @@ export function buildCardLogic(def) {
           async run(api, self) {
             const enemies = api.enemiesOf(self);
             if (enemies.length) await api.damage(enemies[0], amount, self);
+          },
+        };
+      }
+      if (p.target === 'last_enemy') {
+        return {
+          preview: ctx => [{ targets: [ctx.enemies.filter(Boolean).at(-1)], hp: -amount }],
+          async run(api, self) {
+            const enemies = api.enemiesOf(self);
+            if (enemies.length) await api.damage(enemies[enemies.length - 1], amount, self);
           },
         };
       }
@@ -210,6 +234,21 @@ export function buildCardLogic(def) {
           },
         };
       }
+      if (p.target === 'lowest_noise_enemy') {
+        // Ties go to the card closest to the front (it moves the least)
+        const quietest = units => units.reduce((a, b) => (b.noise ?? 1) < (a.noise ?? 1) ? b : a);
+        return {
+          preview: ctx => {
+            const enemies = ctx.enemies.filter(Boolean);
+            return [{ targets: enemies.length ? [quietest(enemies)] : [], reorder: 'bring-front' }];
+          },
+          async run(api, self) {
+            const enemies = api.enemiesOf(self);
+            if (!enemies.length) return;
+            await api.bringToFront(quietest(enemies), self);
+          },
+        };
+      }
       if (p.target === 'highest_hp_friend') {
         return {
           preview: ctx => {
@@ -286,6 +325,16 @@ export function buildCardLogic(def) {
       break;
     }
 
+    case 'make_noise': {
+      const amount = Number(p.amount) || 1;
+      return {
+        preview: () => [{ noise: amount }],
+        async run(api, self) {
+          await api.makeNoise(self, amount);
+        },
+      };
+    }
+
     case 'shield': {
       return {
         preview: ctx => [{ targets: [ctx.self], shield: true }],
@@ -314,49 +363,52 @@ export function buildCardLogic(def) {
 
 // Generates canonical trigger ability description text
 export function generateAbilityText(def) {
-  const trigEmoji = TRIGGERS[def.trigger]?.emoji || '🏁';
+  const pre = triggerPrefix(def.trigger);
   const p = def.preset;
   if (!p) return def.text || '';
 
   if (p.type === 'deal_damage') {
-    if (p.target === 'first_enemy') return `When ${trigEmoji} deal ${p.amount} damage to the first enemy.`;
-    if (p.target === 'random_enemy') return `When ${trigEmoji} deal ${p.amount} damage to a random enemy.`;
-    if (p.target === 'all_enemies') return `When ${trigEmoji} deal ${p.amount} damage to ALL enemies.`;
-    if (p.target === 'attacker') return `When ${trigEmoji} deal ${p.amount} damage back to the attacker.`;
-    if (p.target === 'self_hp_enemy') return `When ${trigEmoji} deal damage equal to this card's HP to a random enemy.`;
+    if (p.target === 'first_enemy') return `${pre} deal ${p.amount} damage to the first enemy.`;
+    if (p.target === 'last_enemy') return `${pre} deal ${p.amount} damage to the last enemy.`;
+    if (p.target === 'random_enemy') return `${pre} deal ${p.amount} damage to a random enemy.`;
+    if (p.target === 'all_enemies') return `${pre} deal ${p.amount} damage to ALL enemies.`;
+    if (p.target === 'attacker') return `${pre} deal ${p.amount} damage back to the attacker.`;
+    if (p.target === 'self_hp_enemy') return `${pre} deal damage equal to this card's HP to a random enemy.`;
   }
   if (p.type === 'buff') {
-    if (p.dynamic === 'equal_this_atk') return `When ${trigEmoji} give HP to the friend behind equal to this ATK.`;
-    if (p.dynamic === 'equal_remaining_hp') return `When ${trigEmoji} give ATK to the friend behind equal to this remaining HP.`;
+    if (p.dynamic === 'equal_this_atk') return `${pre} give HP to the friend behind equal to this ATK.`;
+    if (p.dynamic === 'equal_remaining_hp') return `${pre} give ATK to the friend behind equal to this remaining HP.`;
     const atkStr = p.atk ? (p.atk > 0 ? `+${p.atk}` : `${p.atk}`) : '';
     const hpStr = p.hp ? (p.hp > 0 ? `+${p.hp}` : `${p.hp}`) : '';
     const statStr = (atkStr && hpStr) ? `${atkStr}/${hpStr}` : (atkStr ? `${atkStr} ATK` : `${hpStr} HP`);
-    if (p.target === 'self') return `When ${trigEmoji} gain ${statStr}.`;
-    if (p.target === 'friend_behind') return `When ${trigEmoji} give ${statStr} to the friend behind.`;
-    if (p.target === 'friend_ahead') return `When ${trigEmoji} give ${statStr} to the friend ahead.`;
-    if (p.target === 'two_ahead') return `When ${trigEmoji} give ${statStr} to the two friends ahead.`;
-    if (p.target === 'random_friend') return `When ${trigEmoji} give a random friend ${statStr}.`;
-    if (p.target === 'all_friends') return `When ${trigEmoji} give all friends ${statStr}.`;
+    if (p.target === 'self') return `${pre} gain ${statStr}.`;
+    if (p.target === 'friend_behind') return `${pre} give ${statStr} to the friend behind.`;
+    if (p.target === 'friend_ahead') return `${pre} give ${statStr} to the friend ahead.`;
+    if (p.target === 'two_ahead') return `${pre} give ${statStr} to the two friends ahead.`;
+    if (p.target === 'random_friend') return `${pre} give a random friend ${statStr}.`;
+    if (p.target === 'all_friends') return `${pre} give all friends ${statStr}.`;
   }
-  if (p.type === 'retaliate') return `When ${trigEmoji} deal half the damage taken back to the attacker.`;
+  if (p.type === 'retaliate') return `${pre} deal half the damage taken back to the attacker.`;
   if (p.type === 'summon') {
     const tokenName = p.token === 'beetle' ? '2/2 Beetle' : '1/1 Bug';
     const posStr = p.pos === 'front' ? 'at the front' : 'behind';
     const countStr = p.count === 2 ? `2 ${tokenName}s` : `a ${tokenName}`;
-    return `When ${trigEmoji} summon ${countStr} ${posStr}.`;
+    return `${pre} summon ${countStr} ${posStr}.`;
   }
   if (p.type === 'reposition') {
-    if (p.action === 'push_last') return `When ${trigEmoji} push the first enemy to last.`;
-    if (p.target === 'lowest_hp_enemy') return `When ${trigEmoji} bring the lowest-HP enemy to the front.`;
-    if (p.target === 'highest_hp_friend') return `When ${trigEmoji} push the highest-HP friend to the front.`;
-    if (p.target === 'highest_atk_friend') return `When ${trigEmoji} bring the highest-ATK friend forward.`;
+    if (p.action === 'push_last') return `${pre} push the first enemy to last.`;
+    if (p.target === 'lowest_hp_enemy') return `${pre} bring the lowest-HP enemy to the front.`;
+    if (p.target === 'lowest_noise_enemy') return `${pre} bring the quietest (lowest-noise) enemy to the front.`;
+    if (p.target === 'highest_hp_friend') return `${pre} push the highest-HP friend to the front.`;
+    if (p.target === 'highest_atk_friend') return `${pre} bring the highest-ATK friend forward.`;
   }
   if (p.type === 'debuff') {
-    if (p.debuffType === 'halve_highest_atk') return `When ${trigEmoji} halve the ATK of the highest-ATK enemy (rounded down).`;
-    if (p.debuffType === 'set_atk_to_hp') return `When ${trigEmoji} set the first enemy's ATK equal to its current HP.`;
-    if (p.debuffType === 'reduce_atk_by_hp') return `When ${trigEmoji} reduce the first enemy's ATK by its current HP.`;
+    if (p.debuffType === 'halve_highest_atk') return `${pre} halve the ATK of the highest-ATK enemy (rounded down).`;
+    if (p.debuffType === 'set_atk_to_hp') return `${pre} set the first enemy's ATK equal to its current HP.`;
+    if (p.debuffType === 'reduce_atk_by_hp') return `${pre} reduce the first enemy's ATK by its current HP.`;
   }
-  if (p.type === 'shield') return `When ${trigEmoji} gain 1-time block (Shield).`;
+  if (p.type === 'make_noise') return `${pre} make ${p.amount} noise.`;
+  if (p.type === 'shield') return `${pre} gain 1-time block (Shield).`;
   return def.text || '';
 }
 
@@ -366,25 +418,25 @@ export const BASE_CHARACTERS = {
   rotator_start: {
     class: 'rotator', name: 'Swiftbeak', emoji: '🦅', atk: 2, hp: 3, noise: 2,
     trigger: 'start',
-    text: 'When 🏁 push the first enemy to last.',
+    text: 'On start 🏁: push the first enemy to last.',
     preset: { type: 'reposition', action: 'push_last', target: 'first_enemy' },
   },
   rotator_attack: {
     class: 'rotator', name: 'Tailwind', emoji: '🦜', atk: 3, hp: 3, noise: 3,
     trigger: 'attack',
-    text: 'When 🗡️ bring the lowest-HP enemy to the front.',
+    text: 'Before attack 🗡️: bring the lowest-HP enemy to the front.',
     preset: { type: 'reposition', action: 'bring_front', target: 'lowest_hp_enemy' },
   },
   rotator_hurt: {
     class: 'rotator', name: 'Stormwing', emoji: '🦢', atk: 2, hp: 5, noise: 1,
     trigger: 'hurt',
-    text: 'When 💢 push the highest-HP friend to the front.',
+    text: 'On hurt 💢: push the highest-HP friend to the front.',
     preset: { type: 'reposition', action: 'bring_front', target: 'highest_hp_friend' },
   },
   rotator_death: {
     class: 'rotator', name: 'Deathfeather', emoji: '🦩', atk: 2, hp: 3, noise: 2,
     trigger: 'death',
-    text: 'When 💀 bring the highest-ATK friend forward.',
+    text: 'On death 💀: bring the highest-ATK friend forward.',
     preset: { type: 'reposition', action: 'bring_front', target: 'highest_atk_friend' },
   },
 
@@ -392,25 +444,25 @@ export const BASE_CHARACTERS = {
   dps_start: {
     class: 'dps', name: 'Claw Strike', emoji: '🐯', atk: 3, hp: 3, noise: 2,
     trigger: 'start',
-    text: 'When 🏁 deal 3 damage to a random enemy.',
+    text: 'On start 🏁: deal 3 damage to a random enemy.',
     preset: { type: 'deal_damage', target: 'random_enemy', amount: 3 },
   },
   dps_attack: {
     class: 'dps', name: 'Frenzy', emoji: '🐆', atk: 3, hp: 5, noise: 3,
     trigger: 'attack',
-    text: 'When 🗡️ gain +1 ATK.',
+    text: 'Before attack 🗡️: gain +1 ATK.',
     preset: { type: 'buff', target: 'self', atk: 1, hp: 0 },
   },
   dps_hurt: {
     class: 'dps', name: 'Retaliate', emoji: '🐅', atk: 3, hp: 4, noise: 2,
     trigger: 'hurt',
-    text: 'When 💢 deal half the damage taken back to the attacker.',
+    text: 'On hurt 💢: deal half the damage taken back to the attacker.',
     preset: { type: 'retaliate', fraction: 0.5 },
   },
   dps_death: {
     class: 'dps', name: 'Death Roar', emoji: '🦁', atk: 5, hp: 3, noise: 3,
     trigger: 'death',
-    text: 'When 💀 deal 1 damage to ALL enemies.',
+    text: 'On death 💀: deal 1 damage to ALL enemies.',
     preset: { type: 'deal_damage', target: 'all_enemies', amount: 1 },
   },
 
@@ -418,25 +470,25 @@ export const BASE_CHARACTERS = {
   warlock_start: {
     class: 'warlock', name: 'Venom Sight', emoji: '🐍', atk: 2, hp: 4, noise: 1,
     trigger: 'start',
-    text: 'When 🏁 halve the ATK of the highest-ATK enemy (rounded down).',
+    text: 'On start 🏁: halve the ATK of the highest-ATK enemy (rounded down).',
     preset: { type: 'debuff', debuffType: 'halve_highest_atk' },
   },
   warlock_attack: {
     class: 'warlock', name: 'Curse Bite', emoji: '🦂', atk: 2, hp: 3, noise: 2,
     trigger: 'attack',
-    text: 'When 🗡️ set the first enemy\'s ATK equal to its current HP.',
+    text: 'Before attack 🗡️: set the first enemy\'s ATK equal to its current HP.',
     preset: { type: 'debuff', debuffType: 'set_atk_to_hp' },
   },
   warlock_hurt: {
     class: 'warlock', name: 'Hex Scales', emoji: '🐊', atk: 1, hp: 5, noise: 1,
     trigger: 'hurt',
-    text: 'When 💢 deal damage equal to this card\'s HP to a random enemy.',
+    text: 'On hurt 💢: deal damage equal to this card\'s HP to a random enemy.',
     preset: { type: 'deal_damage', target: 'self_hp_enemy', amount: 0 },
   },
   warlock_death: {
     class: 'warlock', name: 'Death Curse', emoji: '🦎', atk: 2, hp: 4, noise: 2,
     trigger: 'death',
-    text: 'When 💀 reduce the first enemy\'s ATK by its current HP.',
+    text: 'On death 💀: reduce the first enemy\'s ATK by its current HP.',
     preset: { type: 'debuff', debuffType: 'reduce_atk_by_hp' },
   },
 
@@ -444,25 +496,25 @@ export const BASE_CHARACTERS = {
   support_start: {
     class: 'support', name: 'Grace Aura', emoji: '🦌', atk: 2, hp: 3, noise: 1,
     trigger: 'start',
-    text: 'When 🏁 give +2/+1 to the two friends ahead.',
+    text: 'On start 🏁: give +2/+1 to the two friends ahead.',
     preset: { type: 'buff', target: 'two_ahead', atk: 2, hp: 1 },
   },
   support_attack: {
     class: 'support', name: 'Healer Doe', emoji: '🦙', atk: 1, hp: 4, noise: 1,
     trigger: 'attack',
-    text: 'When 🗡️ give HP to the friend behind equal to this ATK.',
+    text: 'Before attack 🗡️: give HP to the friend behind equal to this ATK.',
     preset: { type: 'buff', target: 'friend_behind', dynamic: 'equal_this_atk', atk: 0, hp: 0 },
   },
   support_hurt: {
     class: 'support', name: 'Pain Share', emoji: '🦘', atk: 2, hp: 3, noise: 2,
     trigger: 'hurt',
-    text: 'When 💢 give ATK to the friend behind equal to this remaining HP.',
+    text: 'On hurt 💢: give ATK to the friend behind equal to this remaining HP.',
     preset: { type: 'buff', target: 'friend_behind', dynamic: 'equal_remaining_hp', atk: 0, hp: 0 },
   },
   support_death: {
     class: 'support', name: 'Final Gift', emoji: '🐐', atk: 1, hp: 4, noise: 2,
     trigger: 'death',
-    text: 'When 💀 give a random friend +2/+2.',
+    text: 'On death 💀: give a random friend +2/+2.',
     preset: { type: 'buff', target: 'random_friend', atk: 2, hp: 2 },
   },
 
@@ -470,26 +522,52 @@ export const BASE_CHARACTERS = {
   tank_start: {
     class: 'tank', name: 'Iron Hide', emoji: '🦛', atk: 1, hp: 6, noise: 1,
     trigger: 'start',
-    text: 'When 🏁 give the friend behind +2 HP.',
+    text: 'On start 🏁: give the friend behind +2 HP.',
     preset: { type: 'buff', target: 'friend_behind', atk: 0, hp: 2 },
   },
   tank_attack: {
     class: 'tank', name: 'Trample Share', emoji: '🐘', atk: 1, hp: 7, noise: 1,
     trigger: 'attack',
-    text: 'When 🗡️ give HP to the friend behind equal to this ATK.',
+    text: 'Before attack 🗡️: give HP to the friend behind equal to this ATK.',
     preset: { type: 'buff', target: 'friend_behind', dynamic: 'equal_this_atk', atk: 0, hp: 0 },
   },
   tank_hurt: {
     class: 'tank', name: 'Thick Skin', emoji: '🐪', atk: 1, hp: 5, noise: 1,
     trigger: 'hurt',
-    text: 'When 💢 give a random friend +1 HP.',
+    text: 'On hurt 💢: give a random friend +1 HP.',
     preset: { type: 'buff', target: 'random_friend', atk: 0, hp: 1 },
   },
   tank_death: {
     class: 'tank', name: 'Last Stand', emoji: '🦬', atk: 1, hp: 7, noise: 2,
     trigger: 'death',
-    text: 'When 💀 give +2 HP to the friend behind.',
+    text: 'On death 💀: give +2 HP to the friend behind.',
     preset: { type: 'buff', target: 'friend_behind', atk: 0, hp: 2 },
+  },
+
+  // ── NOISE & AMBUSH cards: ability noise fills the Worm meter (and can call a bite) without attacking
+  warlock_start_noise: {
+    class: 'warlock', name: 'Howler', emoji: '🐒', atk: 2, hp: 4, noise: 0,
+    trigger: 'start',
+    text: 'On start 🏁: make 5 noise.',
+    preset: { type: 'make_noise', amount: 5 },
+  },
+  tank_hurt_noise: {
+    class: 'tank', name: 'Rattleback', emoji: '🦔', atk: 1, hp: 6, noise: 0,
+    trigger: 'hurt',
+    text: 'On hurt 💢: make 3 noise.',
+    preset: { type: 'make_noise', amount: 3 },
+  },
+  dps_start_last: {
+    class: 'dps', name: 'Ambush Fox', emoji: '🦊', atk: 2, hp: 3, noise: 2,
+    trigger: 'start',
+    text: 'On start 🏁: deal 5 damage to the last enemy.',
+    preset: { type: 'deal_damage', target: 'last_enemy', amount: 5 },
+  },
+  rotator_attack_quiet: {
+    class: 'rotator', name: 'Sandgrouse', emoji: '🐦', atk: 3, hp: 3, noise: 2,
+    trigger: 'attack',
+    text: 'Before attack 🗡️: bring the quietest (lowest-noise) enemy to the front.',
+    preset: { type: 'reposition', action: 'bring_front', target: 'lowest_noise_enemy' },
   },
 
 
@@ -685,6 +763,7 @@ export function applyCharacterOverrides(overrides = {}) {
     const { preview, run } = buildCardLogic(merged);
     merged.preview = preview;
     merged.run = run;
+    merged.text = rewordTriggerText(merged.text);
     if (!merged.text || ov.autoText) {
       merged.text = generateAbilityText(merged);
     }
