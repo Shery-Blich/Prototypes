@@ -1,0 +1,206 @@
+sim/combos.html?args=--games 250 --trials 2 --seed 1   · terrain design pass 1, 2026-10-22 (the only tuning pass)
+Tiles: random per game index, at most one Dune (same as the baseline). Changes vs the terrain baseline, all tile-aware:
+  Claw Strike  🏁 deal 3 to a random enemy        → 🏁 turn the FRONT tile into Quicksand 🌀
+  Death Roar   💀 deal 1 to all enemies            → 💀 turn the tile here into Oasis 🌴
+  Falcon       plain 5/3                          → 🏁 swap the front and back tiles
+  Hyena        🗡️ deal 1 to the last enemy         → 🧭 on new tile: deal 2 to the last enemy
+  Hex Scales   💢 deal this HP to a random enemy   → 🧭 on new tile: same effect
+  Retaliate    💢 half the damage back             → 💢 only if on Oasis 🌴 (fires twice there = full damage back)
+
+── BEFORE / AFTER ──
+                                 worm (p1 pass 2)   no terrain   terrain baseline   terrain pass 1
+strong combos                         579              565             356               525
+fewest combos on a card                18               17               3                 9  (Falcon)
+orphan cards                            0                0               0                 0
+base win rate (combo search)          76%              63%             64%               67%
+order choice: chosen / random      77% / 50%        62% / 45%       64% / 44%         64% / 45%
+   = value of choosing the order     +27              +17             +20               +19
+cards within ±5 ΔWin                 18/35             9/35           11/35             10/35
+ΔWin spread SD (sim.mjs)              7.0             12.3            12.3              12.3
+Behemoth combos owned                  46              186             191               194
+(order and ±5 rows: sim.mjs --pool base, 12000 games best order / 6000 games --order random, seed 1. The worm ±5 / SD come
+ from re-running prototype 1's sim.mjs --noise-rule worm on the same seed; that re-run gives 76% / 47% for the order rows.)
+
+Pass 1 cards (combos owned, baseline → pass 1 · solo ΔWin in the combo search):
+  Claw Strike   3 → 69   (+5.3 → −5.1)   best: Deathfeather + Claw Strike + Hex Scales +23.4
+  Hex Scales    9 → 55   (−0.4 → +12.2)  best: Deathfeather + Claw Strike + Hex Scales +23.4
+  Hyena         8 → 51   (+14.8 → +17.5) best: Claw Strike + Hyena + Sloth +22.4
+  Death Roar    5 → 43   (+9.5 → +7.7)   best: Death Roar + Curse Bite + Hex Scales +18.5
+  Retaliate    10 → 17   (+2.4 → +1.2)   best: Retaliate + Curse Bite + Behemoth +17.2
+  Falcon        6 →  9   (+5.6 → +7.5)   best: Curse Bite + Falcon + Behemoth +11.7
+New top pairs: Claw Strike + Hex Scales +13.0, Claw Strike + Hyena +10.9 (front Quicksand rotates the line every clash,
+so every 🧭 card fires every turn). Terrain per fight (sim.mjs): Quicksand sinks 1.15 (was 0.88), tile entries fired 0.39.
+
+── SOLVED-TILE CHECK ── (cards fielded in won fights, by the tile of their starting slot; solved = one class > 70%)
+                combo search (pass 1)            sim.mjs random hands (pass 1)
+  Dune 🏜️       plain 24%, then dps 19%          plain 24%, then dps 20%, warlock 16%
+  Rock 🪨        plain 24%, then dps 19%          plain 27%, then dps 19%, warlock 18%
+  Oasis 🌴       plain 21%, then dps 20%          plain 22%, then dps 20%, warlock 17%
+  Quicksand 🌀   plain 24%, then dps 19%          plain 25%, then dps 19%, tank 18%
+  Mirage 🌫️     plain 23%, then dps 21%          plain 26%, then dps 18%, tank 17%
+No tile is solved: no class goes above 28% anywhere, and the shares track the roster mix (8 classless cards, 6 dps).
+The flip side: no tile pulls a class toward it either. Rock leans slightly to plain cards (they lose nothing there).
+Baseline was the same picture (top class 22-25% on every tile).
+
+── VERDICT ──
+Terrain did NOT reach the worm's numbers. Pass 1 gets close on the headline count (525 vs 579 strong triples, 0 orphans)
+but misses on everything else: the weakest card owns 9 combos (worm 18), only 10/35 cards sit within ±5 ΔWin (worm 18),
+the card spread is almost twice as wide (SD 12.3 vs 7.0), and choosing the order is worth less (+19 points vs +27).
+
+Where the variety came from: the tile-aware ABILITIES, not the tiles. Random tiles on their own cost variety: the same
+cards on a plain Dune lane make 565 strong triples, random terrain drops that to 356 and the weakest card to 3 combos.
+Pass 1 won back 169 triples, and the six changed cards account for most of it (41 → 244 owned combos between them).
+Nearly all of that is one engine: Claw Strike turns the front into Quicksand, the front cards rotate every clash, and the
+🧭 cards (Hyena, Hex Scales) fire on every move.
+
+Behemoth is the real problem the worm was solving. Without a tax on a 12/10, Behemoth owns 191-194 combos and most of the
+top 40 triples are "two cheap enablers + Behemoth" (Curse Bite / Deathfeather / Healer Doe + Behemoth). Terrain is shared
+by both sides and never touches stats, so it can't push back on raw size. A fair comparison with the worm would need
+Behemoth re-costed first; I didn't do that, since it's outside this task.
+
+Tiles that did little:
+  * Mirage: Rock/Mirage make only 0.11-0.15 abilities fizzle per fight. Most abilities pick "the first / a random
+    enemy" from the cards they CAN target, so Mirage quietly redirects them instead of blocking anything you can see.
+  * Quicksand in the middle or back column: only front cards clash, so it does nothing there. Quicksand is a front-only tile.
+  * Swap tiles (Falcon): 9 combos. Swapping front and back only matters when the two tiles differ in a way the
+    lineup cares about, which is rare with random tiles.
+  * Oasis, Rock and front Quicksand all fire about once per fight. They do act; they just don't create combos by themselves.
+
+Complexity without depth:
+  * Mirage is Rock minus the silence. Two tiles share one rule ("can't be targeted"), and the difference is hard to read.
+  * Shared tiles are symmetric. Whatever a tile does for your front card it also does for theirs, so most tiles shift
+    both sides equally and the only lever is ordering. The order value went DOWN (27 → 19-20).
+  * "First enemy" now means "first enemy an ability can reach". Under Mirage an ability silently skips to the second
+    card. It is correct by the rules but surprising to watch, and the preview has to re-derive it.
+  * The 🧭 trigger needs slot tracking, an entry-resolution loop with a pass cap (two movers can shove each other forever),
+    and quicksand rules about who sinks once. That's a lot of engine for one trigger, though it is the trigger that made
+    the combos.
+  * Oasis doubles death and hurt triggers as well, so a few cards get very swingy on one tile. It's readable in the log
+    but hard to predict from the prep screen.
+
+Desert Fighters 3-card combo search · 6545 triples × 250 games (trials 2) · pool=base (35) · tiles random (≤1 Dune) · seed 1 · 259s on 8 workers
+
+Base win rate  67% · one triple's noise ±3.0 · strong combo = lift ≥ +8.9 (3×SE) · a card owns a combo when fielded in ≥  60% of its wins
+Strong combos: 525 of 6545 triples (chance alone would give about 9) · orphan cards (own none): 0
+
+Cards ranked by combos owned (fewest first = redesign candidates)
+combos = strong triples this card is fielded in · in = strong triples it merely appears in · solo = ΔWin from the card alone · played = how often fielded
+ combos  in   solo  played front  hp/atk  name            best combo (lift, partners)
+    9    9   +7.5   69%   13%    3/ 5   Falcon          +11.7  Curse Bite + Falcon + Behemoth
+   15   15  +14.0   93%   70%    5/ 3   Frenzy          +13.4  Swiftbeak + Frenzy + Venom Sight
+   17   17   +1.2   88%   63%    4/ 3   Retaliate       +17.2  Retaliate + Curse Bite + Behemoth
+   17   17   +1.7   61%    9%    3/ 4   Owl             +15.8  Curse Bite + Owl + Behemoth
+   22   22  +10.1   75%   15%    3/ 2   Ambush Fox      +11.6  Curse Bite + Ambush Fox + Warthog
+   28   28   -4.8   94%   79%    5/ 2   Stormwing       +22.0  Stormwing + Curse Bite + Behemoth
+   29   29   -2.3   77%   33%    3/ 2   Grace Aura      +20.7  Curse Bite + Grace Aura + Behemoth
+   30   30   -4.5   97%   85%    3/ 3   Tailwind        +21.7  Tailwind + Curse Bite + Behemoth
+   30   31   -3.7   69%   28%    7/ 1   Trample Share   +21.3  Curse Bite + Trample Share + Behemoth
+   32   33   -7.1   68%   29%    6/ 1   Iron Hide       +23.9  Curse Bite + Iron Hide + Behemoth
+   32   32   +3.7   87%   54%    4/ 2   Venom Sight     +15.4  Venom Sight + Curse Bite + Behemoth
+   36   37  -12.0   66%   36%    3/ 2   Pain Share      +28.0  Curse Bite + Pain Share + Behemoth
+   36   37   -9.3   58%   16%    5/ 1   Rattleback      +26.1  Curse Bite + Rattleback + Behemoth
+   36   36  +16.2   74%    4%    8/ 2   Buffalo         +12.4  Swiftbeak + Last Stand + Buffalo
+   37   39  -11.2   53%   12%    4/ 2   Jackal          +28.4  Curse Bite + Jackal + Behemoth
+   37   37   -3.3   65%   23%    4/ 2   Howler          +20.8  Curse Bite + Howler + Behemoth
+   37   37  +16.2   79%   10%    6/ 4   Warthog         +12.8  Swiftbeak + Death Curse + Warthog
+   39   40   -5.7   59%   16%    3/ 3   Sandgrouse      +23.3  Curse Bite + Sandgrouse + Behemoth
+   40   41   -5.0   65%   22%    7/ 1   Last Stand      +21.7  Curse Bite + Last Stand + Behemoth
+   42   45   -9.2   49%    3%    7/ 1   Camel           +26.4  Curse Bite + Camel + Behemoth
+   43   43   +7.7   89%   62%    3/ 5   Death Roar      +18.5  Death Roar + Curse Bite + Hex Scales
+   45   50  -13.3   45%    4%    6/ 1   Sloth           +30.1  Curse Bite + Sloth + Behemoth
+   45   45   -2.2   73%   36%    4/ 1   Final Gift      +19.0  Curse Bite + Final Gift + Behemoth
+   47   47   +1.8   81%   47%    4/ 2   Death Curse     +18.5  Curse Bite + Death Curse + Behemoth
+   51   51  +17.5   81%    9%    5/ 3   Hyena           +22.4  Claw Strike + Hyena + Sloth
+   52   52  -16.2   89%   73%    3/ 2   Deathfeather    +30.9  Deathfeather + Curse Bite + Behemoth
+   53   55  -12.2   60%   25%    5/ 1   Thick Skin      +28.6  Curse Bite + Thick Skin + Behemoth
+   54   54  +17.2   74%    3%    9/ 2   Elephant        +13.9  Swiftbeak + Grace Aura + Elephant
+   55   55  +12.2   91%   35%    5/ 1   Hex Scales      +23.4  Deathfeather + Claw Strike + Hex Scales
+   56   57  -19.2   70%   45%    3/ 2   Curse Bite      +30.9  Deathfeather + Curse Bite + Behemoth
+   60   60  +17.9   79%   10%    4/ 8   Jaguar          +14.3  Tailwind + Healer Doe + Jaguar
+   63   65  -15.4   67%   38%    4/ 1   Healer Doe      +30.9  Curse Bite + Healer Doe + Behemoth
+   66   66  -14.4   99%   86%    3/ 2   Swiftbeak       +30.4  Swiftbeak + Curse Bite + Behemoth
+   69   69   -5.1   88%   70%    3/ 3   Claw Strike     +23.4  Deathfeather + Claw Strike + Hex Scales
+  194  194  +31.1   85%    1%   12/10   Behemoth        +30.9  Deathfeather + Curse Bite + Behemoth
+
+Top strong combos (lift = beyond solo strength · 3way = beyond the pairs too · win = triple win rate · fielded-in-wins per card)
+  lift   3way   win   fielded          cards
+ +30.9   +3.5   94%  100%/ 92%/100%   Deathfeather + Curse Bite + Behemoth
+ +30.9   +3.6   94%   96%/ 96%/100%   Curse Bite + Healer Doe + Behemoth
+ +30.4   +5.5   95%   99%/ 84%/100%   Swiftbeak + Curse Bite + Behemoth
+ +30.1   +3.6   96%   97%/ 96%/100%   Curse Bite + Sloth + Behemoth
+ +28.6   +6.9   96%   99%/ 96%/100%   Swiftbeak + Deathfeather + Behemoth
+ +28.6   +2.8   95%   97%/ 96%/100%   Curse Bite + Thick Skin + Behemoth
+ +28.4   +4.6   96%   98%/ 97%/100%   Curse Bite + Jackal + Behemoth
+ +28.0   +4.6   95%   97%/ 96%/100%   Curse Bite + Pain Share + Behemoth
+ +27.9   +4.1   94%  100%/ 99%/100%   Deathfeather + Healer Doe + Behemoth
+ +27.8   +4.5   96%  100%/ 98%/ 99%   Deathfeather + Sloth + Behemoth
+ +26.6   +4.2   95%   99%/ 96%/100%   Swiftbeak + Healer Doe + Behemoth
+ +26.4   +3.1   96%   98%/ 97%/100%   Curse Bite + Camel + Behemoth
+ +26.2   +7.1   96%  100%/ 96%/ 97%   Healer Doe + Sloth + Behemoth
+ +26.1   +3.4   96%   98%/ 97%/100%   Curse Bite + Rattleback + Behemoth
+ +25.4   +5.9   95%  100%/ 97%/100%   Deathfeather + Pain Share + Behemoth
+ +25.3   +3.6   96%   99%/ 96%/ 99%   Swiftbeak + Sloth + Behemoth
+ +25.2   +3.2   95%  100%/ 98%/100%   Deathfeather + Thick Skin + Behemoth
+ +25.2   +6.3   96%  100%/ 97%/ 98%   Healer Doe + Thick Skin + Behemoth
+ +25.0   +5.1   96%  100%/ 98%/100%   Deathfeather + Jackal + Behemoth
+ +25.0   +1.9   96%  100%/ 97%/ 97%   Healer Doe + Pain Share + Behemoth
+ +24.9   +6.0   96%   99%/ 96%/100%   Swiftbeak + Pain Share + Behemoth
+ +24.3   +2.9   96%  100%/ 97%/100%   Swiftbeak + Thick Skin + Behemoth
+ +24.2   +4.9   96%  100%/ 97%/ 98%   Healer Doe + Jackal + Behemoth
+ +24.2   +3.7   97%  100%/ 98%/ 98%   Deathfeather + Camel + Behemoth
+ +24.1   +1.9   97%  100%/ 97%/ 98%   Pain Share + Sloth + Behemoth
+ +23.9   +2.0   96%   99%/ 97%/ 98%   Curse Bite + Iron Hide + Behemoth
+ +23.9   +4.2   96%  100%/ 99%/ 99%   Deathfeather + Rattleback + Behemoth
+ +23.7   +4.7   96%   99%/ 98%/100%   Swiftbeak + Jackal + Behemoth
+ +23.4   +8.1   81%  100%/ 99%/100%   Deathfeather + Claw Strike + Hex Scales
+ +23.3   +4.0   97%  100%/ 98%/ 98%   Jackal + Sloth + Behemoth
+ +23.3   +8.4   84%  100%/100%/ 75%   Claw Strike + Hex Scales + Sloth
+ +23.3   +3.6   96%   98%/ 94%/100%   Curse Bite + Sandgrouse + Behemoth
+ +22.7   +5.3   95%  100%/ 97%/ 97%   Thick Skin + Sloth + Behemoth
+ +22.6   +8.2   84%  100%/100%/ 74%   Claw Strike + Hex Scales + Thick Skin
+ +22.6   +2.5   96%  100%/ 98%/ 99%   Pain Share + Thick Skin + Behemoth
+ +22.6   +6.6   96%  100%/ 96%/ 97%   Healer Doe + Camel + Behemoth
+ +22.6   +7.7   81%  100%/100%/ 72%   Claw Strike + Hex Scales + Healer Doe
+ +22.5   +3.9   97%   99%/ 98%/ 99%   Swiftbeak + Rattleback + Behemoth
+ +22.5   +3.2   97%  100%/ 98%/ 96%   Deathfeather + Iron Hide + Behemoth
+ +22.4   +7.7   88%  100%/100%/ 70%   Claw Strike + Hyena + Sloth
+
+Top pairs (synergy = pair win rate beyond the two solo strengths, averaged over all 33 third cards · noise ±0.5)
+   +17.8  Curse Bite + Behemoth
+   +15.0  Deathfeather + Behemoth
+   +13.9  Healer Doe + Behemoth
+   +13.6  Swiftbeak + Behemoth
+   +13.0  Claw Strike + Hex Scales
+   +12.4  Sloth + Behemoth
+   +11.3  Pain Share + Behemoth
+   +11.2  Thick Skin + Behemoth
+   +10.9  Claw Strike + Hyena
+   +10.4  Jackal + Behemoth
+    +8.7  Rattleback + Behemoth
+    +8.7  Camel + Behemoth
+    +7.6  Healer Doe + Jaguar
+    +7.6  Healer Doe + Warthog
+    +7.2  Curse Bite + Hyena
+    +7.1  Curse Bite + Buffalo
+    +7.0  Swiftbeak + Buffalo
+    +6.7  Iron Hide + Behemoth
+    +6.6  Swiftbeak + Hyena
+    +6.4  Healer Doe + Hyena
+
+Worst pairs (anti-synergy)
+    -8.9  Ambush Fox + Behemoth
+   -11.5  Hex Scales + Behemoth
+   -13.2  Frenzy + Behemoth
+   -15.3  Warthog + Behemoth
+   -15.4  Buffalo + Behemoth
+   -15.8  Elephant + Behemoth
+   -16.0  Hyena + Behemoth
+   -17.0  Jaguar + Behemoth
+
+Solved-tile check (cards fielded in won fights, by the tile of their starting slot; "solved" = one class > 70%)
+  tile        wins-fielded  top class      share   next
+  Dune 🏜️          487572  plain          24%   dps  19%
+  Rock 🪨           725110  plain          24%   dps  19%
+  Oasis 🌴          653334  plain          21%   dps  20%
+  Quicksand 🌀      562288  plain          24%   dps  19%
+  Mirage 🌫️        675376  plain          23%   dps  21%

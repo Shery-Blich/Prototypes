@@ -1,0 +1,545 @@
+Terrain roster sweeps · 2026-10-22 · sim/run.html (sim.mjs) · pool=base · seed 1. Raw outputs, one per config.
+
+════════ terrain ════════
+/prototypes/desert-fighters-prototype-2/sim/run.html?args=--pool base --games 12000
+
+Desert Fighters balance sim · 12000 games · pool=base (35 cards) · slots=3 · hp+0 · tiles=random (≤1 Dune) · enemies=random · hand=all · order=best · seed 1 · 5.8s
+
+Overall:  player WIN  64%   avg clashes/fight 4.49   avg cards played 2.09
+Terrain per fight: 🪨 abilities silenced 0.97 · 🌴 extra triggers 0.99 · 🌀 sinks 0.88 · 🌫️/🪨 targets dodged 0.15 · 🧭 tile entries fired 0.00
+
+ΔWin  = win rate when this card is in the player's hand, minus the overall win rate (positive = good card for the player)
+Played= how often the player chose to actually field it · Front= how often it was put in front
+AsEnemy = how often the PLAYER LOSES when this card is on the enemy team (higher = scarier as an enemy)
+
+ ΔWin  Win  Played Front AsEnemy  hp/atk  trig    name          ability
++33.3   97%   93%   34%   89%    12/10   -       Behemoth                                   (no ability)
++18.9   82%   82%   34%   55%     8/ 2   start   Buffalo                                    On start 🏁: give +1 ATK to the friend behind.
++18.9   82%   84%   36%   52%     4/ 8   -       Jaguar                                     (no ability)
++15.5   79%   81%   38%   49%     5/ 3   attack  Hyena                                      Before attack 🗡️: deal 1 damage to the last enemy.
++15.3   79%   80%   32%   59%     9/ 2   start   Elephant                                   On start 🏁: gain 1-time block (Shield).
++14.7   78%   78%   34%   52%     5/ 3   attack  Frenzy                                     Before attack 🗡️: gain +1 ATK.
++14.7   78%   81%   32%   56%     6/ 4   -       Warthog                                    (no ability)
++11.1   75%   76%   31%   41%     3/ 2   start   Ambush Fox                                 On start 🏁: deal 5 damage to the last enemy.
+ +9.5   73%   77%   40%   43%     3/ 5   death   Death Roar                                 On death 💀: deal 1 damage to ALL enemies.
+ +5.8   69%   79%   35%   44%     3/ 3   start   Claw Strike                                On start 🏁: deal 3 damage to a random enemy.
+ +4.9   68%   71%   33%   41%     3/ 5   -       Falcon                                     (no ability)
+ +3.0   67%   73%   32%   38%     4/ 2   start   Venom Sight                                On start 🏁: halve the ATK of the highest-ATK enemy (rounded down).
+ +2.8   66%   70%   36%   34%     4/ 2   death   Death Curse                                On death 💀: reduce the first enemy's ATK by its current HP.
+ +2.5   66%   71%   36%   36%     3/ 4   -       Owl                                        (no ability)
+ +1.3   65%   71%   35%   34%     4/ 3   hurt    Retaliate                                  On hurt 💢: deal half the damage taken back to the attacker.
+ -0.4   63%   74%   35%   34%     5/ 1   hurt    Hex Scales                                 On hurt 💢: deal damage equal to this card's HP to a random enemy.
+ -1.3   62%   71%   38%   33%     4/ 1   death   Final Gift                                 On death 💀: give a random friend +2/+2.
+ -1.5   62%   66%   33%   33%     4/ 2   death   Howler                                     On death 💀: deal 2 damage to the first enemy.
+ -2.0   62%   70%   26%   31%     3/ 2   start   Grace Aura                                 On start 🏁: give +1/+1 to the two friends ahead.
+ -2.4   61%   67%   36%   32%     3/ 3   attack  Tailwind                                   Before attack 🗡️: bring the lowest-HP enemy to the front.
+ -4.6   59%   67%   35%   30%     7/ 1   attack  Trample Share                              Before attack 🗡️: give HP to the friend behind equal to this ATK.
+ -5.1   58%   64%   33%   32%     3/ 3   start   Sandgrouse                                 On start 🏁: bring the lowest-HP enemy to the front.
+ -5.1   58%   66%   33%   31%     7/ 1   death   Last Stand                                 On death 💀: give +2 HP to the friend behind.
+ -6.7   57%   67%   32%   30%     5/ 2   hurt    Stormwing                                  On hurt 💢: push the highest-HP friend to the front.
+ -8.5   55%   62%   30%   25%     7/ 1   -       Camel                                      (no ability)
+ -8.6   55%   64%   29%   28%     6/ 1   start   Iron Hide                                  On start 🏁: give the friend behind +2 HP.
+ -9.5   54%   63%   32%   27%     5/ 1   hurt    Rattleback                                 On hurt 💢: deal 1 damage back to the attacker.
+-11.7   52%   63%   36%   24%     3/ 2   hurt    Pain Share                                 On hurt 💢: give ATK to the friend behind equal to this remaining HP.
+-12.1   51%   62%   33%   28%     4/ 2   -       Jackal                                     (no ability)
+-12.9   51%   59%   32%   25%     5/ 1   hurt    Thick Skin                                 On hurt 💢: give a random friend +1 HP.
+-13.2   50%   59%   31%   24%     3/ 2   start   Swiftbeak                                  On start 🏁: push the first enemy to last.
+-13.7   50%   59%   31%   23%     6/ 1   -       Sloth                                      (no ability)
+-17.1   46%   58%   32%   22%     4/ 1   attack  Healer Doe                                 Before attack 🗡️: give HP to the friend behind equal to this ATK.
+-19.2   44%   58%   32%   25%     3/ 2   death   Deathfeather                               On death 💀: bring the highest-ATK friend forward.
+-20.2   43%   52%   27%   18%     3/ 2   attack  Curse Bite                                 Before attack 🗡️: set the first enemy's ATK equal to its current HP.
+
+(* = candidate card from sim/cards.js, not in the prototype yet)
+
+Variety:  card ΔWin spread SD 12.3 · cards within ±5: 11/35 · effective winning cards 34.0/35
+          combos: 595 pairs measured (≥30 hands each, ±6.2 noise) · strong combos (synergy ≥ +15.5, fielded together ≥50%): 3
+           +21.5  together  61%  Elephant + Healer Doe
+           +18.9  together  51%  Behemoth + Deathfeather
+           +18.5  together  56%  Behemoth + Curse Bite
+           +14.9  together  53%  Behemoth + Pain Share
+           +14.8  together  57%  Behemoth + Healer Doe
+           +14.2  together  60%  Rattleback + Death Curse
+           +14.1  together  77%  Camel + Hyena
+           +13.6  together  66%  Ambush Fox + Deathfeather
+
+Solved-tile check (cards fielded in won fights, by the tile of their starting slot; "solved" = one class > 70%)
+  Dune 🏜️       2820  plain     24%   then dps  21%, tank  17%
+  Rock 🪨        4225  plain     28%   then dps  19%, warlock  15%
+  Oasis 🌴       4591  dps       23%   then plain  21%, warlock  17%
+  Quicksand 🌀   4365  plain     25%   then dps  19%, tank  17%
+  Mirage 🌫️     4279  plain     27%   then dps  20%, tank  16%
+
+════════ terrain-random-order ════════
+/prototypes/desert-fighters-prototype-2/sim/run.html?args=--pool base --games 6000 --order random
+
+Desert Fighters balance sim · 6000 games · pool=base (35 cards) · slots=3 · hp+0 · tiles=random (≤1 Dune) · enemies=random · hand=all · order=random · seed 1 · 0.1s
+
+Overall:  player WIN  44%   avg clashes/fight 5.97   avg cards played 3.00
+Terrain per fight: 🪨 abilities silenced 1.30 · 🌴 extra triggers 1.16 · 🌀 sinks 1.33 · 🌫️/🪨 targets dodged 0.19 · 🧭 tile entries fired 0.00
+
+ΔWin  = win rate when this card is in the player's hand, minus the overall win rate (positive = good card for the player)
+Played= how often the player chose to actually field it · Front= how often it was put in front
+AsEnemy = how often the PLAYER LOSES when this card is on the enemy team (higher = scarier as an enemy)
+
+ ΔWin  Win  Played Front AsEnemy  hp/atk  trig    name          ability
++46.5   90%  100%   31%   95%    12/10   -       Behemoth                                   (no ability)
++20.4   64%  100%   36%   75%     6/ 4   -       Warthog                                    (no ability)
++19.5   63%  100%   31%   76%     9/ 2   start   Elephant                                   On start 🏁: gain 1-time block (Shield).
++18.3   62%  100%   35%   73%     8/ 2   start   Buffalo                                    On start 🏁: give +1 ATK to the friend behind.
++13.9   58%  100%   32%   73%     4/ 8   -       Jaguar                                     (no ability)
++13.8   58%  100%   34%   73%     5/ 3   attack  Hyena                                      Before attack 🗡️: deal 1 damage to the last enemy.
++11.4   55%  100%   36%   68%     5/ 3   attack  Frenzy                                     Before attack 🗡️: gain +1 ATK.
++10.6   54%  100%   32%   64%     3/ 5   death   Death Roar                                 On death 💀: deal 1 damage to ALL enemies.
++10.4   54%  100%   34%   65%     3/ 3   start   Claw Strike                                On start 🏁: deal 3 damage to a random enemy.
+ +9.4   53%  100%   30%   62%     3/ 2   start   Ambush Fox                                 On start 🏁: deal 5 damage to the last enemy.
+ +1.8   46%  100%   33%   60%     4/ 2   start   Venom Sight                                On start 🏁: halve the ATK of the highest-ATK enemy (rounded down).
+ +1.7   46%  100%   31%   61%     4/ 3   hurt    Retaliate                                  On hurt 💢: deal half the damage taken back to the attacker.
+ -0.5   43%  100%   31%   62%     3/ 5   -       Falcon                                     (no ability)
+ -1.5   42%  100%   33%   53%     4/ 2   death   Howler                                     On death 💀: deal 2 damage to the first enemy.
+ -1.9   42%  100%   32%   56%     5/ 1   hurt    Hex Scales                                 On hurt 💢: deal damage equal to this card's HP to a random enemy.
+ -2.2   42%  100%   31%   54%     4/ 2   death   Death Curse                                On death 💀: reduce the first enemy's ATK by its current HP.
+ -3.5   40%  100%   33%   50%     4/ 1   death   Final Gift                                 On death 💀: give a random friend +2/+2.
+ -3.6   40%  100%   28%   59%     3/ 4   -       Owl                                        (no ability)
+ -4.0   40%  100%   36%   45%     7/ 1   death   Last Stand                                 On death 💀: give +2 HP to the friend behind.
+ -4.0   40%  100%   33%   49%     3/ 2   start   Grace Aura                                 On start 🏁: give +1/+1 to the two friends ahead.
+ -4.4   40%  100%   32%   56%     5/ 2   hurt    Stormwing                                  On hurt 💢: push the highest-HP friend to the front.
+ -4.9   39%  100%   37%   51%     3/ 3   start   Sandgrouse                                 On start 🏁: bring the lowest-HP enemy to the front.
+ -5.5   38%  100%   33%   50%     7/ 1   attack  Trample Share                              Before attack 🗡️: give HP to the friend behind equal to this ATK.
+ -6.6   37%  100%   36%   50%     7/ 1   -       Camel                                      (no ability)
+ -6.7   37%  100%   35%   45%     6/ 1   start   Iron Hide                                  On start 🏁: give the friend behind +2 HP.
+ -7.3   37%  100%   33%   50%     3/ 3   attack  Tailwind                                   Before attack 🗡️: bring the lowest-HP enemy to the front.
+ -7.3   37%  100%   37%   41%     6/ 1   -       Sloth                                      (no ability)
+ -8.3   36%  100%   33%   45%     5/ 1   hurt    Rattleback                                 On hurt 💢: deal 1 damage back to the attacker.
+-10.1   34%  100%   36%   44%     5/ 1   hurt    Thick Skin                                 On hurt 💢: give a random friend +1 HP.
+-10.1   34%  100%   34%   47%     4/ 2   -       Jackal                                     (no ability)
+-13.7   30%  100%   33%   42%     3/ 2   death   Deathfeather                               On death 💀: bring the highest-ATK friend forward.
+-14.2   30%  100%   36%   43%     3/ 2   start   Swiftbeak                                  On start 🏁: push the first enemy to last.
+-14.3   30%  100%   34%   45%     3/ 2   hurt    Pain Share                                 On hurt 💢: give ATK to the friend behind equal to this remaining HP.
+-16.7   27%  100%   34%   42%     4/ 1   attack  Healer Doe                                 Before attack 🗡️: give HP to the friend behind equal to this ATK.
+-21.9   22%  100%   30%   36%     3/ 2   attack  Curse Bite                                 Before attack 🗡️: set the first enemy's ATK equal to its current HP.
+
+(* = candidate card from sim/cards.js, not in the prototype yet)
+
+Variety:  card ΔWin spread SD 13.2 · cards within ±5: 12/35 · effective winning cards 33.7/35
+          combos: 324 pairs measured (≥30 hands each, ±8.5 noise) · strong combos (synergy ≥ +21.3, fielded together ≥50%): 1
+           +25.7  together 100%  Jaguar + Owl
+           +18.7  together 100%  Ambush Fox + Elephant
+           +18.1  together 100%  Healer Doe + Curse Bite
+           +17.9  together 100%  Buffalo + Jackal
+           +17.5  together 100%  Trample Share + Hex Scales
+           +16.9  together 100%  Death Roar + Iron Hide
+           +16.5  together 100%  Frenzy + Sloth
+           +16.5  together 100%  Elephant + Swiftbeak
+
+Solved-tile check (cards fielded in won fights, by the tile of their starting slot; "solved" = one class > 70%)
+  Dune 🏜️       1124  plain     25%   then dps  21%, tank  17%
+  Rock 🪨        1680  plain     28%   then dps  20%, tank  15%
+  Oasis 🌴       1678  plain     25%   then dps  21%, tank  17%
+  Quicksand 🌀   1711  plain     24%   then dps  21%, tank  17%
+  Mirage 🌫️     1709  plain     26%   then dps  22%, tank  15%
+
+════════ noterrain ════════
+/prototypes/desert-fighters-prototype-2/sim/run.html?args=--pool base --games 12000 --tiles dune,dune,dune
+
+Desert Fighters balance sim · 12000 games · pool=base (35 cards) · slots=3 · hp+0 · tiles=dune,dune,dune · enemies=random · hand=all · order=best · seed 1 · 5.9s
+
+Overall:  player WIN  62%   avg clashes/fight 4.50   avg cards played 2.15
+Terrain per fight: 🪨 abilities silenced 0.00 · 🌴 extra triggers 0.00 · 🌀 sinks 0.00 · 🌫️/🪨 targets dodged 0.00 · 🧭 tile entries fired 0.00
+
+ΔWin  = win rate when this card is in the player's hand, minus the overall win rate (positive = good card for the player)
+Played= how often the player chose to actually field it · Front= how often it was put in front
+AsEnemy = how often the PLAYER LOSES when this card is on the enemy team (higher = scarier as an enemy)
+
+ ΔWin  Win  Played Front AsEnemy  hp/atk  trig    name          ability
++35.5   98%   94%   34%   86%    12/10   -       Behemoth                                   (no ability)
++20.1   82%   85%   36%   54%     4/ 8   -       Jaguar                                     (no ability)
++17.4   80%   83%   32%   59%     9/ 2   start   Elephant                                   On start 🏁: gain 1-time block (Shield).
++15.1   77%   80%   34%   55%     6/ 4   -       Warthog                                    (no ability)
++14.0   76%   81%   35%   57%     8/ 2   start   Buffalo                                    On start 🏁: give +1 ATK to the friend behind.
++12.7   75%   80%   39%   52%     5/ 3   attack  Frenzy                                     Before attack 🗡️: gain +1 ATK.
++11.8   74%   79%   33%   50%     5/ 3   attack  Hyena                                      Before attack 🗡️: deal 1 damage to the last enemy.
++11.5   74%   80%   37%   36%     4/ 2   death   Death Curse                                On death 💀: reduce the first enemy's ATK by its current HP.
++11.4   74%   79%   39%   45%     3/ 5   death   Death Roar                                 On death 💀: deal 1 damage to ALL enemies.
+ +8.8   71%   76%   32%   43%     3/ 2   start   Ambush Fox                                 On start 🏁: deal 5 damage to the last enemy.
+ +8.3   71%   75%   18%   36%     3/ 2   start   Grace Aura                                 On start 🏁: give +1/+1 to the two friends ahead.
+ +3.6   66%   80%   29%   39%     5/ 1   hurt    Hex Scales                                 On hurt 💢: deal damage equal to this card's HP to a random enemy.
+ +3.1   66%   80%   35%   53%     3/ 3   start   Claw Strike                                On start 🏁: deal 3 damage to a random enemy.
+ +1.7   64%   76%   35%   37%     4/ 1   death   Final Gift                                 On death 💀: give a random friend +2/+2.
+ +0.9   63%   73%   35%   33%     7/ 1   attack  Trample Share                              Before attack 🗡️: give HP to the friend behind equal to this ATK.
+ +0.0   62%   72%   37%   35%     3/ 5   -       Falcon                                     (no ability)
+ -0.2   62%   72%   34%   46%     4/ 2   start   Venom Sight                                On start 🏁: halve the ATK of the highest-ATK enemy (rounded down).
+ -0.2   62%   74%   34%   36%     4/ 3   hurt    Retaliate                                  On hurt 💢: deal half the damage taken back to the attacker.
+ -1.7   61%   71%   38%   34%     3/ 4   -       Owl                                        (no ability)
+ -3.1   59%   71%   37%   33%     4/ 2   death   Howler                                     On death 💀: deal 2 damage to the first enemy.
+ -7.3   55%   64%   37%   34%     3/ 3   start   Sandgrouse                                 On start 🏁: bring the lowest-HP enemy to the front.
+ -7.3   55%   70%   37%   29%     7/ 1   death   Last Stand                                 On death 💀: give +2 HP to the friend behind.
+ -8.1   54%   66%   30%   27%     5/ 1   hurt    Rattleback                                 On hurt 💢: deal 1 damage back to the attacker.
+ -8.5   54%   66%   36%   31%     3/ 3   attack  Tailwind                                   Before attack 🗡️: bring the lowest-HP enemy to the front.
+ -8.8   54%   64%   31%   32%     5/ 2   hurt    Stormwing                                  On hurt 💢: push the highest-HP friend to the front.
+ -9.1   53%   64%   37%   28%     3/ 2   hurt    Pain Share                                 On hurt 💢: give ATK to the friend behind equal to this remaining HP.
+ -9.5   53%   66%   30%   28%     6/ 1   start   Iron Hide                                  On start 🏁: give the friend behind +2 HP.
+ -9.8   53%   64%   35%   24%     4/ 1   attack  Healer Doe                                 Before attack 🗡️: give HP to the friend behind equal to this ATK.
+-11.4   51%   60%   26%   26%     7/ 1   -       Camel                                      (no ability)
+-13.2   49%   63%   33%   25%     5/ 1   hurt    Thick Skin                                 On hurt 💢: give a random friend +1 HP.
+-13.5   49%   62%   30%   23%     6/ 1   -       Sloth                                      (no ability)
+-13.7   49%   60%   29%   27%     4/ 2   -       Jackal                                     (no ability)
+-14.2   48%   59%   32%   24%     3/ 2   start   Swiftbeak                                  On start 🏁: push the first enemy to last.
+-17.8   45%   62%   34%   21%     3/ 2   death   Deathfeather                               On death 💀: bring the highest-ATK friend forward.
+-19.0   43%   55%   27%   14%     3/ 2   attack  Curse Bite                                 Before attack 🗡️: set the first enemy's ATK equal to its current HP.
+
+(* = candidate card from sim/cards.js, not in the prototype yet)
+
+Variety:  card ΔWin spread SD 12.3 · cards within ±5: 9/35 · effective winning cards 34.1/35
+          combos: 595 pairs measured (≥30 hands each, ±6.2 noise) · strong combos (synergy ≥ +15.6, fielded together ≥50%): 7
+           +19.5  together  62%  Sandgrouse + Final Gift
+           +16.8  together  74%  Camel + Grace Aura
+           +16.7  together  63%  Pain Share + Trample Share
+           +16.3  together  81%  Final Gift + Iron Hide
+           +16.2  together  56%  Falcon + Healer Doe
+           +16.2  together  45%  Behemoth + Curse Bite
+           +15.9  together  76%  Elephant + Stormwing
+           +15.6  together  73%  Frenzy + Last Stand
+
+Solved-tile check (cards fielded in won fights, by the tile of their starting slot; "solved" = one class > 70%)
+  Dune 🏜️      20246  plain     24%   then dps  20%, tank  16%
+  Rock 🪨           0
+  Oasis 🌴          0
+  Quicksand 🌀      0
+  Mirage 🌫️        0
+
+════════ noterrain-random-order ════════
+/prototypes/desert-fighters-prototype-2/sim/run.html?args=--pool base --games 6000 --order random --tiles dune,dune,dune
+
+Desert Fighters balance sim · 6000 games · pool=base (35 cards) · slots=3 · hp+0 · tiles=dune,dune,dune · enemies=random · hand=all · order=random · seed 1 · 0.1s
+
+Overall:  player WIN  45%   avg clashes/fight 5.83   avg cards played 3.00
+Terrain per fight: 🪨 abilities silenced 0.00 · 🌴 extra triggers 0.00 · 🌀 sinks 0.00 · 🌫️/🪨 targets dodged 0.00 · 🧭 tile entries fired 0.00
+
+ΔWin  = win rate when this card is in the player's hand, minus the overall win rate (positive = good card for the player)
+Played= how often the player chose to actually field it · Front= how often it was put in front
+AsEnemy = how often the PLAYER LOSES when this card is on the enemy team (higher = scarier as an enemy)
+
+ ΔWin  Win  Played Front AsEnemy  hp/atk  trig    name          ability
++48.0   93%  100%   33%   94%    12/10   -       Behemoth                                   (no ability)
++18.9   64%  100%   32%   72%     8/ 2   start   Buffalo                                    On start 🏁: give +1 ATK to the friend behind.
++16.6   61%  100%   32%   73%     9/ 2   start   Elephant                                   On start 🏁: gain 1-time block (Shield).
++14.3   59%  100%   36%   75%     4/ 8   -       Jaguar                                     (no ability)
++13.5   58%  100%   33%   71%     5/ 3   attack  Hyena                                      Before attack 🗡️: deal 1 damage to the last enemy.
++12.5   57%  100%   33%   71%     5/ 3   attack  Frenzy                                     Before attack 🗡️: gain +1 ATK.
++12.1   57%  100%   33%   71%     6/ 4   -       Warthog                                    (no ability)
++10.8   55%  100%   35%   63%     3/ 2   start   Ambush Fox                                 On start 🏁: deal 5 damage to the last enemy.
+ +7.8   53%  100%   33%   66%     3/ 3   start   Claw Strike                                On start 🏁: deal 3 damage to a random enemy.
+ +6.5   51%  100%   31%   65%     3/ 5   death   Death Roar                                 On death 💀: deal 1 damage to ALL enemies.
+ +5.9   51%  100%   32%   65%     4/ 2   start   Venom Sight                                On start 🏁: halve the ATK of the highest-ATK enemy (rounded down).
+ +4.9   50%  100%   34%   57%     5/ 1   hurt    Hex Scales                                 On hurt 💢: deal damage equal to this card's HP to a random enemy.
+ +4.3   49%  100%   31%   59%     3/ 5   -       Falcon                                     (no ability)
+ +2.6   47%  100%   33%   58%     4/ 2   death   Death Curse                                On death 💀: reduce the first enemy's ATK by its current HP.
+ +2.5   47%  100%   33%   52%     7/ 1   attack  Trample Share                              Before attack 🗡️: give HP to the friend behind equal to this ATK.
+ +0.5   45%  100%   34%   58%     4/ 3   hurt    Retaliate                                  On hurt 💢: deal half the damage taken back to the attacker.
+ -0.3   44%  100%   35%   57%     4/ 1   death   Final Gift                                 On death 💀: give a random friend +2/+2.
+ -2.4   42%  100%   33%   51%     3/ 2   start   Grace Aura                                 On start 🏁: give +1/+1 to the two friends ahead.
+ -2.9   42%  100%   38%   47%     7/ 1   death   Last Stand                                 On death 💀: give +2 HP to the friend behind.
+ -2.9   42%  100%   35%   47%     3/ 3   start   Sandgrouse                                 On start 🏁: bring the lowest-HP enemy to the front.
+ -4.0   41%  100%   36%   51%     5/ 2   hurt    Stormwing                                  On hurt 💢: push the highest-HP friend to the front.
+ -5.9   39%  100%   32%   50%     5/ 1   hurt    Rattleback                                 On hurt 💢: deal 1 damage back to the attacker.
+ -6.9   38%  100%   33%   56%     3/ 4   -       Owl                                        (no ability)
+ -7.1   38%  100%   32%   51%     4/ 2   death   Howler                                     On death 💀: deal 2 damage to the first enemy.
+ -9.1   36%  100%   34%   46%     3/ 3   attack  Tailwind                                   Before attack 🗡️: bring the lowest-HP enemy to the front.
+ -9.4   35%  100%   35%   44%     6/ 1   start   Iron Hide                                  On start 🏁: give the friend behind +2 HP.
+ -9.5   35%  100%   31%   42%     6/ 1   -       Sloth                                      (no ability)
+ -9.5   35%  100%   35%   46%     5/ 1   hurt    Thick Skin                                 On hurt 💢: give a random friend +1 HP.
+-11.4   33%  100%   35%   47%     3/ 2   hurt    Pain Share                                 On hurt 💢: give ATK to the friend behind equal to this remaining HP.
+-12.1   33%  100%   34%   40%     7/ 1   -       Camel                                      (no ability)
+-13.6   31%  100%   34%   40%     4/ 2   -       Jackal                                     (no ability)
+-13.8   31%  100%   31%   43%     4/ 1   attack  Healer Doe                                 Before attack 🗡️: give HP to the friend behind equal to this ATK.
+-16.6   28%  100%   33%   40%     3/ 2   start   Swiftbeak                                  On start 🏁: push the first enemy to last.
+-18.1   27%  100%   32%   39%     3/ 2   death   Deathfeather                               On death 💀: bring the highest-ATK friend forward.
+-24.2   20%  100%   32%   28%     3/ 2   attack  Curse Bite                                 Before attack 🗡️: set the first enemy's ATK equal to its current HP.
+
+(* = candidate card from sim/cards.js, not in the prototype yet)
+
+Variety:  card ΔWin spread SD 13.4 · cards within ±5: 10/35 · effective winning cards 33.6/35
+          combos: 320 pairs measured (≥30 hands each, ±8.5 noise) · strong combos (synergy ≥ +21.3, fielded together ≥50%): 0
+           +21.2  together 100%  Falcon + Trample Share
+           +21.0  together 100%  Buffalo + Stormwing
+           +18.8  together 100%  Pain Share + Venom Sight
+           +17.9  together 100%  Warthog + Sandgrouse
+           +17.4  together 100%  Death Roar + Pain Share
+           +16.7  together 100%  Behemoth + Sloth
+           +15.3  together 100%  Tailwind + Curse Bite
+           +15.3  together 100%  Frenzy + Jackal
+
+Solved-tile check (cards fielded in won fights, by the tile of their starting slot; "solved" = one class > 70%)
+  Dune 🏜️       8046  plain     25%   then dps  21%, tank  17%
+  Rock 🪨           0
+  Oasis 🌴          0
+  Quicksand 🌀      0
+  Mirage 🌫️        0
+
+════════ pass1 ════════
+/prototypes/desert-fighters-prototype-2/sim/run.html?args=--pool base --games 12000
+
+Desert Fighters balance sim · 12000 games · pool=base (35 cards) · slots=3 · hp+0 · tiles=random (≤1 Dune) · enemies=random · hand=all · order=best · seed 1 · 6.4s
+
+Overall:  player WIN  64%   avg clashes/fight 4.46   avg cards played 2.09
+Terrain per fight: 🪨 abilities silenced 0.91 · 🌴 extra triggers 0.98 · 🌀 sinks 1.15 · 🌫️/🪨 targets dodged 0.11 · 🧭 tile entries fired 0.39
+
+ΔWin  = win rate when this card is in the player's hand, minus the overall win rate (positive = good card for the player)
+Played= how often the player chose to actually field it · Front= how often it was put in front
+AsEnemy = how often the PLAYER LOSES when this card is on the enemy team (higher = scarier as an enemy)
+
+ ΔWin  Win  Played Front AsEnemy  hp/atk  trig    name          ability
++33.2   97%   94%   32%   87%    12/10   -       Behemoth                                   (no ability)
++18.2   82%   82%   35%   55%     8/ 2   start   Buffalo                                    On start 🏁: give +1 ATK to the friend behind.
++18.0   82%   82%   31%   50%     5/ 3   tile    Hyena                                      On new tile 🧭: deal 2 damage to the last enemy.
++17.2   81%   83%   35%   54%     6/ 4   -       Warthog                                    (no ability)
++16.9   81%   81%   35%   49%     4/ 8   -       Jaguar                                     (no ability)
++15.4   79%   80%   32%   59%     9/ 2   start   Elephant                                   On start 🏁: gain 1-time block (Shield).
++14.5   78%   80%   24%   45%     5/ 1   tile    Hex Scales                                 On new tile 🧭: deal damage equal to this card's HP to a random enemy.
++14.2   78%   79%   36%   52%     5/ 3   attack  Frenzy                                     Before attack 🗡️: gain +1 ATK.
++11.4   75%   77%   31%   42%     3/ 2   start   Ambush Fox                                 On start 🏁: deal 5 damage to the last enemy.
+ +7.5   71%   75%   36%   39%     3/ 5   start   Falcon                                     On start 🏁: swap the front and back tiles.
+ +5.6   69%   73%   37%   38%     3/ 5   death   Death Roar                                 On death 💀: turn the tile here into Oasis 🌴.
+ +3.2   67%   71%   36%   34%     3/ 4   -       Owl                                        (no ability)
+ +2.2   66%   72%   36%   35%     4/ 2   death   Death Curse                                On death 💀: reduce the first enemy's ATK by its current HP.
+ +1.5   65%   72%   35%   38%     4/ 2   start   Venom Sight                                On start 🏁: halve the ATK of the highest-ATK enemy (rounded down).
+ -1.1   63%   68%   34%   36%     4/ 3   hurt    Retaliate                                  On hurt 💢: if on Oasis 🌴, deal half the damage taken back to the attacker.
+ -1.8   62%   69%   37%   32%     4/ 1   death   Final Gift                                 On death 💀: give a random friend +2/+2.
+ -1.8   62%   68%   33%   32%     4/ 2   death   Howler                                     On death 💀: deal 2 damage to the first enemy.
+ -2.4   61%   69%   37%   32%     7/ 1   attack  Trample Share                              Before attack 🗡️: give HP to the friend behind equal to this ATK.
+ -3.1   61%   69%   36%   33%     3/ 3   start   Sandgrouse                                 On start 🏁: bring the lowest-HP enemy to the front.
+ -3.9   60%   69%   26%   33%     3/ 2   start   Grace Aura                                 On start 🏁: give +1/+1 to the two friends ahead.
+ -4.7   59%   69%   34%   31%     7/ 1   death   Last Stand                                 On death 💀: give +2 HP to the friend behind.
+ -6.3   57%   65%   34%   32%     3/ 3   attack  Tailwind                                   Before attack 🗡️: bring the lowest-HP enemy to the front.
+ -7.1   57%   64%   33%   29%     6/ 1   start   Iron Hide                                  On start 🏁: give the friend behind +2 HP.
+ -7.3   56%   63%   33%   27%     3/ 3   start   Claw Strike                                On start 🏁: turn the front tile into Quicksand 🌀.
+ -7.7   56%   63%   33%   32%     5/ 2   hurt    Stormwing                                  On hurt 💢: push the highest-HP friend to the front.
+ -8.7   55%   65%   32%   26%     5/ 1   hurt    Rattleback                                 On hurt 💢: deal 1 damage back to the attacker.
+-10.7   53%   61%   30%   24%     5/ 1   hurt    Thick Skin                                 On hurt 💢: give a random friend +1 HP.
+-10.8   53%   64%   34%   27%     7/ 1   -       Camel                                      (no ability)
+-11.2   53%   63%   32%   23%     6/ 1   -       Sloth                                      (no ability)
+-11.6   52%   64%   40%   28%     3/ 2   hurt    Pain Share                                 On hurt 💢: give ATK to the friend behind equal to this remaining HP.
+-12.1   52%   60%   33%   31%     4/ 2   -       Jackal                                     (no ability)
+-15.4   48%   61%   33%   25%     3/ 2   death   Deathfeather                               On death 💀: bring the highest-ATK friend forward.
+-15.7   48%   57%   29%   23%     3/ 2   start   Swiftbeak                                  On start 🏁: push the first enemy to last.
+-16.3   47%   58%   33%   24%     4/ 1   attack  Healer Doe                                 Before attack 🗡️: give HP to the friend behind equal to this ATK.
+-19.2   45%   52%   28%   16%     3/ 2   attack  Curse Bite                                 Before attack 🗡️: set the first enemy's ATK equal to its current HP.
+
+(* = candidate card from sim/cards.js, not in the prototype yet)
+
+Variety:  card ΔWin spread SD 12.3 · cards within ±5: 10/35 · effective winning cards 34.1/35
+          combos: 595 pairs measured (≥30 hands each, ±6.2 noise) · strong combos (synergy ≥ +15.5, fielded together ≥50%): 5
+           +20.1  together  55%  Behemoth + Curse Bite
+           +20.0  together  82%  Jaguar + Iron Hide
+           +17.2  together  51%  Behemoth + Swiftbeak
+           +15.7  together  54%  Behemoth + Healer Doe
+           +15.6  together  67%  Grace Aura + Death Curse
+           +15.4  together  71%  Jaguar + Tailwind
+           +15.1  together  63%  Buffalo + Healer Doe
+           +14.9  together  70%  Warthog + Thick Skin
+
+Solved-tile check (cards fielded in won fights, by the tile of their starting slot; "solved" = one class > 70%)
+  Dune 🏜️       2907  plain     24%   then dps  20%, warlock  16%
+  Rock 🪨        4297  plain     27%   then dps  19%, warlock  18%
+  Oasis 🌴       4469  plain     22%   then dps  20%, warlock  17%
+  Quicksand 🌀   4531  plain     25%   then dps  19%, tank  18%
+  Mirage 🌫️     4371  plain     26%   then dps  18%, tank  17%
+
+════════ pass1-random-order ════════
+/prototypes/desert-fighters-prototype-2/sim/run.html?args=--pool base --games 6000 --order random
+
+Desert Fighters balance sim · 6000 games · pool=base (35 cards) · slots=3 · hp+0 · tiles=random (≤1 Dune) · enemies=random · hand=all · order=random · seed 1 · 0.1s
+
+Overall:  player WIN  45%   avg clashes/fight 5.82   avg cards played 3.00
+Terrain per fight: 🪨 abilities silenced 1.17 · 🌴 extra triggers 1.24 · 🌀 sinks 1.65 · 🌫️/🪨 targets dodged 0.13 · 🧭 tile entries fired 0.51
+
+ΔWin  = win rate when this card is in the player's hand, minus the overall win rate (positive = good card for the player)
+Played= how often the player chose to actually field it · Front= how often it was put in front
+AsEnemy = how often the PLAYER LOSES when this card is on the enemy team (higher = scarier as an enemy)
+
+ ΔWin  Win  Played Front AsEnemy  hp/atk  trig    name          ability
++44.3   89%  100%   34%   94%    12/10   -       Behemoth                                   (no ability)
++20.6   65%  100%   31%   72%     6/ 4   -       Warthog                                    (no ability)
++19.5   64%  100%   32%   75%     9/ 2   start   Elephant                                   On start 🏁: gain 1-time block (Shield).
++18.7   63%  100%   33%   70%     8/ 2   start   Buffalo                                    On start 🏁: give +1 ATK to the friend behind.
++18.1   63%  100%   35%   73%     5/ 3   tile    Hyena                                      On new tile 🧭: deal 2 damage to the last enemy.
++16.4   61%  100%   38%   72%     5/ 3   attack  Frenzy                                     Before attack 🗡️: gain +1 ATK.
++14.3   59%  100%   32%   73%     4/ 8   -       Jaguar                                     (no ability)
+ +8.4   53%  100%   29%   60%     3/ 5   death   Death Roar                                 On death 💀: turn the tile here into Oasis 🌴.
+ +7.6   52%  100%   27%   63%     3/ 2   start   Ambush Fox                                 On start 🏁: deal 5 damage to the last enemy.
+ +6.7   51%  100%   32%   62%     5/ 1   tile    Hex Scales                                 On new tile 🧭: deal damage equal to this card's HP to a random enemy.
+ +6.4   51%  100%   30%   63%     3/ 5   start   Falcon                                     On start 🏁: swap the front and back tiles.
+ +5.2   50%  100%   33%   58%     4/ 2   start   Venom Sight                                On start 🏁: halve the ATK of the highest-ATK enemy (rounded down).
+ +0.6   45%  100%   35%   61%     3/ 4   -       Owl                                        (no ability)
+ +0.1   45%  100%   39%   56%     4/ 2   death   Death Curse                                On death 💀: reduce the first enemy's ATK by its current HP.
+ -1.0   44%  100%   31%   51%     4/ 2   death   Howler                                     On death 💀: deal 2 damage to the first enemy.
+ -2.1   43%  100%   34%   56%     4/ 3   hurt    Retaliate                                  On hurt 💢: if on Oasis 🌴, deal half the damage taken back to the attacker.
+ -2.3   42%  100%   33%   57%     5/ 2   hurt    Stormwing                                  On hurt 💢: push the highest-HP friend to the front.
+ -3.9   41%  100%   33%   50%     7/ 1   attack  Trample Share                              Before attack 🗡️: give HP to the friend behind equal to this ATK.
+ -4.9   40%  100%   36%   52%     4/ 1   death   Final Gift                                 On death 💀: give a random friend +2/+2.
+ -5.1   40%  100%   34%   48%     3/ 3   start   Sandgrouse                                 On start 🏁: bring the lowest-HP enemy to the front.
+ -5.9   39%  100%   36%   48%     3/ 2   start   Grace Aura                                 On start 🏁: give +1/+1 to the two friends ahead.
+ -6.2   38%  100%   32%   45%     7/ 1   death   Last Stand                                 On death 💀: give +2 HP to the friend behind.
+ -7.3   37%  100%   35%   47%     6/ 1   start   Iron Hide                                  On start 🏁: give the friend behind +2 HP.
+ -8.2   36%  100%   34%   47%     7/ 1   -       Camel                                      (no ability)
+ -8.3   36%  100%   34%   47%     3/ 3   start   Claw Strike                                On start 🏁: turn the front tile into Quicksand 🌀.
+ -9.7   35%  100%   36%   53%     3/ 3   attack  Tailwind                                   Before attack 🗡️: bring the lowest-HP enemy to the front.
+-10.0   35%  100%   32%   47%     5/ 1   hurt    Thick Skin                                 On hurt 💢: give a random friend +1 HP.
+-11.3   33%  100%   29%   46%     4/ 2   -       Jackal                                     (no ability)
+-11.4   33%  100%   35%   49%     5/ 1   hurt    Rattleback                                 On hurt 💢: deal 1 damage back to the attacker.
+-11.9   33%  100%   34%   38%     6/ 1   -       Sloth                                      (no ability)
+-12.6   32%  100%   33%   44%     3/ 2   hurt    Pain Share                                 On hurt 💢: give ATK to the friend behind equal to this remaining HP.
+-13.7   31%  100%   34%   43%     3/ 2   start   Swiftbeak                                  On start 🏁: push the first enemy to last.
+-14.1   30%  100%   37%   44%     3/ 2   death   Deathfeather                               On death 💀: bring the highest-ATK friend forward.
+-15.3   29%  100%   31%   40%     4/ 1   attack  Healer Doe                                 Before attack 🗡️: give HP to the friend behind equal to this ATK.
+-21.0   24%  100%   31%   37%     3/ 2   attack  Curse Bite                                 Before attack 🗡️: set the first enemy's ATK equal to its current HP.
+
+(* = candidate card from sim/cards.js, not in the prototype yet)
+
+Variety:  card ΔWin spread SD 13.4 · cards within ±5: 7/35 · effective winning cards 33.5/35
+          combos: 313 pairs measured (≥30 hands each, ±8.5 noise) · strong combos (synergy ≥ +21.2, fielded together ≥50%): 1
+           +21.5  together 100%  Behemoth + Swiftbeak
+           +19.5  together 100%  Tailwind + Death Curse
+           +18.1  together 100%  Claw Strike + Warthog
+           +16.6  together 100%  Swiftbeak + Thick Skin
+           +16.5  together 100%  Retaliate + Ambush Fox
+           +16.3  together 100%  Retaliate + Grace Aura
+           +15.8  together 100%  Last Stand + Venom Sight
+           +15.5  together 100%  Thick Skin + Hex Scales
+
+Solved-tile check (cards fielded in won fights, by the tile of their starting slot; "solved" = one class > 70%)
+  Dune 🏜️       1135  plain     27%   then dps  19%, warlock  16%
+  Rock 🪨        1687  plain     29%   then dps  20%, warlock  15%
+  Oasis 🌴       1761  plain     24%   then dps  21%, warlock  16%
+  Quicksand 🌀   1742  plain     24%   then dps  21%, tank  16%
+  Mirage 🌫️     1706  plain     27%   then dps  19%, tank  16%
+
+════════ worm-p1 ════════
+/prototypes/desert-fighters-prototype-1/sim/run.html?args=--pool base --noise-rule worm --games 12000
+
+Desert Fighters balance sim · 12000 games · pool=base (35 cards) · slots=3 · hp+0 · noise-rule=worm · enemies=random · hand=all · order=best · 6.2s
+
+Overall:  player WIN  76%   fight won  76%   quieter 100%   won-fight-but-too-loud   0%   equal noise  15%
+          avg clashes/fight 4.24   avg cards played 2.62   avg noise player 6.0 / enemy 6.9
+
+Worm:     every 6 noise, bite noise2 · bites/fight 1.79 · fights with a bite  96% · fights where the worm KILLED something  88%
+          bites on player  30% / enemy  70% · kills: player cards 0.40/fight, enemy cards 0.96/fight
+
+ΔWin  = win rate when this card is in the player's hand, minus the overall win rate (positive = good card for the player)
+Played= how often the player chose to actually field it · Front= how often it was put in front · Loud= won the fight but lost on noise
+AsEnemy = how often the PLAYER LOSES when this card is on the enemy team (higher = scarier as an enemy)
+
+ ΔWin  Win  Played Front Loud AsEnemy  hp/atk/noise  trig    name          ability
+ +9.8   86%   95%   40%    0%   30%     7/ 1/ 1      attack  Trample Share                          Before attack 🗡️: give HP to the friend behind equal to this ATK.
+ +9.5   86%   93%   31%    0%   41%     3/ 3/ 2      start   Sandgrouse                             On start 🏁: the last enemy gets +3 noise.
+ +9.2   85%   82%   17%    0%   41%     9/ 2/ 3      bite    Elephant                               On worm bite 🪱: when bitten, the first enemy takes the same damage.
+ +8.5   85%   95%   33%    0%   25%     6/ 1/ 1      start   Iron Hide                              On start 🏁: give the friend behind +2 HP.
+ +7.8   84%   93%   49%    0%   31%     8/ 2/ 2      start   Buffalo                                On start 🏁: the friend behind gets -2 noise.
+ +7.8   84%   96%   21%    0%   27%     3/ 2/ 1      start   Grace Aura                             On start 🏁: give +1/+1 to the two friends ahead.
+ +7.2   83%   98%   33%    0%   39%     5/ 1/ 1      hurt    Hex Scales                             On hurt 💢: deal damage equal to this card's HP to a random enemy.
+ +7.1   83%   86%   24%    0%   28%     3/ 2/ 2      start   Ambush Fox                             On start 🏁: deal 5 damage to the last enemy.
+ +6.8   83%   96%   36%    0%   31%     4/ 2/ 1      start   Venom Sight                            On start 🏁: halve the ATK of the highest-ATK enemy (rounded down).
+ +4.7   81%   99%   46%    0%   30%     3/ 4/ 0      -       Owl                                    (no ability)
+ +4.5   81%   98%   41%    0%   28%     5/ 1/ 1      hurt    Rattleback                             On hurt 💢: the attacker gets +2 noise.
+ +4.2   80%   80%   44%    0%   23%     4/ 8/ 3      -       Jaguar                                 (no ability)
+ +3.5   80%   87%   33%    0%   28%     5/ 3/ 2      attack  Hyena                                  Before attack 🗡️: gain +1 ATK for every worm bite so far.
+ +2.9   79%   87%   33%    0%   27%     4/ 1/ 2      death   Final Gift                             On death 💀: give a random friend +2/+2.
+ +2.0   78%   94%   31%    0%   22%     7/ 1/ 1      -       Camel                                  (no ability)
+ +1.7   78%   72%   24%    0%   25%     4/ 2/ 0      start   Howler                                 On start 🏁: make 5 noise.
+ +1.3   77%   94%   33%    0%   27%     5/ 2/ 1      hurt    Stormwing                              On hurt 💢: push the highest-HP friend to the front.
+ +0.4   76%   87%   39%    0%   20%     3/ 5/ 2      -       Falcon                                 (no ability)
+ +0.3   76%   80%   26%    0%   18%     7/ 1/ 2      death   Last Stand                             On death 💀: give +2 HP to the friend behind.
+ +0.0   76%   78%   34%    0%   23%     3/ 5/ 3      death   Death Roar                             On death 💀: deal 1 damage to ALL enemies.
+ -0.7   75%   84%   30%    0%   18%     4/ 2/ 2      death   Death Curse                            On death 💀: reduce the first enemy's ATK by its current HP.
+ -1.2   75%   94%   36%    0%   19%     5/ 1/ 1      hurt    Thick Skin                             On hurt 💢: give a random friend +1 HP.
+ -2.3   74%   98%   34%    0%   20%     6/ 1/ 0      -       Sloth                                  (no ability)
+ -3.1   73%   75%   34%    0%   15%     6/ 4/ 3      -       Warthog                                (no ability)
+ -3.1   73%   84%   33%    0%   18%     4/ 3/ 2      hurt    Retaliate                              On hurt 💢: deal half the damage taken back to the attacker.
+ -4.0   72%   74%   33%    0%   18%     5/ 3/ 3      attack  Frenzy                                 Before attack 🗡️: gain +1 ATK.
+ -4.4   72%   94%   38%    0%   19%     4/ 2/ 1      -       Jackal                                 (no ability)
+ -5.4   71%   94%   41%    0%   17%     4/ 1/ 1      attack  Healer Doe                             Before attack 🗡️: give HP to the friend behind equal to this ATK.
+ -5.7   70%   80%   33%    0%   20%     3/ 3/ 2      attack  Tailwind                               Before attack 🗡️: bring the lowest-HP enemy to the front.
+ -5.8   70%   92%   33%    0%   41%     3/ 3/ 2      start   Claw Strike                            On start 🏁: deal 3 damage to a random enemy.
+ -8.6   67%   78%   24%    0%   12%     3/ 2/ 2      start   Swiftbeak                              On start 🏁: push the first enemy to last.
+ -9.8   66%   79%   35%    0%   14%     3/ 2/ 2      hurt    Pain Share                             On hurt 💢: give ATK to the friend behind equal to this remaining HP.
+ -9.9   66%   93%   37%    0%   18%     3/ 2/ 1      death   Deathfeather                           On death 💀: bring the highest-ATK friend forward.
+-16.7   59%   89%   30%    0%    9%     3/ 2/ 1      attack  Curse Bite                             Before attack 🗡️: set the first enemy's ATK equal to its current HP.
+-17.4   59%   64%   27%    0%   13%    12/10/ 7      -       Behemoth                               (no ability)
+
+(* = candidate card from sim/cards.js, not in the prototype yet)
+
+Variety:  card ΔWin spread SD 7.0 · cards within ±5: 18/35 · effective winning cards 34.7/35
+          combos: 595 pairs measured (≥30 hands each, ±5.5 noise) · strong combos (synergy ≥ +13.7, fielded together ≥50%): 3
+           +15.5  together  71%  Behemoth + Iron Hide
+           +15.2  together  76%  Pain Share + Iron Hide
+           +15.0  together  75%  Warthog + Sandgrouse
+           +13.1  together  81%  Retaliate + Curse Bite
+           +12.7  together  89%  Buffalo + Warthog
+           +12.2  together  73%  Warthog + Iron Hide
+           +12.0  together  88%  Rattleback + Death Curse
+           +12.0  together  85%  Jackal + Final Gift
+
+════════ worm-p1-random-order ════════
+/prototypes/desert-fighters-prototype-1/sim/run.html?args=--pool base --noise-rule worm --games 6000 --order random
+
+Desert Fighters balance sim · 6000 games · pool=base (35 cards) · slots=3 · hp+0 · noise-rule=worm · enemies=random · hand=all · order=random · 0.1s
+
+Overall:  player WIN  47%   fight won  47%   quieter 100%   won-fight-but-too-loud   0%   equal noise  12%
+          avg clashes/fight 4.46   avg cards played 3.00   avg noise player 7.1 / enemy 6.9
+
+Worm:     every 6 noise, bite noise2 · bites/fight 1.95 · fights with a bite  99% · fights where the worm KILLED something  93%
+          bites on player  43% / enemy  57% · kills: player cards 0.67/fight, enemy cards 0.85/fight
+
+ΔWin  = win rate when this card is in the player's hand, minus the overall win rate (positive = good card for the player)
+Played= how often the player chose to actually field it · Front= how often it was put in front · Loud= won the fight but lost on noise
+AsEnemy = how often the PLAYER LOSES when this card is on the enemy team (higher = scarier as an enemy)
+
+ ΔWin  Win  Played Front Loud AsEnemy  hp/atk/noise  trig    name          ability
++15.6   63%  100%   38%    0%   74%     3/ 3/ 2      start   Sandgrouse                             On start 🏁: the last enemy gets +3 noise.
++14.9   62%  100%   34%    0%   69%     5/ 1/ 1      hurt    Hex Scales                             On hurt 💢: deal damage equal to this card's HP to a random enemy.
++12.4   60%  100%   29%    0%   68%     9/ 2/ 3      bite    Elephant                               On worm bite 🪱: when bitten, the first enemy takes the same damage.
++11.3   59%  100%   36%    0%   61%     3/ 2/ 2      start   Ambush Fox                             On start 🏁: deal 5 damage to the last enemy.
++11.1   59%  100%   34%    0%   52%     6/ 1/ 1      start   Iron Hide                              On start 🏁: give the friend behind +2 HP.
++11.1   59%  100%   32%    0%   59%     7/ 1/ 1      attack  Trample Share                          Before attack 🗡️: give HP to the friend behind equal to this ATK.
+ +9.5   57%  100%   32%    0%   58%     8/ 2/ 2      start   Buffalo                                On start 🏁: the friend behind gets -2 noise.
+ +8.3   56%  100%   32%    0%   60%     5/ 2/ 1      hurt    Stormwing                              On hurt 💢: push the highest-HP friend to the front.
+ +7.3   55%  100%   31%    0%   60%     4/ 2/ 1      start   Venom Sight                            On start 🏁: halve the ATK of the highest-ATK enemy (rounded down).
+ +7.0   54%  100%   32%    0%   60%     3/ 3/ 2      start   Claw Strike                            On start 🏁: deal 3 damage to a random enemy.
+ +6.2   54%  100%   34%    0%   58%     5/ 1/ 1      hurt    Rattleback                             On hurt 💢: the attacker gets +2 noise.
+ +5.3   53%  100%   35%    0%   57%     3/ 2/ 1      start   Grace Aura                             On start 🏁: give +1/+1 to the two friends ahead.
+ +5.2   53%  100%   34%    0%   61%     3/ 4/ 0      -       Owl                                    (no ability)
+ +1.7   49%  100%   35%    0%   49%     5/ 1/ 1      hurt    Thick Skin                             On hurt 💢: give a random friend +1 HP.
+ +1.7   49%  100%   34%    0%   43%     4/ 2/ 2      death   Death Curse                            On death 💀: reduce the first enemy's ATK by its current HP.
+ +1.0   48%  100%   34%    0%   54%     5/ 3/ 2      attack  Hyena                                  Before attack 🗡️: gain +1 ATK for every worm bite so far.
+ +0.9   48%  100%   31%    0%   43%     7/ 1/ 2      death   Last Stand                             On death 💀: give +2 HP to the friend behind.
+ +0.3   48%  100%   32%    0%   56%     4/ 2/ 0      start   Howler                                 On start 🏁: make 5 noise.
+ -0.2   47%  100%   33%    0%   55%     3/ 5/ 2      -       Falcon                                 (no ability)
+ -0.3   47%  100%   35%    0%   57%     7/ 1/ 1      -       Camel                                  (no ability)
+ -1.6   46%  100%   31%    0%   54%     4/ 1/ 2      death   Final Gift                             On death 💀: give a random friend +2/+2.
+ -3.2   44%  100%   34%    0%   48%     4/ 3/ 2      hurt    Retaliate                              On hurt 💢: deal half the damage taken back to the attacker.
+ -3.4   44%  100%   30%    0%   46%     3/ 2/ 1      death   Deathfeather                           On death 💀: bring the highest-ATK friend forward.
+ -4.1   43%  100%   32%    0%   53%     6/ 1/ 0      -       Sloth                                  (no ability)
+ -5.2   42%  100%   38%    0%   47%     4/ 8/ 3      -       Jaguar                                 (no ability)
+ -7.3   40%  100%   33%    0%   45%     3/ 3/ 2      attack  Tailwind                               Before attack 🗡️: bring the lowest-HP enemy to the front.
+ -7.5   40%  100%   35%    0%   54%     3/ 5/ 3      death   Death Roar                             On death 💀: deal 1 damage to ALL enemies.
+ -8.1   39%  100%   35%    0%   42%     4/ 1/ 1      attack  Healer Doe                             Before attack 🗡️: give HP to the friend behind equal to this ATK.
+ -8.3   39%  100%   34%    0%   41%     3/ 2/ 2      hurt    Pain Share                             On hurt 💢: give ATK to the friend behind equal to this remaining HP.
+ -8.5   39%  100%   36%    0%   54%     4/ 2/ 1      -       Jackal                                 (no ability)
+-10.7   37%  100%   32%    0%   46%     5/ 3/ 3      attack  Frenzy                                 Before attack 🗡️: gain +1 ATK.
+-11.6   36%  100%   31%    0%   41%     6/ 4/ 3      -       Warthog                                (no ability)
+-12.3   35%  100%   33%    0%   39%     3/ 2/ 2      start   Swiftbeak                              On start 🏁: push the first enemy to last.
+-20.6   27%  100%   31%    0%   35%     3/ 2/ 1      attack  Curse Bite                             Before attack 🗡️: set the first enemy's ATK equal to its current HP.
+-22.2   25%  100%   33%    0%   38%    12/10/ 7      -       Behemoth                               (no ability)
+
+(* = candidate card from sim/cards.js, not in the prototype yet)
+
+Variety:  card ΔWin spread SD 9.3 · cards within ±5: 11/35 · effective winning cards 34.2/35
+          combos: 318 pairs measured (≥30 hands each, ±8.5 noise) · strong combos (synergy ≥ +21.3, fielded together ≥50%): 3
+           +22.2  together 100%  Stormwing + Swiftbeak
+           +22.1  together 100%  Hyena + Last Stand
+           +21.8  together 100%  Death Roar + Sandgrouse
+           +20.6  together 100%  Claw Strike + Stormwing
+           +18.2  together 100%  Warthog + Sandgrouse
+           +18.1  together 100%  Final Gift + Trample Share
+           +17.9  together 100%  Owl + Tailwind
+           +17.4  together 100%  Rattleback + Death Curse
