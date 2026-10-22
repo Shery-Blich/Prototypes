@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "static",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\Users\\maaia\\AppData\\Local\\Temp\\claude\\C--UnityProjects-DesetFighters-Prototypes\\bf284328-da86-49bc-95b3-e39783796c1d\\scratchpad\\serve.ps1"],
+      "port": 5173
+    }
+  ]
+}
