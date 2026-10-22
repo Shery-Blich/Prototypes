@@ -1,0 +1,107 @@
+sim/combos.html?args=--games 250 --trials 2 --seed 1   · design pass 2, 2026-10-21
+Changes vs pass 1: Sandgrouse = On start: last enemy +3 noise · Rattleback = On hurt: attacker +2 noise · Elephant 10hp → 9hp
+
+── Baseline → pass 1 → pass 2 ──
+strong combos            472    518    579
+base win rate            80%    78%    76%
+fewest combos on a card    9      8     18
+Sandgrouse combos/solo   16/0.0   14/+2.9   80/+7.7   (now the #4 combo card; Sandgrouse + Warthog + Behemoth is the top triple at +24.0)
+Rattleback                16/+3.1   8/+0.4   29/+5.9
+Elephant                   9/−8.5  37/+10.3  26/+8.9   (trim worked: no card above +10 solo)
+Top solo cards: Trample Share +9.1, Buffalo +8.9, Elephant +8.9, Sandgrouse +7.7, Grace Aura +7.2
+New bottom six: Jackal 18, Hyena 18, Thick Skin 24, Owl 24, Retaliate 26, Elephant 26
+New anti-synergies: Ambush Fox + Sandgrouse −14.0 (both spend their effect on the last enemy), Hex Scales + Sandgrouse −8.0, Howler + Warthog −8.6
+
+Desert Fighters 3-card combo search · 6545 triples × 250 games (trials 2) · pool=base (35) · worm every 6, bite noise2 · seed 1 · 685s on 8 workers
+
+Base win rate  76% · one triple's noise ±2.7 · strong combo = lift ≥ +8.0 (3×SE) · a card owns a combo when fielded in ≥  60% of its wins
+Strong combos: 579 of 6545 triples (chance alone would give about 9) · orphan cards (own none): 0
+
+Cards ranked by combos owned (fewest first = redesign candidates)
+ combos  in   solo  played front  hp/atk/noise  name            best combo (lift, partners)
+   18   21   -3.3   71%   11%    4/ 2/ 1      Jackal          +13.2  Sandgrouse + Jackal + Jaguar
+   18   18   +5.4   78%   16%    5/ 3/ 2      Hyena           +15.3  Curse Bite + Hyena + Buffalo
+   24   25   -0.8   81%   23%    5/ 1/ 1      Thick Skin      +13.2  Final Gift + Thick Skin + Howler
+   24   25   +3.8   74%    9%    3/ 4/ 0      Owl             +14.6  Stormwing + Owl + Behemoth
+   26   26   -1.6   91%   60%    4/ 3/ 2      Retaliate       +14.6  Swiftbeak + Retaliate + Ambush Fox
+   26   26   +8.9   74%    8%    9/ 2/ 3      Elephant        +14.3  Curse Bite + Buffalo + Elephant
+   27   28   -0.2   71%   17%    3/ 5/ 2      Falcon          +13.1  Swiftbeak + Ambush Fox + Falcon
+   27   27   +5.7   93%   48%    4/ 2/ 1      Venom Sight     +14.9  Swiftbeak + Venom Sight + Ambush Fox
+   29   29   +5.9   83%   17%    5/ 1/ 1      Rattleback      +11.5  Frenzy + Rattleback + Behemoth
+   35   37   -3.5   83%   36%    4/ 1/ 1      Healer Doe      +17.7  Swiftbeak + Grace Aura + Healer Doe
+   38   38   -8.4   93%   60%    3/ 2/ 1      Deathfeather    +16.3  Deathfeather + Warthog + Buffalo
+   38   39   -1.5   67%    5%    6/ 1/ 0      Sloth           +15.5  Sandgrouse + Warthog + Sloth
+   39   39   +2.5   97%   68%    5/ 2/ 1      Stormwing       +15.1  Stormwing + Sandgrouse + Warthog
+   39   39   +7.2   90%   26%    3/ 2/ 1      Grace Aura      +17.7  Swiftbeak + Grace Aura + Healer Doe
+   40   40   -5.8   97%   73%    3/ 3/ 2      Tailwind        +16.9  Tailwind + Warthog + Buffalo
+   41   42   -0.7   77%   18%    4/ 2/ 0      Howler          +15.9  Healer Doe + Final Gift + Howler
+   41   41   +0.6   79%   25%    7/ 1/ 2      Last Stand      +13.1  Swiftbeak + Hex Scales + Last Stand
+   41   42   +3.9   72%    4%    7/ 1/ 1      Camel           +14.6  Final Gift + Camel + Behemoth
+   42   42   -6.3   97%   66%    3/ 3/ 2      Claw Strike     +14.5  Claw Strike + Final Gift + Iron Hide
+   43   43   +9.1   89%   28%    7/ 1/ 1      Trample Share   +13.4  Curse Bite + Grace Aura + Trample Share
+   46   90  -12.1   48%   21%   12/10/ 7      Behemoth        +24.0  Sandgrouse + Warthog + Behemoth
+   46   46   +6.8   80%   18%    3/ 2/ 2      Ambush Fox      +15.6  Swiftbeak + Frenzy + Ambush Fox
+   47   47   +5.8   87%   25%    6/ 1/ 1      Iron Hide       +14.5  Claw Strike + Final Gift + Iron Hide
+   50   50   -1.4   86%   44%    4/ 2/ 2      Death Curse     +14.0  Death Curse + Grace Aura + Healer Doe
+   58   58   +0.0   90%   66%    3/ 5/ 3      Death Roar      +21.5  Death Roar + Curse Bite + Hex Scales
+   63   64   -9.3   77%   38%    3/ 2/ 2      Pain Share      +16.9  Pain Share + Warthog + Buffalo
+   66   68   +1.1   68%   29%    4/ 8/ 3      Jaguar          +21.3  Curse Bite + Sandgrouse + Jaguar
+   73   74  -15.8   77%   34%    3/ 2/ 1      Curse Bite      +22.1  Curse Bite + Warthog + Buffalo
+   73   73   +8.9   76%    8%    8/ 2/ 2      Buffalo         +22.6  Swiftbeak + Warthog + Buffalo
+   74   81   -4.5   65%   28%    6/ 4/ 3      Warthog         +24.0  Sandgrouse + Warthog + Behemoth
+   79   80   +1.4   85%   34%    4/ 1/ 2      Final Gift      +15.9  Healer Doe + Final Gift + Howler
+   80   80   +7.7   81%   19%    3/ 3/ 2      Sandgrouse      +24.0  Sandgrouse + Warthog + Behemoth
+   85   85   -3.0   91%   73%    5/ 3/ 3      Frenzy          +22.9  Frenzy + Sandgrouse + Behemoth
+   86   86  -10.7   93%   73%    3/ 2/ 2      Swiftbeak       +22.6  Swiftbeak + Warthog + Buffalo
+   88   88   +4.1   96%   40%    5/ 1/ 1      Hex Scales      +21.5  Death Roar + Curse Bite + Hex Scales
+
+Top strong combos (lift = beyond solo strength · 3way = beyond the pairs too · win = triple win rate · fielded-in-wins per card)
+  lift   3way   win   fielded          cards
+ +24.0  +13.7   92%   99%/ 99%/ 68%   Sandgrouse + Warthog + Behemoth
+ +22.9  +11.4   92%  100%/ 97%/ 56%   Frenzy + Sandgrouse + Behemoth
+ +22.6  +10.3   93%   91%/ 94%/ 95%   Swiftbeak + Warthog + Buffalo
+ +22.1   +9.7   87%   91%/ 98%/ 95%   Curse Bite + Warthog + Buffalo
+ +21.5   +3.9   86%  100%/ 89%/ 76%   Death Roar + Curse Bite + Hex Scales
+ +21.3   +5.9   91%   94%/ 98%/ 93%   Curse Bite + Sandgrouse + Jaguar
+ +20.4  +10.6   89%  100%/ 96%/ 60%   Warthog + Buffalo + Behemoth
+ +19.8   +8.4   86%  100%/ 88%/ 90%   Frenzy + Curse Bite + Buffalo
+ +19.0   +5.2   84%  100%/ 92%/ 90%   Frenzy + Curse Bite + Sandgrouse
+ +18.4   +6.0   92%  100%/100%/ 55%   Sandgrouse + Jaguar + Behemoth
+ +18.1   +5.0   82%   95%/ 99%/ 91%   Curse Bite + Sandgrouse + Warthog
+ +17.8   +3.2   80%   99%/ 82%/ 89%   Frenzy + Curse Bite + Hex Scales
+ +17.7  +10.0   87%   94%/100%/ 91%   Swiftbeak + Grace Aura + Healer Doe
+ +16.9   +6.0   92%   99%/ 96%/ 96%   Tailwind + Warthog + Buffalo
+ +16.9   +7.5   87%  100%/ 97%/ 62%   Frenzy + Buffalo + Behemoth
+ +16.9   +5.8   82%   99%/ 98%/ 57%   Frenzy + Hex Scales + Behemoth
+ +16.9   +5.7   88%   99%/ 90%/ 95%   Pain Share + Warthog + Buffalo
+ +16.7   +2.7   85%  100%/ 92%/ 77%   Death Roar + Curse Bite + Sandgrouse
+ +16.7   +7.0   88%   91%/ 94%/ 96%   Swiftbeak + Frenzy + Buffalo
+ +16.3   +5.6   89%   95%/ 98%/ 94%   Deathfeather + Warthog + Buffalo
+ +16.2   +8.7   85%   86%/ 98%/ 91%   Swiftbeak + Sandgrouse + Warthog
+ +16.2   +7.5   92%   93%/ 94%/ 91%   Swiftbeak + Jaguar + Buffalo
+ +16.0   +2.0   97%  100%/ 95%/ 74%   Sandgrouse + Warthog + Jaguar
+ +16.0   +7.9   90%  100%/ 97%/ 56%   Jaguar + Buffalo + Behemoth
+
+Top pairs (synergy = pair win rate beyond the two solo strengths, averaged over all 33 third cards · noise ±0.5)
+   +11.3  Warthog + Buffalo
+   +10.5  Swiftbeak + Ambush Fox
+   +10.1  Sandgrouse + Warthog
+    +9.7  Frenzy + Sandgrouse
+    +9.2  Frenzy + Buffalo
+    +8.7  Frenzy + Hex Scales
+    +8.6  Grace Aura + Healer Doe
+    +7.9  Swiftbeak + Hex Scales
+    +7.5  Final Gift + Sloth
+    +7.5  Hex Scales + Behemoth
+    +7.3  Final Gift + Howler
+    +7.3  Sandgrouse + Jaguar
+    +7.2  Tailwind + Hex Scales
+Worst pairs (anti-synergy)
+    -7.9  Deathfeather + Curse Bite
+    -8.0  Hex Scales + Sandgrouse
+    -8.6  Frenzy + Howler
+    -8.6  Howler + Warthog
+    -9.8  Swiftbeak + Behemoth
+   -10.1  Death Roar + Jaguar
+   -10.9  Frenzy + Warthog
+   -14.0  Ambush Fox + Sandgrouse

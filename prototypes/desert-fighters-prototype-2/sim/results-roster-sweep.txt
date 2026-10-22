@@ -1,0 +1,76 @@
+Roster sweep · 2026-10-21 · pool=base (35 cards) · noise-rule=worm (every 6, bite noise2) unless noted
+Run in the browser via sim/run.html. Cells: ΔWin  Played%  AsEnemy%
+
+Config          args                                         player WIN  clashes  bites/fight  bites on player/enemy
+main            --games 12000                                77%         4.22     1.91         29% / 71%
+random          --order random --games 6000                  50%         4.59     2.13         42% / 58%
+starterEasy     --hand starter --enemy-set easy              99%         5.02     0.97         55% / 45%
+starterMedium   --hand starter --enemy-set medium            71%         5.50     1.78         27% / 73%
+starterHard     --hand starter --enemy-set hard              43%         4.88     1.67         18% / 82%
+allHard         --enemy-set hard                             49%         3.87     1.54         25% / 75%
+worm4           --worm-every 4                               77%         3.74     2.52         29% / 71%
+worm9           --worm-every 9                               76%         4.71     1.36         28% / 72%
+slots4          --slots 4                                    84%         6.10     2.73         32% / 68%
+
+card | main | random | starterEasy | starterMedium | starterHard | allHard | worm4 | worm9 | slots4
+Grace Aura | +13.4 97p 34e | +11.2 100p 65e | - | - | - | +30.2 99p 48e | +13.4 96p 36e | +14.0 98p 39e | +10.9 97p 24e
+Rattleback | +9.1 84p 32e | +7.4 100p 58e | - | - | - | - | +13.4 80p 40e | +4.7 84p 25e | +4.4 81p 22e
+Iron Hide | +8.1 96p 27e | +12.7 100p 56e | +0.0 85p 1e | +0.9 93p 17e | - | - | +12.9 96p 34e | +5.9 98p 25e | +5.9 97p 20e
+Trample Share | +7.9 97p 37e | +15.4 100p 64e | - | - | - | +15.2 98p 54e | +12.3 95p 36e | +7.4 98p 33e | +6.9 97p 25e
+Ambush Fox | +7.6 84p 26e | +12.2 100p 63e | - | - | - | - | +6.2 80p 25e | +9.0 88p 34e | +3.6 86p 17e
+Hex Scales | +7.6 97p 40e | +15.6 100p 70e | - | - | - | +11.0 98p 65e | +10.9 96p 44e | +6.4 98p 39e | -3.0 99p 32e
+Venom Sight | +7.2 96p 35e | +11.4 100p 64e | - | - | - | -0.5 94p 45e | +8.0 96p 35e | +6.5 97p 36e | +1.2 98p 21e
+Camel | +6.3 96p 23e | +4.2 100p 55e | -0.4 86p 1e | -0.9 95p 26e | -2.6 88p 50e | +2.7 95p 52e | +9.1 94p 29e | -1.4 97p 24e | +4.6 97p 17e
+Buffalo | +4.8 83p 23e | +4.9 100p 52e | - | +7.6 83p 64e | -3.0 67p 46e | +0.5 65p 37e | +1.5 73p 19e | +7.2 88p 30e | +2.5 83p 19e
+Owl | +4.4 99p 33e | +7.2 100p 65e | +0.8 100p 2e | +6.5 99p 54e | - | - | +7.8 99p 37e | +4.9 99p 30e | +3.5 99p 20e
+Stormwing | +4.2 96p 32e | +8.7 100p 64e | - | - | - | - | +9.7 96p 29e | +4.6 96p 27e | +5.0 97p 20e
+Thick Skin | +3.6 96p 24e | +5.5 100p 48e | - | - | - | - | +3.2 94p 24e | -2.3 96p 21e | -0.8 98p 18e
+Jaguar | +1.8 71p 17e | -6.8 100p 43e | - | - | - | +22.5 77p 41e | -9.4 68p 10e | +7.7 80p 21e | -2.2 82p 8e
+Falcon | +1.8 86p 17e | -2.0 100p 54e | - | - | - | -3.1 74p 43e | +2.7 83p 19e | +4.9 88p 20e | +1.6 87p 16e
+Howler | +1.7 69p 29e | +4.4 100p 57e | - | - | - | - | +3.2 66p 32e | -1.6 71p 22e | +0.8 72p 20e
+Final Gift | +1.7 85p 28e | -0.8 100p 49e | - | - | - | - | +1.6 83p 29e | +3.6 88p 31e | +0.7 90p 25e
+Hyena | +1.4 83p 23e | +4.5 100p 48e | +0.2 77p 2e | +1.6 76p 4e | +0.9 71p 58e | -6.2 67p 66e | -0.7 75p 21e | +5.0 85p 25e | +0.3 84p 13e
+Sloth | +1.1 98p 25e | -3.0 100p 54e | +0.5 99p 1e | - | - | - | +5.0 100p 30e | -5.9 99p 20e | +3.0 100p 15e
+Sandgrouse | +0.6 82p 27e | -0.2 100p 53e | - | - | - | - | +1.6 79p 24e | +0.1 85p 29e | +1.7 86p 16e
+Last Stand | +0.5 79p 21e | +5.6 100p 48e | - | - | - | - | +2.4 75p 17e | -0.1 81p 20e | +1.6 79p 13e
+Jackal | +0.0 95p 22e | -1.9 100p 53e | +0.3 88p 0e | -6.0 90p 8e | -9.8 88p 63e | -7.2 89p 65e | +1.9 94p 27e | -4.0 95p 20e | -0.5 96p 15e
+Healer Doe | -0.5 95p 20e | -3.3 100p 45e | - | - | - | - | +3.8 95p 25e | -2.2 96p 19e | +1.4 97p 14e
+Death Curse | -1.2 83p 21e | +1.1 100p 47e | - | - | - | - | -1.1 81p 17e | -0.9 88p 20e | +1.5 89p 13e
+Death Roar | -2.4 75p 19e | -8.4 100p 50e | - | - | - | +2.7 67p 37e | -9.6 72p 17e | +1.8 78p 22e | -0.9 81p 14e
+Retaliate | -3.0 84p 18e | +3.0 100p 47e | - | - | - | - | -1.8 76p 15e | +1.0 86p 20e | +1.7 89p 11e
+Warthog | -4.5 69p 12e | -11.1 100p 39e | - | -5.9 79p 32e | +9.1 72p 55e | +7.5 60p 48e | -12.3 64p 10e | +0.6 73p 19e | -5.3 74p 9e
+Frenzy | -5.1 67p 12e | -15.0 100p 38e | - | - | - | - | -10.2 65p 8e | +4.3 77p 18e | -2.7 70p 9e
+Claw Strike | -5.6 90p 41e | +5.5 100p 57e | - | +1.6 94p 26e | +8.3 91p 65e | +5.1 88p 49e | -6.0 88p 37e | -2.3 92p 44e | -9.4 88p 30e
+Pain Share | -6.4 79p 16e | -4.1 100p 43e | - | - | - | - | -5.7 75p 16e | -4.9 82p 16e | -0.7 84p 12e
+Swiftbeak | -7.1 74p 13e | -8.2 100p 39e | - | - | - | - | -8.2 73p 17e | -12.2 77p 14e | -0.1 77p 11e
+Elephant | -8.9 61p 14e | -12.2 100p 39e | - | - | - | - | -9.1 53p 13e | -0.6 71p 17e | -10.5 64p 9e
+Behemoth | -9.9 58p 12e | -21.4 100p 37e | - | - | - | - | -15.2 61p 11e | -10.2 60p 12e | -7.0 65p 8e
+Tailwind | -10.2 64p 15e | -14.9 100p 39e | - | - | - | - | -14.5 63p 12e | -12.8 65p 14e | -4.9 69p 10e
+Deathfeather | -13.7 71p 12e | -10.3 100p 34e | - | - | - | - | -14.1 73p 13e | -14.6 77p 12e | -3.5 81p 13e
+Curse Bite | -15.6 70p 9e | -19.3 100p 33e | - | - | - | - | -11.4 69p 14e | -21.1 72p 8e | -10.4 73p 8e
+("-" = the card never showed up in that config: starter hands and the designed enemy lineups only use some cards)
+
+── After balance tweaks (main config, --games 12000, same seed) ──
+Tweaks: Grace Aura buff +2/+1 → +1/+1 · Rattleback 6hp/0 noise → 5hp/1 noise · Curse Bite noise 2→1 ·
+        Deathfeather noise 2→1 · Tailwind noise 3→2 · Behemoth noise 10→7
+Overall player WIN 77% → 80%   clashes 4.22 → 4.33   bites/fight 1.91 → 1.92
+
+card            ΔWin before → after
+Grace Aura      +13.4 → +8.9
+Rattleback       +9.1 → +1.8
+Tailwind        -10.2 → -3.7
+Deathfeather    -13.7 → -8.5
+Curse Bite      -15.6 → -13.6
+Behemoth         -9.9 → -12.4   (a noise-7 bite does 14 dmg, still more than its 12 HP)
+Trample Share    +7.9 → +11.2   (now the top card)
+
+── Worm bite strength vs variety (after tweaks, --games 30000 each, new Variety section in sim.mjs) ──
+bite            WIN   ΔWin SD  cards within ±5   strong combos*   top card / worst card
+noise2 (now)    80%    6.2        17/35             16             Trample Share +10.9 / Curse Bite -13.2
+noise (1x)      77%    6.4        21/35             10             Trample Share +10.7 / Curse Bite -18.6
+flat 4          80%    5.3        22/35              7             Trample Share +9.0  / Curse Bite -13.9
+flat 3          78%    5.8        23/35             15             Behemoth +10.8      / Curse Bite -15.5
+flat 2          75%    7.1        20/35             11             Behemoth +17.8      / Curse Bite -18.1
+no worm (old)   54%   13.4         5/35             11             Behemoth +40.7      / Howler -29.7
+* pair synergy ≥ 2.5x noise and fielded together ≥50%; about 4 per run are expected by chance alone.
+Combos that show up in several runs: Ambush Fox + Swiftbeak, Trample Share + Curse Bite, Healer Doe + Grace Aura, Pain Share + Iron Hide.

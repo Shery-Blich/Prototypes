@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Desert Fighters Prototype 2</title>
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./editor.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="hud"></header>
+
+    <!-- HOME SCREEN (BASE & STASH) -->
+    <section id="home-screen" class="screen">
+      <div class="home-header panel">
+        <div class="home-title-row">
+          <div>
+            <h1>🏕️ Base Camp & Stash</h1>
+          </div>
+          <div class="home-actions">
+            <button id="btn-starter-expedition" class="btn btn-starter" title="Start expedition with free 4 starter cards without using your stash!">🎁 Expedition with Starter Pack</button>
+            <button id="btn-go-expedition" class="btn btn-primary">⚔️ Go Expedition</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SELECTED LOADOUT WINDOW (NO HEADER TEXT, HIGHER IN SCREEN) -->
+      <div id="home-selected-panel" class="panel home-selected-panel">
+        <div id="selected-loadout-cards" class="row row-stash row-selected-loadout"></div>
+      </div>
+
+      <!-- HOME LEVELS PROGRESS BAR WITH MYSTERY CARD SILHOUETTE -->
+      <div class="panel home-progression-card">
+        <div class="home-progress-bar-row">
+          <div class="xp-progress-track">
+            <div id="home-xp-fill" class="xp-progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="card-silhouette-target" id="card-silhouette-target" title="Next Card Unlock Reward">
+            <div class="silhouette-card-inner">
+              <span class="silhouette-qm">?</span>
+            </div>
+            <span class="silhouette-badge" id="silhouette-badge">?</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>The Oasis</h2>
+        <div id="stash-cards" class="row row-stash"></div>
+      </div>
+    </section>
+
+    <!-- MAP SCREEN -->
+    <section id="map-screen" class="screen hidden">
+      <div class="map-header panel">
+        <div class="map-title-row">
+          <div>
+            <h1>🗺️ Expedition Map</h1>
+            <p class="hint" id="map-hint">Click an adjacent tile to advance. Reach an Extraction Point (🚪➔) to secure your squad!</p>
+          </div>
+          <div class="map-actions-cluster">
+            <span class="map-stat-pill">Squad: <b id="map-squad-count">0</b></span>
+            <span class="map-stat-pill">Battles Won: <b id="map-battles-won">0</b></span>
+            <button id="btn-map-to-prep" class="btn btn-primary hidden">⚔ Back to Prep</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="map-viewport panel">
+        <div id="map-container" class="map-container">
+          <svg id="map-connections-svg" class="map-connections-svg"></svg>
+          <div id="map-tiles-layer" class="map-tiles-layer"></div>
+        </div>
+      </div>
+
+      <div class="map-legend panel">
+        <div class="map-legend-items">
+          <span class="legend-item"><span class="legend-swatch swatch-start"></span> Start</span>
+          <span class="legend-item"><span class="legend-swatch swatch-easy"></span> Easy (1 Sword)</span>
+          <span class="legend-item"><span class="legend-swatch swatch-med"></span> Medium (2 Swords)</span>
+          <span class="legend-item"><span class="legend-swatch swatch-hard"></span> Boss (Skull)</span>
+          <span class="legend-item"><span class="legend-swatch swatch-ext"></span> Extraction Door</span>
+          <span class="legend-item"><span class="legend-player-pin">🤠</span> Current Position</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- PREP SCREEN -->
+    <section id="prep-screen" class="screen hidden">
+      <svg id="preview-arrows" class="preview-arrows"></svg>
+      <div class="prep-header-bar">
+        <button id="btn-fight" class="btn btn-primary">⚔ Fight</button>
+        <span id="fight-hint" class="hint hidden"></span>
+      </div>
+
+      <div class="arena prep-arena">
+        <div class="side side-player panel-team">
+          <div class="side-label">YOU</div>
+          <div id="team-slots" class="row row-team"></div>
+        </div>
+        <div class="vs-col">
+          <div class="vs">VS</div>
+          <div id="prep-tiles" class="tile-strip"></div>
+        </div>
+        <div class="side side-enemy panel-enemy">
+          <div class="side-label">ENEMY</div>
+          <div id="enemy-preview" class="row row-enemy"></div>
+        </div>
+      </div>
+
+      <div id="preview-info" class="preview-info hidden"></div>
+
+      <div id="camp-panel" class="panel">
+        <h2>Available<b id="camp-count" style="display:none;"></b></h2>
+        <div id="roster" class="row row-roster"></div>
+      </div>
+    </section>
+
+    <!-- BATTLE SCREEN -->
+    <section id="battle-screen" class="screen hidden">
+      <svg id="battle-arrows" class="preview-arrows"></svg>
+      <svg id="effect-arrows" class="preview-arrows"></svg>
+      <div class="battle-controls">
+        <span>Speed:</span>
+        <button class="btn speed" data-speed="1">1x</button>
+        <button class="btn speed" data-speed="2">2x</button>
+        <button class="btn speed" data-speed="4">4x</button>
+        <button class="btn" id="btn-skip">Skip ⏭</button>
+        <span id="pause-label" class="pause-label hidden">⏸ Paused · click it again to resume</span>
+        <span id="turn-label" class="turn-label"></span>
+      </div>
+      <div id="recruit-bar" class="prep-header-bar hidden">
+        <button id="btn-recruit" class="btn btn-primary">Pass</button>
+      </div>
+      <div class="arena">
+        <div class="side side-player">
+          <div class="side-label">YOU</div>
+          <div id="battle-player" class="row"></div>
+          <div id="battle-camp" class="row row-camp hidden"></div>
+        </div>
+        <div class="vs-col">
+          <div id="battle-tiles" class="tile-strip"></div>
+          <div class="vs">VS</div>
+        </div>
+        <div class="side side-enemy">
+          <div class="side-label">ENEMY</div>
+          <div id="battle-enemy" class="row"></div>
+        </div>
+      </div>
+      <!-- Explanatory text beneath battle screen removed -->
+      <div id="battle-preview-info" class="preview-info battle-preview-info hidden"></div>
+      <div id="battle-log" class="log hidden"></div>
+    </section>
+
+    <!-- CAMP OVERFLOW (modifier change) -->
+    <div id="discard-overlay" class="overlay hidden">
+      <div class="result-box">
+        <h1 class="lose">Camp overflow</h1>
+        <p id="discard-text"></p>
+        <div id="discard-cards" class="row row-result"></div>
+        <div class="result-actions">
+          <button id="discard-cancel" class="btn">Cancel</button>
+          <button id="discard-confirm" class="btn btn-primary">Discard</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULT OVERLAY -->
+    <div id="result-overlay" class="overlay hidden">
+      <div class="result-box">
+        <h1 id="result-title"></h1>
+        <p id="result-text"></p>
+        <div id="result-cards" class="row row-result"></div>
+
+        <!-- SQUAD PREVIEW DROPDOWN (when picking up cards after battle) -->
+        <details id="result-squad-preview" class="result-squad-preview hidden">
+          <summary class="squad-dropdown-summary">
+            <span class="squad-preview-label">Your Squad Overview</span>
+            <span class="squad-dropdown-arrow">▼</span>
+          </summary>
+          <div class="squad-preview-sections">
+            <div class="squad-section">
+              <div class="squad-section-title">
+                <span>👥 Team Slots</span>
+                <span class="hint">(Front is on the right)</span>
+              </div>
+              <div id="preview-team-slots" class="row row-squad-preview row-team-preview"></div>
+            </div>
+            <div class="squad-section">
+              <div class="squad-section-title">
+                <span>⛺ Camp</span>
+              </div>
+              <div id="preview-camp-slots" class="row row-squad-preview row-camp-preview"></div>
+            </div>
+          </div>
+        </details>
+
+        <div id="result-discard-wrap" class="result-discard-wrap hidden">
+          <p id="result-discard-label"></p>
+          <div id="result-discard" class="row row-result"></div>
+        </div>
+
+        <!-- EXTRACTION XP & LEVEL UP SUMMARY (when an expedition concludes) -->
+        <div id="result-xp-debrief" class="result-xp-debrief hidden">
+          <div class="xp-debrief-header">
+            <h3>🎖️ Extraction Debrief & XP Progression</h3>
+            <span id="debrief-outcome-badge" class="debrief-badge">Extraction Complete</span>
+          </div>
+          <div class="xp-debrief-grid">
+            <div class="xp-debrief-row">
+              <span class="xp-lbl">🃏 Cards Played:</span>
+              <span class="xp-calc"><b id="xp-debrief-cards-count">0</b> × 22 XP</span>
+              <span class="xp-val" id="xp-debrief-cards-val">+0 XP</span>
+            </div>
+            <div class="xp-debrief-row">
+              <span class="xp-lbl">🏆 Levels Cleared:</span>
+              <span class="xp-calc"><b id="xp-debrief-levels-count">0</b> × 25 XP</span>
+              <span class="xp-val" id="xp-debrief-levels-val">+0 XP</span>
+            </div>
+            <div class="xp-debrief-row" id="row-debrief-run-comp">
+              <span class="xp-lbl">🚁 Run Completion Bonus:</span>
+              <span class="xp-calc" id="xp-debrief-comp-calc">Extracted</span>
+              <span class="xp-val" id="xp-debrief-comp-val">+0 XP</span>
+            </div>
+            <div class="xp-debrief-row" id="row-debrief-first-run">
+              <span class="xp-lbl">🌟 First Run Bonus (Run 1):</span>
+              <span class="xp-calc">One-time bonus</span>
+              <span class="xp-val" id="xp-debrief-first-val">+0 XP</span>
+            </div>
+            <div class="xp-debrief-total">
+              <span>Total XP Earned This Run:</span>
+              <b class="xp-total-num" id="xp-debrief-total-val">+0 XP</b>
+            </div>
+          </div>
+
+          <div class="debrief-progress-wrap">
+            <div class="debrief-progress-labels">
+              <span>XP Level <b id="debrief-lvl-num">0</b></span>
+              <span id="debrief-xp-nums">0 / 191 XP</span>
+            </div>
+            <div class="xp-progress-track">
+              <div id="debrief-xp-bar" class="xp-progress-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <!-- LEVEL UP & CARD UNLOCK CELEBRATION -->
+          <div id="debrief-unlocks-box" class="debrief-unlocks-box hidden">
+            <div class="unlock-banner">🎉 LEVEL UP! <span id="debrief-unlock-msg">Level 1 reached!</span></div>
+            <div class="unlock-subtitle">New cards unlocked & added to enemy spawn pool:</div>
+            <div id="debrief-unlocked-cards" class="row row-result"></div>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button id="btn-continue" class="btn btn-primary">Continue to Map 🗺️</button>
+          <button id="btn-return-home" class="btn btn-primary hidden">Return to Home Stash 🏠</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING BUTTONS AT BOTTOM-LEFT CORNER -->
+  <div class="floating-corner-cluster">
+    <button id="btn-view-map" class="btn-floating-corner btn-map-corner hidden" title="View Expedition Map">
+      <span class="corner-btn-icon">🗺️</span>
+      <span class="corner-btn-label">Expedition Map</span>
+    </button>
+    <button id="btn-evac-base" class="btn-floating-corner btn-evac-corner hidden" title="Return to Home Stash with surviving cards">
+      <span class="corner-btn-icon">🏠</span>
+      <span class="corner-btn-label">Evac to Base</span>
+    </button>
+    <button id="btn-open-editor" class="btn-floating-corner btn-editor-corner" title="Visually edit characters, stats, and abilities">
+      <span class="corner-btn-icon">🎨</span>
+      <span class="corner-btn-label">Card Editor</span>
+    </button>
+    <button id="btn-open-modifiers" class="btn-floating-corner" title="Open Gameplay Modifiers & Card Progression">
+      <span class="corner-btn-icon">⚙️</span>
+      <span class="corner-btn-label">Modifiers & Progression</span>
+    </button>
+  </div>
+
+  <!-- GAMEPLAY MODIFIERS & CARD PROGRESSION MODAL -->
+  <div id="modifiers-modal" class="editor-modal-backdrop hidden">
+    <div class="editor-modal-dialog modifiers-modal-dialog">
+      <div class="editor-modal-header">
+        <div class="modal-title-group">
+          <h2>⚙️ Modifiers & Card Progression</h2>
+          <div class="modal-subtabs">
+            <button type="button" id="tab-mod-settings" class="btn btn-small tab-btn active">⚙️ Gameplay Modifiers</button>
+            <button type="button" id="tab-mod-progression" class="btn btn-small tab-btn">🎖️ Card Unlocks & Pool</button>
+          </div>
+        </div>
+        <div class="editor-modal-actions">
+          <button id="btn-modal-open-editor" class="btn btn-small" title="Open Visual Card Editor">🎨 Card Editor</button>
+          <button id="btn-close-modifiers" class="btn btn-small">✕ Close</button>
+        </div>
+      </div>
+
+      <div class="modifiers-modal-content-area">
+        <!-- TAB 1: GAMEPLAY MODIFIERS -->
+        <div id="modal-tab-content-settings" class="modal-tab-pane">
+          <div id="modifiers-panel" class="panel">
+            <h2>Gameplay modifiers <span class="hint">(apply from the next battle)</span></h2>
+            <div class="modifier">
+              <label for="mod-start-pct" class="mod-name">🎲 Who triggers first</label>
+              <span class="mod-end">Enemy</span>
+              <input id="mod-start-pct" type="range" min="0" max="100" step="5" />
+              <span class="mod-end">You</span>
+              <b id="mod-start-val" class="mod-val"></b>
+              <button id="mod-start-reset" class="btn btn-small">Reset</button>
+              <span id="mod-start-desc" class="hint"></span>
+            </div>
+            <div class="modifier modifier-bool">
+              <span class="mod-name">⭐ Keep enemy buffs</span>
+              <button type="button" id="mod-keep-buffs-toggle" class="btn btn-small mod-toggle-btn">Reset to Base 🔄</button>
+              <button type="button" id="mod-keep-buffs-reset" class="btn btn-small">Reset</button>
+              <span id="mod-keep-buffs-desc" class="hint"></span>
+            </div>
+            <div class="modifier">
+              <span class="mod-name">👥 Your team slots</span>
+              <button class="btn btn-small" data-step="playerSlots" data-dir="-1">−</button>
+              <b id="mod-playerSlots-val" class="mod-val mod-step-val"></b>
+              <button class="btn btn-small" data-step="playerSlots" data-dir="1">+</button>
+              <button class="btn btn-small" data-reset="playerSlots">Reset</button>
+              <span id="mod-playerSlots-desc" class="hint"></span>
+            </div>
+            <div class="modifier">
+              <span class="mod-name">👹 Enemy team slots</span>
+              <button class="btn btn-small" data-step="enemySlots" data-dir="-1">−</button>
+              <b id="mod-enemySlots-val" class="mod-val mod-step-val"></b>
+              <button class="btn btn-small" data-step="enemySlots" data-dir="1">+</button>
+              <button class="btn btn-small" data-reset="enemySlots">Reset</button>
+              <span id="mod-enemySlots-desc" class="hint"></span>
+            </div>
+            <div class="modifier">
+              <span class="mod-name">⛺ Camp size</span>
+              <button class="btn btn-small" data-step="campMax" data-dir="-1">−</button>
+              <b id="mod-campMax-val" class="mod-val mod-step-val"></b>
+              <button class="btn btn-small" data-step="campMax" data-dir="1">+</button>
+              <button class="btn btn-small" data-reset="campMax">Reset</button>
+              <span id="mod-campMax-desc" class="hint"></span>
+            </div>
+            <div class="modifier modifier-action">
+              <span class="mod-name">🔄 Reset Progression</span>
+              <button type="button" id="mod-reset-progression" class="btn btn-small btn-danger">Reset to Starter Pack & Level 0</button>
+              <span class="hint" id="mod-reset-desc">Replaces your stash with the Starter Pack cards, re-locks every other card and resets level to 0.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: CARD UNLOCKS & XP PROGRESSION -->
+        <div id="modal-tab-content-progression" class="modal-tab-pane hidden">
+          <div class="panel progression-panel">
+            <div class="progression-header">
+              <div class="prog-title-group">
+                <h2>🎖️ Card Unlocks & Enemy Spawn Pool</h2>
+                <p class="hint">Locked cards will not spawn as enemies until unlocked. Earn XP after each extraction to unlock 1 card per level!</p>
+              </div>
+              <div class="prog-meta-stats">
+                <span class="prog-pill">Total XP: <b id="home-total-xp">0</b></span>
+                <span class="prog-pill">Runs: <b id="home-run-count">0</b></span>
+                <span class="prog-pill">Unlocked: <b id="home-unlocked-ratio">4 / 20</b></span>
+                <button id="btn-reset-progression" class="btn btn-tiny btn-danger" title="Reset XP and card unlocks back to starter pack">Reset Progress</button>
+              </div>
+            </div>
+
+            <div class="xp-rules-chips">
+              <span class="rule-chip">🃏 Card Played: <b>+22 XP</b></span>
+              <span class="rule-chip">🏆 Level Cleared: <b>+25 XP</b></span>
+              <span class="rule-chip">🚁 Run Completion: <b>+50 XP</b></span>
+              <span class="rule-chip" id="rule-first-run-chip">🌟 First Run Bonus: <b>+50 XP</b> (Run 1)</span>
+            </div>
+
+            <!-- Card Pool Tabs -->
+            <div class="card-pool-section">
+              <div class="card-pool-tabs">
+                <button type="button" id="tab-unlocked-pool" class="btn btn-small tab-btn active">👹 Enemy Spawn Pool (<span id="unlocked-count">4</span>)</button>
+                <button type="button" id="tab-locked-pool" class="btn btn-small tab-btn">🔒 Locked Cards (<span id="locked-count">16</span>)</button>
+                <span class="hint tab-hint" id="pool-tab-hint">These unlocked cards can spawn as enemy opponents in battles and be recruited on victory.</span>
+              </div>
+              <div id="pool-cards-container" class="row row-stash pool-cards-row"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VISUAL CHARACTER EDITOR MODAL -->
+  <div id="editor-modal" class="editor-modal-backdrop hidden">
+    <div class="editor-modal-dialog">
+      <div class="editor-modal-header">
+        <h2>🎨 Visual Character Editor</h2>
+        <div class="editor-modal-actions">
+          <a href="./editor.html" target="_blank" class="btn btn-small" title="Open editor in a dedicated tab">↗ Open Standalone Tab</a>
+          <button id="btn-close-editor" class="btn btn-small">✕ Close</button>
+        </div>
+      </div>
+      <div id="editor-modal-content" class="editor-wrapper" style="overflow:hidden;flex:1;"></div>
+    </div>
+  </div>
+
+  <div id="trigger-tip" class="trigger-tip hidden"></div>
+
+  <script type="module" src="/src/shared/nav.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
