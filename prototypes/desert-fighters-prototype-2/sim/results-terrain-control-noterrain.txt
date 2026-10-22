@@ -1,0 +1,128 @@
+No-terrain control (all Dune), baseline cards · 2026-10-22
+/prototypes/desert-fighters-prototype-2/sim/combos.html?args=--games 250 --trials 2 --seed 1 --tiles dune,dune,dune
+Desert Fighters 3-card combo search · 6545 triples × 250 games (trials 2) · pool=base (35) · tiles dune,dune,dune · seed 1 · 213s on 8 workers
+
+Base win rate  63% · one triple's noise ±3.0 · strong combo = lift ≥ +9.1 (3×SE) · a card owns a combo when fielded in ≥  60% of its wins
+Strong combos: 565 of 6545 triples (chance alone would give about 9) · orphan cards (own none): 0
+
+Cards ranked by combos owned (fewest first = redesign candidates)
+combos = strong triples this card is fielded in · in = strong triples it merely appears in · solo = ΔWin from the card alone · played = how often fielded
+ combos  in   solo  played front  hp/atk  name            best combo (lift, partners)
+   17   17   +3.3   66%   13%    3/ 5   Falcon          +16.1  Deathfeather + Falcon + Behemoth
+   21   21   -0.0   93%   68%    3/ 3   Claw Strike     +19.4  Claw Strike + Final Gift + Iron Hide
+   25   25   -2.1   59%   10%    3/ 4   Owl             +21.5  Deathfeather + Owl + Behemoth
+   25   25   +2.8   88%   42%    5/ 1   Hex Scales      +16.0  Curse Bite + Hex Scales + Behemoth
+   30   30  +15.1   78%   11%    6/ 4   Warthog         +17.1  Swiftbeak + Ambush Fox + Warthog
+   31   31   -9.0   70%   39%    3/ 2   Pain Share      +26.4  Deathfeather + Pain Share + Behemoth
+   31   31  +13.5   78%   14%    5/ 3   Hyena           +19.8  Swiftbeak + Ambush Fox + Hyena
+   32   32   +8.0   73%   16%    3/ 2   Ambush Fox      +20.7  Swiftbeak + Death Curse + Ambush Fox
+   33   33   -7.8   58%   17%    3/ 3   Sandgrouse      +28.6  Curse Bite + Sandgrouse + Behemoth
+   33   33   -0.0   88%   62%    4/ 3   Retaliate       +20.0  Retaliate + Curse Bite + Behemoth
+   35   35  +15.6   94%   69%    5/ 3   Frenzy          +14.2  Swiftbeak + Frenzy + Ambush Fox
+   37   37   -8.0   61%   17%    5/ 1   Rattleback      +28.0  Curse Bite + Rattleback + Behemoth
+   38   38  +16.6   75%    5%    8/ 2   Buffalo         +16.3  Swiftbeak + Ambush Fox + Buffalo
+   39   40  -11.4   63%   25%    5/ 1   Thick Skin      +29.2  Deathfeather + Thick Skin + Behemoth
+   41   41   -7.3   96%   85%    3/ 3   Tailwind        +26.5  Tailwind + Curse Bite + Behemoth
+   42   42  -18.8   88%   70%    3/ 2   Deathfeather    +34.8  Deathfeather + Curse Bite + Behemoth
+   42   42   +1.4   85%   54%    4/ 2   Venom Sight     +19.4  Venom Sight + Curse Bite + Behemoth
+   43   43   -9.2   67%   27%    6/ 1   Iron Hide       +28.4  Curse Bite + Iron Hide + Behemoth
+   43   43  +11.7   91%   63%    3/ 5   Death Roar      +13.6  Death Roar + Curse Bite + Elephant
+   44   47  -11.4   47%    3%    7/ 1   Camel           +29.8  Curse Bite + Camel + Behemoth
+   44   44   -9.2   93%   75%    5/ 2   Stormwing       +28.0  Stormwing + Curse Bite + Behemoth
+   44   44   -3.4   66%   23%    4/ 2   Howler          +24.2  Curse Bite + Howler + Behemoth
+   47   53  -14.8   44%    4%    6/ 1   Sloth           +33.3  Curse Bite + Sloth + Behemoth
+   48   49  -13.9   52%   12%    4/ 2   Jackal          +32.3  Curse Bite + Jackal + Behemoth
+   55   56   -5.2   65%   23%    7/ 1   Last Stand      +24.4  Curse Bite + Last Stand + Behemoth
+   56   56   +0.8   79%   37%    4/ 1   Final Gift      +21.1  Swiftbeak + Final Gift + Elephant
+   57   58  -20.6   69%   41%    3/ 2   Curse Bite      +36.8  Swiftbeak + Curse Bite + Behemoth
+   59   59   +1.8   75%   31%    7/ 1   Trample Share   +19.5  Swiftbeak + Grace Aura + Trample Share
+   60   60  +18.3   75%    3%    9/ 2   Elephant        +21.1  Swiftbeak + Final Gift + Elephant
+   61   61   +8.0   83%   25%    3/ 2   Grace Aura      +19.5  Swiftbeak + Grace Aura + Trample Share
+   65   65  +10.2   87%   47%    4/ 2   Death Curse     +20.7  Swiftbeak + Death Curse + Ambush Fox
+   70   72  -11.4   71%   41%    4/ 1   Healer Doe      +29.4  Curse Bite + Healer Doe + Behemoth
+   71   71  +18.0   80%   11%    4/ 8   Jaguar          +16.2  Swiftbeak + Ambush Fox + Jaguar
+   75   75  -16.0   97%   84%    3/ 2   Swiftbeak       +36.8  Swiftbeak + Curse Bite + Behemoth
+  186  186  +34.3   87%    1%   12/10   Behemoth        +36.8  Swiftbeak + Curse Bite + Behemoth
+
+Top strong combos (lift = beyond solo strength · 3way = beyond the pairs too · win = triple win rate · fielded-in-wins per card)
+  lift   3way   win   fielded          cards
+ +36.8   +5.6   98%  100%/ 84%/100%   Swiftbeak + Curse Bite + Behemoth
+ +34.8   -0.4   93%  100%/ 98%/100%   Deathfeather + Curse Bite + Behemoth
+ +34.6   +6.1   98%   99%/ 96%/100%   Swiftbeak + Deathfeather + Behemoth
+ +33.3   +3.9   96%   95%/ 93%/100%   Curse Bite + Sloth + Behemoth
+ +32.3   +2.8   96%   96%/ 96%/100%   Curse Bite + Jackal + Behemoth
+ +32.0   +4.5   97%  100%/100%/100%   Deathfeather + Jackal + Behemoth
+ +31.4   +2.3   96%  100%/ 99%/100%   Deathfeather + Sloth + Behemoth
+ +30.6   +4.5   98%  100%/ 95%/ 99%   Swiftbeak + Sloth + Behemoth
+ +29.8   +3.6   96%   97%/ 94%/100%   Curse Bite + Camel + Behemoth
+ +29.6   +5.7   98%  100%/ 96%/100%   Swiftbeak + Jackal + Behemoth
+ +29.5   +3.3   97%  100%/ 99%/ 98%   Deathfeather + Camel + Behemoth
+ +29.4   +2.3   95%   94%/ 97%/100%   Curse Bite + Healer Doe + Behemoth
+ +29.2   +3.2   97%  100%/100%/100%   Deathfeather + Thick Skin + Behemoth
+ +28.6   +3.4   98%   98%/ 96%/100%   Curse Bite + Sandgrouse + Behemoth
+ +28.4   +3.9   96%   98%/ 92%/ 99%   Curse Bite + Iron Hide + Behemoth
+ +28.2   +1.4   94%   96%/ 95%/100%   Curse Bite + Thick Skin + Behemoth
+ +28.0   +2.7   96%  100%/ 99%/100%   Deathfeather + Healer Doe + Behemoth
+ +28.0   +4.8   97%   98%/ 96%/100%   Curse Bite + Rattleback + Behemoth
+ +28.0   +5.9   96%   99%/ 95%/100%   Stormwing + Curse Bite + Behemoth
+ +27.4   +2.9   97%  100%/ 99%/ 98%   Deathfeather + Iron Hide + Behemoth
+ +27.2   +3.3   98%   98%/ 98%/100%   Swiftbeak + Healer Doe + Behemoth
+ +27.2   +4.2   98%   98%/ 96%/ 99%   Swiftbeak + Thick Skin + Behemoth
+ +27.1   +3.4   98%  100%/ 95%/ 99%   Swiftbeak + Camel + Behemoth
+ +26.9   +3.5   96%   99%/ 98%/ 99%   Jackal + Sloth + Behemoth
+ +26.8   +2.1   98%  100%/ 96%/100%   Deathfeather + Sandgrouse + Behemoth
+ +26.6   +3.5   98%   99%/100%/ 99%   Deathfeather + Rattleback + Behemoth
+ +26.5   +3.6   96%  100%/ 88%/100%   Tailwind + Curse Bite + Behemoth
+ +26.4   +1.5   96%  100%/ 99%/100%   Deathfeather + Pain Share + Behemoth
+ +26.1   +4.1   99%  100%/ 98%/ 99%   Swiftbeak + Stormwing + Behemoth
+ +25.8   +1.5   96%  100%/100%/100%   Stormwing + Deathfeather + Behemoth
+ +25.5   +1.9   97%  100%/100%/100%   Tailwind + Deathfeather + Behemoth
+ +25.4   +3.3   98%  100%/ 95%/ 98%   Swiftbeak + Iron Hide + Behemoth
+ +25.0   +4.9   99%  100%/ 96%/ 98%   Swiftbeak + Rattleback + Behemoth
+ +25.0   -1.1   93%   95%/ 96%/100%   Curse Bite + Pain Share + Behemoth
+ +24.9   +5.2   96%  100%/ 95%/ 97%   Healer Doe + Sloth + Behemoth
+ +24.8   +3.3   98%   99%/ 97%/100%   Swiftbeak + Pain Share + Behemoth
+ +24.7   +3.4   97%  100%/ 97%/ 96%   Thick Skin + Jackal + Behemoth
+ +24.6   +3.8   97%   99%/ 98%/ 97%   Jackal + Camel + Behemoth
+ +24.4   +3.3   96%   97%/ 97%/100%   Curse Bite + Last Stand + Behemoth
+ +24.3   +3.7   97%   99%/ 96%/ 97%   Healer Doe + Jackal + Behemoth
+
+Top pairs (synergy = pair win rate beyond the two solo strengths, averaged over all 33 third cards · noise ±0.5)
+   +19.4  Curse Bite + Behemoth
+   +18.5  Deathfeather + Behemoth
+   +16.5  Swiftbeak + Behemoth
+   +13.9  Sloth + Behemoth
+   +13.7  Jackal + Behemoth
+   +10.9  Grace Aura + Healer Doe
+   +10.8  Healer Doe + Behemoth
+   +10.8  Camel + Behemoth
+   +10.5  Thick Skin + Behemoth
+    +9.9  Grace Aura + Trample Share
+    +9.1  Stormwing + Behemoth
+    +9.0  Pain Share + Behemoth
+    +8.7  Iron Hide + Behemoth
+    +8.1  Swiftbeak + Ambush Fox
+    +7.8  Sandgrouse + Behemoth
+    +7.7  Rattleback + Behemoth
+    +7.4  Swiftbeak + Hyena
+    +7.4  Tailwind + Behemoth
+    +7.3  Jaguar + Sloth
+    +6.8  Final Gift + Iron Hide
+
+Worst pairs (anti-synergy)
+    -9.2  Death Curse + Behemoth
+   -10.7  Death Roar + Behemoth
+   -13.4  Hyena + Behemoth
+   -14.5  Warthog + Behemoth
+   -14.7  Frenzy + Behemoth
+   -15.6  Buffalo + Behemoth
+   -16.9  Jaguar + Behemoth
+   -17.6  Elephant + Behemoth
+
+Solved-tile check (cards fielded in won fights, by the tile of their starting slot; "solved" = one class > 70%)
+  tile        wins-fielded  top class      share   next
+  Dune 🏜️         2945967  plain          23%   dps  20%
+  Rock 🪨                0
+  Oasis 🌴               0
+  Quicksand 🌀           0
+  Mirage 🌫️             0

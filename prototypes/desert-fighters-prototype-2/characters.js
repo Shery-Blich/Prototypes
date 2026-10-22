@@ -483,9 +483,9 @@ export const BASE_CHARACTERS = {
   // ── DPS (tigers)
   dps_start: {
     class: 'dps', name: 'Claw Strike', emoji: '🐯', atk: 3, hp: 3,
-    trigger: 'start',
-    text: 'On start 🏁: deal 3 damage to a random enemy.',
-    preset: { type: 'deal_damage', target: 'random_enemy', amount: 3 },
+    trigger: 'start',   // terrain pass 1: was "deal 3 damage to a random enemy"
+    text: 'On start 🏁: turn the front tile into Quicksand 🌀.',
+    preset: { type: 'terraform', where: 'front', tile: 'quicksand' },
   },
   dps_attack: {
     class: 'dps', name: 'Frenzy', emoji: '🐆', atk: 3, hp: 5,
@@ -495,15 +495,15 @@ export const BASE_CHARACTERS = {
   },
   dps_hurt: {
     class: 'dps', name: 'Retaliate', emoji: '🐅', atk: 3, hp: 4,
-    trigger: 'hurt',
-    text: 'On hurt 💢: deal half the damage taken back to the attacker.',
-    preset: { type: 'retaliate', fraction: 0.5 },
+    trigger: 'hurt',   // terrain pass 1: now only on Oasis (where it fires twice = full damage back)
+    text: 'On hurt 💢: if on Oasis 🌴, deal half the damage taken back to the attacker.',
+    preset: { type: 'retaliate', fraction: 0.5, onlyOn: 'oasis' },
   },
   dps_death: {
     class: 'dps', name: 'Death Roar', emoji: '🦁', atk: 5, hp: 3,
-    trigger: 'death',
-    text: 'On death 💀: deal 1 damage to ALL enemies.',
-    preset: { type: 'deal_damage', target: 'all_enemies', amount: 1 },
+    trigger: 'death',   // terrain pass 1: was "deal 1 damage to ALL enemies"
+    text: 'On death 💀: turn the tile here into Oasis 🌴.',
+    preset: { type: 'terraform', where: 'here', tile: 'oasis' },
   },
 
   // ── WARLOCK (snake / scorpion)
@@ -521,8 +521,8 @@ export const BASE_CHARACTERS = {
   },
   warlock_hurt: {
     class: 'warlock', name: 'Hex Scales', emoji: '🐊', atk: 1, hp: 5,
-    trigger: 'hurt',
-    text: 'On hurt 💢: deal damage equal to this card\'s HP to a random enemy.',
+    trigger: 'tile',   // terrain pass 1: was the same effect "On hurt"
+    text: 'On new tile 🧭: deal damage equal to this card\'s HP to a random enemy.',
     preset: { type: 'deal_damage', target: 'self_hp_enemy', amount: 0 },
   },
   warlock_death: {
@@ -613,14 +613,19 @@ export const BASE_CHARACTERS = {
 
   // ── PLAIN CARDS (no ability, no class): the power ladder is visible in the numbers.
   plain_jackal:   { name: 'Jackal',   emoji: '🐕', atk: 2,  hp: 4, text: '' },
-  plain_hyena: {   // scavenger: picks at the back line every time it attacks
+  plain_hyena: {   // scavenger: picks at the back line every time the line moves (terrain pass 1: was "Before attack")
     class: 'dps', name: 'Hyena', emoji: '🐺', atk: 3, hp: 5,
-    trigger: 'attack',
-    text: 'Before attack 🗡️: deal 1 damage to the last enemy.',
-    preset: { type: 'deal_damage', target: 'last_enemy', amount: 1 },
+    trigger: 'tile',
+    text: 'On new tile 🧭: deal 2 damage to the last enemy.',
+    preset: { type: 'deal_damage', target: 'last_enemy', amount: 2 },
   },
   plain_warthog:  { name: 'Warthog',  emoji: '🐗', atk: 4,  hp: 6, text: '' },
-  plain_falcon:   { name: 'Falcon',   emoji: '🦅', atk: 5,  hp: 3, text: '' },
+  plain_falcon: {   // terrain pass 1: was a plain 5/3
+    name: 'Falcon', emoji: '🦅', atk: 5, hp: 3,
+    trigger: 'start',
+    text: 'On start 🏁: swap the front and back tiles.',
+    preset: { type: 'swap_tiles' },
+  },
   plain_lion:     { name: 'Jaguar',   emoji: '🐈‍⬛', atk: 8,  hp: 4, text: '' },
   plain_owl:      { name: 'Owl',      emoji: '🦉', atk: 4,  hp: 3, text: '' },
   plain_sloth:    { name: 'Sloth',    emoji: '🦥', atk: 1,  hp: 6, text: '' },
