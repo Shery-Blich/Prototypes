@@ -1,0 +1,46 @@
+sim/combos.html?args=--games 250 --trials 2 --seed 1   · honest metric re-baseline, 2026-10-22
+Same cards and seed as results-combos-pass2.txt. What changed is the COUNTER, not the game:
+  old "strong combo" = lift ≥ 3×SE, where lift = triple win − base − Σ solo ΔWin. No absolute bar, so a triple that
+  merely carries a weak card looks like synergy (the weak card's low solo makes "okay" look like a surprise). Prototype 3
+  showed the count RISES when abilities are deleted, so the old number partly measured how bad the parts are.
+  new "winning lineup" = triple win ≥ base + 10 (absolute: cannot be gamed by weak parts)
+  new "good combo"     = winning AND lift ≥ 1×SE (wins, and wins more than "three good cards" predicts)
+  coverage             = good combos a card owns (fielded in ≥ 60% of its wins); the minimum is the "weakest card can create a win" test
+  --strip id1,id2      = control run: those cards lose their ability. A change is only real if it beats the blank-card control.
+
+── Worm, pass-2 cards, old counter vs honest counter ──
+                                old      honest
+strong / good combos            579      760
+winning lineups (≥ 86%)          -      1483
+cards owning none                 0        0
+fewest on a card                 18        6  (Behemoth; old: Jackal/Hyena 18)
+cards within ±5 solo           17/35    18/35
+base win rate                   76%      76%
+
+The ranking FLIPS. Old bottom six: Jackal 18, Hyena 18, Thick Skin 24, Owl 24, Retaliate 26, Elephant 26.
+Honest bottom six: Behemoth 6, Curse Bite 7, Deathfeather 15, Claw Strike 16, Pain Share 26, Thick Skin 29.
+Old top: Hex Scales 88, Swiftbeak 86, Frenzy 85. Honest top: Sandgrouse 130, Elephant 125, Buffalo 123, Grace Aura 115.
+So the old counter was crediting the weak-solo cards (Curse Bite −15.8, Swiftbeak −10.7, Behemoth −12.1) for being carried,
+and the cards that actually sit in winning lineups (Elephant in 274 of them, Buffalo 280) were ranked as "few combos".
+
+Honest caveat on the honest metric: many top good combos have a NEGATIVE 3way (e.g. Death Roar + Buffalo + Elephant 99%, 3way −3.8),
+i.e. they are two strong pairs stacked, not a three-way idea. Buffalo + Elephant appears in 11 of the top 30. Variety by this
+counter is wide (760) but concentrated around the noise-tool cards. The 3way column is the one to watch for genuine triples:
+Sandgrouse + Jaguar + Sloth 98% (+1.8), Stormwing + Frenzy + Sandgrouse 98% (+1.7), Stormwing + Sandgrouse + Warthog 97% (+3.4).
+
+── CONTROL: same run with --strip plain_hyena,tank_hurt,dps_hurt,plain_elephant (Hyena, Thick Skin, Retaliate, Elephant lose their ability) ──
+                                pass 2    control    change
+OLD strong combos                 579       633       +54   ← deleting four abilities RAISES the old counter (the loophole, reproduced)
+honest good combos                760       751        −9   ← flat, within noise
+winning lineups                  1483      1466       −17
+fewest good on a card               6         3        (Behemoth both times)
+base win rate                     76%       78%        (blank cards are weaker enemies too, so the absolute bar moved with the base)
+per-card good combos of the stripped cards:
+  Elephant   125 → 48      Hyena  72 → 43      Retaliate  55 → 51      Thick Skin  29 → 23
+
+Reading: the old counter rewards removing abilities, the honest counter does not. The game-wide good-combo total is a crowded,
+relative number (other triples fill the gap when four cards go blank), so it is a weak discriminator between designs. The
+sensitive numbers are per-card coverage and the minimum: a card's ability either puts it in winning lineups or it does not.
+Rule for future passes: judge a change by (1) the per-card coverage of the changed cards vs the blank-card control, (2) the
+minimum coverage, (3) the 3way column for triples that are more than stacked pairs. Ignore the old strong count.
+
