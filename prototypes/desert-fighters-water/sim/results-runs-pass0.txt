@@ -1,0 +1,33 @@
+Water fork · run sim pass 0 · 2026-10-25 · 100 runs each, seed 1, rollouts 8, est 12, recruit from the defeated enemy
+Raw outputs: results-runs-off.txt, -mana30.txt, -mana30-flat3.txt, -uses.txt, -uses-flat3.txt
+Water values come from solo ΔWin (water.js): mana cost 1..7 (avg 3.0), uses 5..1 (avg 3.1). Flat controls = 3.
+Score = 25 per win + 50 on success (the game XP's 22 per card played is left out: with water it would pay for burning water).
+
+                                   off     mana 30   mana flat 3   uses    uses flat 3
+greedy  effective cards fielded    5.0      7.4        5.0         8.2       7.1
+greedy  distinct winning lineups    21       39         21          61        51
+plan    distinct winning lineups    51       65         41         114       115
+greedy  top card share          Hyena 51% Jackal 36% Hyena 51%  Hyena 25%  Hyena 27%
+value of planning (plan−greedy)  +24.5     +4.5       +7.8       +24.3     +25.3
+greedy  score / success          175/100% 171/100%   175/100%   174/100%  174/100%
+water left at the end              -       3.7        4.9        34 uses   32 uses
+
+What it says
+1. Mana's variety gain is from the per-card COSTS: the flat-cost control plays exactly like water off (same 21 lineups,
+   Hyena 51%). Cheap cards (Jackal, cost 1) take over the fielding.
+2. Uses' variety gain is mostly from ANY per-card cap: flat 3 uses gets most of it (51 vs 61 greedy lineups, 115 vs 114
+   for the planner). Strong cards with few uses force rotation, but so does giving everyone 3.
+3. Neither creates decisions yet. Every policy except random wins every fight it takes and extracts 100% of the time.
+   With the whole squad (9-13 cards) to pick from, the designed encounters (tuned for 3 random cards) are trivial, so
+   the best move is always "the cheapest sure win". The planner's edge (+24) in off/uses is pathing (it finds the
+   6-battle route; greedy takes the easy-first 5-battle route), not water. In mana the edge shrinks to +4.5.
+   Uses never binds: runs end with ~30 uses unspent.
+
+Known metric limits
+- "close calls" (options within 10 score of the best) reads ~100% everywhere: when every option wins, every option is
+  close. It only means something once fights can be lost.
+- Greedy's path rule (easiest battle first) confounds value of planning; a "most battles" greedy path would isolate
+  the water decisions.
+
+Next: make fights losable before judging either mode (harder run encounters or a smaller starting squad), tighten the
+supply (mana 15-20, uses starting lower), fix the greedy path rule, then re-run all five columns.
