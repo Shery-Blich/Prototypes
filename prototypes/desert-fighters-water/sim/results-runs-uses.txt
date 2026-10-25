@@ -1,0 +1,27 @@
+runs.html?args=--runs 100 --mode uses --rollouts 8 --save runs-uses
+
+Desert Fighters run sim · 100 runs · water uses · recruit enemy · rollouts 8 · est 12 · seed 1 · 185s on 8 workers
+starter pack water: Jackal 4, Hyena 2, Camel 4, Sloth 4, Owl 3, Warthog 2, Buffalo 2, Iron Hide 4, Claw Strike 3
+
+RUN OUTCOMES (score = 25/win + 50 on success · XP = the game run XP, which also pays 22 per card played · ± = standard error)
+ policy    score         XP    wins  fights cards  success extracted  ends: extracted/evac/dry/forced/wiped   uses left
+ greedy    174.3 ±0.4   362.8   5.0    5.0   8.6  100%     13.0     100%   0%   0%   0%   0%   34.1
+ plan      198.5 ±0.7   452.2   5.9    6.0  11.5  100%     13.0     100%   0%   0%   0%   0%   30.7
+ random    108.0 ±2.4   314.6   2.3    3.4   9.4   99%      9.6      99%   0%   0%   1%   0%   23.5
+
+VALUE OF PLANNING   plan − greedy  = +24.3 ±0.8 score   (same runs; ≈0 = nothing to plan)
+VALUE OF PLAYING    greedy − random = +66.3 ±2.3 score
+
+DECISIONS (every prep screen of a real run)
+ greedy   500 decisions · legal lineups 679.6 · cards fielded 1.7
+ plan     600 decisions · legal lineups 679.8 · cards fielded 1.9
+          planner: close calls (2+ options within 10 score of the best) 100% · options within 10: 6.6 of 8.5 · best−worst option 83.0 score
+          planner overrides "best win rate now":   0% of decisions (evacuates:   0%) · win rate it gives up: 33.3 points
+
+VARIETY (cards fielded across all runs)
+ greedy   effective cards fielded 8.2 of 16 · winning lineups: 61 distinct of 497 wins (effective 21.0)
+          most fielded: Hyena 25%, Warthog 21%, Buffalo 18%, Jackal 8%, Owl 8%, Claw Strike 7%, Camel 5%, Iron Hide 2%
+ plan     effective cards fielded 9.9 of 18 · winning lineups: 114 distinct of 594 wins (effective 41.8)
+          most fielded: Hyena 20%, Warthog 19%, Buffalo 15%, Claw Strike 11%, Jackal 8%, Owl 7%, Camel 6%, Iron Hide 3%
+ random   effective cards fielded 9.3 of 14 · winning lineups: 104 distinct of 234 wins (effective 89.3)
+          most fielded: Owl 13%, Sloth 12%, Iron Hide 12%, Jackal 11%, Camel 11%, Hyena 11%, Claw Strike 10%, Buffalo 10%

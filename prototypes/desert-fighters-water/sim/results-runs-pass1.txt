@@ -1,0 +1,49 @@
+Water fork · run sim pass 1 · 2026-10-25 · 100 runs each, seed 1, rollouts 8, est 12, recruit from the defeated enemy
+Raw outputs: results-pass1-off.txt, -mana40.txt, -mana40-flat3.txt, -uses-m1.txt, -uses-flat2.txt
+
+Changes from pass 0 (all in the sim only, the game is untouched):
+- Losable fights: --enemy-shift 2 (every encounter drawn from the designed HARD lineups, no stat buffs) and
+  --squad 6 (6 random starter-pack cards instead of all 9). Calibration, greedy, water off, 200 runs:
+    9 cards / normal 98% success · 3 random cards / normal 91% · 9 cards / all hard 99% · 5 cards / all hard 71%
+    6 cards / all hard 84%  ← chosen (fights are lost, runs still mostly succeed)
+  The designed encounters are tuned for 3 random cards; choosing from a squad makes them trivial.
+- Tighter water: mana supply 40 (greedy, 200 runs: 20 → 77% of runs dry, 30 → 69%, 40 → 59%);
+  uses −1 per card (min 1: strong cards 1 use; greedy wins 4.5 → 3.6 per run).
+- Greedy walks the route with the most battles, so plan − greedy no longer measures route finding.
+- New depth metric, TRAPS: decisions where the obvious play (best win rate now) is more than 10 score worse than the
+  planner's best option. The "close calls" metric saturates (~95% everywhere) and is no longer used.
+
+                                     off     mana 40   mana 40 flat 3   uses −1   uses flat 2
+TRAPS (obvious play is wrong)         7%       11%          9%            21%         10%
+planner overrides best-now            5%       16%          8%            13%          6%
+value of planning (plan − greedy)  +10±5    +11±4       +11±4         +15±6       +13±6
+greedy effective cards fielded      10.8     13.3        10.9          14.5        13.4
+greedy top card share            Warthog 22% Jackal 14% Warthog 21%  Claw St. 12% Warthog 15%
+plan distinct winning lineups        159      144         134           176         200
+plan score / success              169/93%  133/95%     142/93%       146/94%     166/93%
+greedy score / success            159/84%  122/84%     130/84%       131/79%     154/83%
+
+What it says
+1. Uses with per-card water is the only setup that clearly creates decisions: traps triple vs water off (21% vs 7%)
+   and double vs the flat control (10%). The decision is "when do I spend my strong card's single use".
+2. Uses rotation (variety) comes from ANY cap: flat 2 uses gets as much variety as per-card uses (13.4 effective
+   cards, 200 lineups). Per-card uses adds the decisions on top, and pushes recruits into play (Trample Share,
+   Hex Scales show up in the most-fielded list).
+3. Mana's variety comes from the per-card COSTS (flat costs play like water off again, as in pass 0), but its
+   decisions barely beat the controls (traps 11% vs 9% flat, 7% off). The planner's overrides are mostly "chump"
+   plays: it sends a cheap card into a fight it expects to lose to save water (it gives up 72 win-rate points when it
+   overrides). Mana also costs the most score (133 vs 169 off).
+4. Value of planning is +10 to +15 everywhere and the ±5 noise swallows the differences: 100 runs × 8 rollouts is
+   not enough to separate modes on that number. Traps and overrides separate them; value of planning does not yet.
+
+Verdict for pass 1: start with USES. It is the only mode whose per-card water beats both controls on decisions,
+and it keeps variety high without the score hit mana takes.
+
+Caveats
+- Run conditions (all-hard encounters, 6-card squad) are sim knobs. The game's encounters would need retuning for
+  whichever mode ships; as designed they are too easy once you pick from a squad.
+- Water values are the pass-0 formula from solo ΔWin, untuned. Uses −1 makes 8 cards single-use.
+- Traps are measured with 8 rollouts; water off's 7% is the noise floor.
+
+Next: uses pass 2 with 300 runs and 16 rollouts (tighter value of planning), tune the uses table (which cards should
+be 1-use), and a mana variant that refunds or limits chump plays if mana stays in the running.

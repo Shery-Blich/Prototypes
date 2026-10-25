@@ -1,0 +1,27 @@
+runs.html?args=--runs 100 --mode off --enemy-shift 2 --squad 6 --rollouts 8 --save pass1-off
+
+Desert Fighters run sim · 100 runs · water off · squad 6 random from starter · enemies +2 tier · recruit enemy · rollouts 8 · est 12 · seed 1 · 97s on 8 workers
+
+RUN OUTCOMES (score = 25/win + 50 on success · XP = the game run XP, which also pays 22 per card played · ± = standard error)
+ policy    score         XP    wins  fights cards  success extracted  ends: extracted/evac/dry/forced/wiped
+ greedy    158.8 ±7.4   465.2   4.7    5.5  13.9   84%     10.9      84%   0%   0%  15%   1%
+ plan      169.0 ±5.8   488.0   4.9    5.6  14.5   93%     11.5      91%   2%   0%   6%   1%
+ random     18.3 ±3.0   149.8   0.3    2.3   6.0   23%      2.1      23%   0%   0%  54%  23%
+
+VALUE OF PLANNING   plan − greedy  = +10.3 ±5.3 score   (same runs; ≈0 = nothing to plan)
+VALUE OF PLAYING    greedy − random = +140.5 ±7.7 score
+
+DECISIONS (every prep screen of a real run)
+ greedy   547 decisions · legal lineups 439.0 · cards fielded 2.5
+ plan     564 decisions · legal lineups 442.9 · cards fielded 2.6
+          planner: close calls (2+ options within 10 score of the best)  95% · options within 10: 5.5 of 8.8 · best−worst option 89.9 score
+          TRAPS (the obvious "best win rate now" lineup is > 10 score worse than the best option):   7% of decisions · average cost of the obvious play 2.8 score
+          planner overrides "best win rate now":   5% of decisions (evacuates:   0%) · win rate it gives up: 35.9 points
+
+VARIETY (cards fielded across all runs)
+ greedy   effective cards fielded 10.8 of 16 · winning lineups: 156 distinct of 467 wins (effective 96.9)
+          most fielded: Warthog 22%, Buffalo 15%, Hyena 14%, Grace Aura 11%, Claw Strike 9%, Owl 5%, Iron Hide 4%, Camel 3%
+ plan     effective cards fielded 10.7 of 16 · winning lineups: 159 distinct of 490 wins (effective 99.3)
+          most fielded: Warthog 22%, Buffalo 15%, Hyena 14%, Grace Aura 10%, Claw Strike 10%, Iron Hide 5%, Owl 5%, Camel 3%
+ random   effective cards fielded 10.1 of 14 · winning lineups: 20 distinct of 27 wins (effective 18.5)
+          most fielded: Jackal 13%, Sloth 11%, Buffalo 11%, Camel 11%, Iron Hide 11%, Warthog 11%, Hyena 10%, Owl 10%

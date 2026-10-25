@@ -5,7 +5,7 @@ import { buildPool, drawFrom, playGame, reseed } from './core.mjs';
 
 self.onmessage = async ({ data }) => {
   const { cfg, triples, workerId } = data;
-  const pool = buildPool(cfg.pool);
+  const pool = buildPool(cfg.pool, cfg.strip || []);
   const rows = [];
   let done = 0, lastPost = Date.now();
   for (const ids of triples) {

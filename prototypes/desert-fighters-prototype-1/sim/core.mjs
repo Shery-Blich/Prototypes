@@ -16,8 +16,11 @@ export function reseed(seed) { s = (seed >>> 0) || 1; for (let k = 0; k < 4; k++
 export function rand() { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }
 Math.random = rand;
 
-export function buildPool(pool = 'base') {
-  applyCharacterOverrides(pool === 'base' ? {} : CANDIDATE_OVERRIDES);
+// strip: card ids that lose their ability (control runs: "is it the new ability, or just losing the old one?")
+export function buildPool(pool = 'base', strip = []) {
+  const overrides = { ...(pool === 'base' ? {} : CANDIDATE_OVERRIDES) };
+  for (const id of strip) overrides[id] = { ...overrides[id], trigger: null, preset: null, run: undefined, preview: undefined, text: '(no ability)' };
+  applyCharacterOverrides(overrides);
   let ids = Object.keys(CHARACTERS).filter(id => !EXCLUDE_IDS.has(id) && !CHARACTERS[id].token && !CHARACTERS[id].isCage);
   if (pool === 'vanilla') ids = ids.filter(id => !CHARACTERS[id].trigger);
   return ids;

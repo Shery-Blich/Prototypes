@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Run Sim</title>
+<style>
+  body { margin: 0; padding: 16px; background: #1f140c; color: #e8d3b0; font: 12px/1.45 ui-monospace, Consolas, monospace; }
+  pre { white-space: pre; overflow-x: auto; }
+  .hint { color: #c9a97f; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<!-- Level-run simulator (run-core.mjs): whole expeditions on the real map, encounters and combat.
+       runs.html?args=--runs 200 --mode mana --water 30 --policies greedy,plan,random --seed 1
+     --mode off|mana|uses   water rule (water.js) · --water N   mana: the run's supply (default RUN_WATER)
+     --flat N               every card has water N (control: is it the per-card water, or any limit?)
+     --policies             greedy (best win rate now) · plan (rollouts of the rest of the run) · random
+     --rollouts 12 --k 6    planner: playouts per option, top-k lineups considered (plus best of each size and a cheap one)
+     --est 12               fights per win-rate estimate · --close-xp 10   "close call" = options within this many score points (a win = 25)
+     --recruit enemy|random recruits from the defeated lineup (what main.js does) or 3 random cards
+     --squad N --squad-pool starter|all   start with N random cards (default: the whole 9-card starter pack)
+     --uses-offset -1       uses: shift every card's uses (min 1)
+     --enemy-shift 1        every encounter one designed tier harder (easy→medium→hard; battle 1 easy→medium)
+     --strip id1,id2        those cards lose their ability (control) · --save name   writes sim/results-name.txt
+     Depth metrics:
+       value of planning = plan score − greedy score on the same runs (≈0: water is only a tax, nothing to plan)
+       traps             = prep decisions where the obvious play (best win rate now) is > --close-xp worse than the best:
+                           thinking ahead matters there (water off should be near 0)
+       overrides         = how often the planner does NOT field the best-win-rate lineup (saves water, evacuates) -->
+<div class="hint" id="hint">Starting…</div>
+<pre id="out"></pre>
+<script type="module">
+  import { CHARACTERS } from '../characters.js';
+  import { RUN_WATER, waterOf } from '../water.js';
+  import { STARTER_PACK_IDS } from '../characters.js';
+
+  const argList = (new URLSearchParams(location.search).get('args') || '').split(/\s+/).filter(Boolean);
+  const args = Object.fromEntries(argList.map((a, i, arr) =>
+    a.startsWith('--') ? [a.slice(2), (arr[i + 1] && !arr[i + 1].startsWith('--')) ? arr[i + 1] : true] : []
+  ).filter(x => x.length));
+  const cfg = {
+    mode: args.mode || 'off', water: Number(args.water ?? RUN_WATER), flat: args.flat != null ? Number(args.flat) : null,
+    policies: String(args.policies || 'greedy,plan,random').split(','), rollouts: Number(args.rollouts || 12), k: Number(args.k || 6),
+    est: Number(args.est || 12), closeXp: Number(args['close-xp'] || 10), recruit: args.recruit || 'enemy', squad: Number(args.squad || 0), squadPool: args['squad-pool'] || 'starter', usesOffset: Number(args['uses-offset'] || 0), enemyShift: Number(args['enemy-shift'] || 0), seed: Number(args.seed || 1),
+    strip: args.strip ? String(args.strip).split(',') : [], hpBonus: 0, atkBonus: 0,
+  };
+  const RUNS = Number(args.runs || 200);
+  const WORKERS = Number(args.workers || navigator.hardwareConcurrency || 4);
+
+  const out = document.getElementById('out'), hint = document.getElementById('hint');
+  const log = (...a) => { out.textContent += a.join(' ') + '\n'; };
+  const pct = (a, b = 1) => b ? (100 * a / b).toFixed(0).padStart(3) + '%' : '  - ';
+  const f1 = x => x.toFixed(1), sg = x => (x > 0 ? '+' : '') + x.toFixed(1);
+  const mean = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
+  const se = a => a.length > 1 ? Math.sqrt(a.reduce((s, x) => s + (x - mean(a)) ** 2, 0) / (a.length - 1) / a.length) : 0;
+  const nm = id => CHARACTERS[id]?.name || id;
+  const effN = counts => { const t = counts.reduce((a, b) => a + b, 0); return t ? Math.exp(-counts.reduce((a, c) => a + (c ? (c / t) * Math.log(c / t) : 0), 0)) : 0; };
+
+  const waterDesc = cfg.mode === 'mana' ? `mana, supply ${cfg.water}${cfg.flat != null ? `, flat cost ${cfg.flat}` : ''}`
+    : cfg.mode === 'uses' ? `uses${cfg.flat != null ? `, flat ${cfg.flat} uses` : ''}${cfg.usesOffset ? `, offset ${cfg.usesOffset}` : ''}` : 'off';
+  hint.textContent = `${RUNS} runs × ${cfg.policies.join('/')} · water ${waterDesc} · ${WORKERS} workers`;
+
+  // ── run on all cores ──
+  const t0 = Date.now();
+  const chunks = Array.from({ length: WORKERS }, () => []);
+  for (let i = 0; i < RUNS; i++) chunks[i % WORKERS].push(i);
+  const progress = new Array(WORKERS).fill(0);
+  const rows = await Promise.all(chunks.map((runs, workerId) => new Promise((res, rej) => {
+    const w = new Worker('./runs-worker.mjs', { type: 'module' });
+    w.onerror = e => rej(e.message || e);
+    w.onmessage = ({ data }) => {
+      if (data.type === 'progress') {
+        progress[workerId] = data.done;
+        const done = progress.reduce((a, b) => a + b, 0), secs = (Date.now() - t0) / 1000;
+        hint.textContent = `${done}/${RUNS} runs · ${secs.toFixed(0)}s · ETA ${(secs / done * (RUNS - done)).toFixed(0)}s`;
+      } else if (data.type === 'error') { rej(data.error); w.terminate(); }
+      else { res(data.rows); w.terminate(); }
+    };
+    w.postMessage({ cfg, runs, workerId });
+  }))).then(r => r.flat()).catch(err => { log('ERROR: ' + err); document.body.dataset.done = 'error'; throw err; });
+  const secs = ((Date.now() - t0) / 1000).toFixed(0);
+
+  // ── report ──
+  const by = Object.fromEntries(cfg.policies.map(p => [p, rows.filter(r => r.policy === p).sort((a, b) => a.run - b.run)]));
+  const starterWater = cfg.mode === 'off' ? '' : ` · starter pack water: ${STARTER_PACK_IDS.map(id => `${nm(id)} ${waterOf(id, cfg.mode, cfg.flat)}`).join(', ')}`;
+  log(`Desert Fighters run sim · ${RUNS} runs · water ${waterDesc} · squad ${cfg.squad ? `${cfg.squad} random from ${cfg.squadPool}` : 'starter pack (9)'} · enemies +${cfg.enemyShift} tier · recruit ${cfg.recruit} · rollouts ${cfg.rollouts} · est ${cfg.est} · seed ${cfg.seed}${cfg.strip.length ? ` · stripped: ${cfg.strip.join(',')}` : ''} · ${secs}s on ${WORKERS} workers`);
+  if (starterWater) log(starterWater.slice(3));
+  log('');
+  log('RUN OUTCOMES (score = 25/win + 50 on success · XP = the game run XP, which also pays 22 per card played · ± = standard error)');
+  log(' policy    score         XP    wins  fights cards  success extracted  ends: extracted/evac/dry/forced/wiped' + (cfg.mode === 'mana' ? '   water left' : cfg.mode === 'uses' ? '   uses left' : ''));
+  for (const [p, rs] of Object.entries(by)) {
+    const ends = ['extracted', 'evac', 'dry', 'forced', 'wiped'].map(e => pct(rs.filter(r => r.end === e).length, rs.length)).join(' ');
+    const left = cfg.mode === 'mana' ? `   ${f1(mean(rs.map(r => r.waterLeft)))}` : cfg.mode === 'uses' ? `   ${f1(mean(rs.map(r => r.usesLeft)))}` : '';
+    log(` ${p.padEnd(8)} ${f1(mean(rs.map(r => r.score))).padStart(6)} ±${f1(se(rs.map(r => r.score))).padEnd(5)} ${f1(mean(rs.map(r => r.xp))).padStart(5)} ${f1(mean(rs.map(r => r.wins))).padStart(5)} ${f1(mean(rs.map(r => r.fights))).padStart(6)} ${f1(mean(rs.map(r => r.cardsPlayed))).padStart(5)}  ${pct(rs.filter(r => r.success).length, rs.length)}    ${f1(mean(rs.map(r => r.extracted))).padStart(5)}     ${ends}${left}`);
+  }
+
+  const paired = (a, b) => { const d = by[a].map((r, i) => r.score - by[b][i].score); return `${sg(mean(d))} ±${f1(se(d))} score`; };
+  log('');
+  if (by.plan && by.greedy) log(`VALUE OF PLANNING   plan − greedy  = ${paired('plan', 'greedy')}   (same runs; ≈0 = nothing to plan)`);
+  if (by.greedy && by.random) log(`VALUE OF PLAYING    greedy − random = ${paired('greedy', 'random')}`);
+
+  // Decision depth
+  log('\nDECISIONS (every prep screen of a real run)');
+  for (const [p, rs] of Object.entries(by)) {
+    if (p === 'random') continue;
+    const ds = rs.flatMap(r => r.decisions).filter(d => d.legal > 0);
+    if (!ds.length) continue;
+    log(` ${p.padEnd(8)} ${ds.length} decisions · legal lineups ${f1(mean(ds.map(d => d.legal)))} · cards fielded ${f1(mean(ds.filter(d => d.size).map(d => d.size)))}`);
+    if (p === 'plan') {
+      const cv = ds.map(d => d.closeValue);
+      log(`          planner: close calls (2+ options within ${cfg.closeXp} score of the best) ${pct(cv.filter(c => c >= 2).length, cv.length)} · options within ${cfg.closeXp}: ${f1(mean(cv))} of ${f1(mean(ds.map(d => d.options)))} · best−worst option ${f1(mean(ds.map(d => d.spread)))} score`);
+      log(`          TRAPS (the obvious "best win rate now" lineup is > ${cfg.closeXp} score worse than the best option): ${pct(ds.filter(d => d.trap).length, ds.length)} of decisions · average cost of the obvious play ${f1(mean(ds.map(d => d.trapCost)))} score`);
+      log(`          planner overrides "best win rate now": ${pct(ds.filter(d => d.deviates).length, ds.length)} of decisions (evacuates: ${pct(ds.filter(d => d.evac).length, ds.length)}) · win rate it gives up: ${f1(100 * mean(ds.filter(d => d.deviates && !d.evac).map(d => d.bestP - d.p)))} points`);
+    }
+  }
+
+  // Variety
+  log('\nVARIETY (cards fielded across all runs)');
+  for (const [p, rs] of Object.entries(by)) {
+    const counts = {};
+    for (const r of rs) for (const id of r.fielded) counts[id] = (counts[id] || 0) + 1;
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    const won = rs.flatMap(r => r.wonLineups), wonCounts = {};
+    for (const k of won) wonCounts[k] = (wonCounts[k] || 0) + 1;
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, n]) => `${nm(id)} ${pct(n, total).trim()}`).join(', ');
+    log(` ${p.padEnd(8)} effective cards fielded ${f1(effN(Object.values(counts)))} of ${Object.keys(counts).length} · winning lineups: ${Object.keys(wonCounts).length} distinct of ${won.length} wins (effective ${f1(effN(Object.values(wonCounts)))})`);
+    log(`          most fielded: ${top}`);
+  }
+
+  window.__runs = { cfg, rows };
+  document.body.dataset.done = '1';
+  if (args.save) {
+    const r = await fetch(`results-${args.save}.txt`, { method: 'PUT', body: `runs.html?args=${argList.join(' ')}\n\n` + out.textContent });
+    hint.textContent = `done in ${secs}s · ${await r.text()}`;
+  } else hint.textContent = `done in ${secs}s`;
+</script>
+</body>
+</html>
