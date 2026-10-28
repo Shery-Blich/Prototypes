@@ -1,0 +1,43 @@
+Water fork · run sim pass 2 (uses only) · 2026-10-25 · 300 runs each, rollouts 16, est 12, seed 1
+Raw outputs: results-pass2-off.txt, -uses-flat2.txt, -uses-shallow.txt, -uses-m1.txt, -uses-steep.txt
+Conditions as pass 1 (sim knobs, the game is untouched): --enemy-shift 2 --squad 6, recruit from the defeated enemy.
+Policies: greedy and plan (random dropped: it is far below both in every setup).
+
+Question: is it the PER-CARD spread of uses that creates decisions? Four uses tables with the same average (~2.1 uses,
+over the 35-card pool), from no spread to a wide one (USES_CURVES in water.js, --uses-curve):
+  flat 2   every card 2                         single-use cards in the pool:  0
+  shallow  1..3, gentle slope (2 at 1, 28 at 2)                                 2
+  m1       pass 1's table: base formula − 1                                    11
+  steep    1..5: strong cards 1, weak cards up to 5                            16
+
+                                      off      flat 2    shallow     m1       steep
+TRAPS (obvious play is wrong)          9%       11%       11%       20%       19%
+avg cost of the obvious play          3.3       4.0       4.0       6.1       5.9
+planner overrides best-now             6%        7%        7%       12%       13%
+VALUE OF PLANNING (plan − greedy)   +8.7±2.8  +9.8±3.0 +12.8±2.9 +19.3±3.4 +19.2±3.3
+greedy effective cards fielded       10.9      13.5      13.4      14.6      13.8
+plan distinct winning lineups         262       334       320       309       296
+plan score / success              167 / 93% 164 / 93% 170 / 95% 151 / 95% 146 / 93%
+greedy score / success            159 / 84% 154 / 84% 157 / 85% 132 / 80% 127 / 80%
+
+What it says
+1. Pass 1 holds with 3× the runs and 2× the rollouts: m1 doubles the traps of flat 2 (20% vs 11%) and value of
+   planning is now clearly above water off (+19 vs +9, the gap is ~2.5× the noise). Pass 1's +15±6 was noise-limited.
+2. It is not a smooth "more spread = more decisions" curve, it is a step. Shallow (2 single-use cards) is no better
+   than flat. m1 (11) and steep (16) are the same. What creates the decisions is MANY STRONG CARDS WITH EXACTLY ONE
+   USE: "when do I spend my one-shot Warthog / Buffalo / Hyena" is the choice the obvious play gets wrong.
+   Giving weak cards more uses (steep) adds nothing.
+3. Variety comes from any cap (flat 2 already 13.5 effective cards, the most winning lineups). Per-card uses adds the
+   decisions on top without losing that variety (14.6 effective cards for m1).
+4. The price: m1/steep are harder. Planner score drops ~16-20 vs off/shallow, greedy ~25-30. A player who doesn't
+   plan pays more for it, which is the point, but the encounters would need tuning for it.
+
+Recommendation: keep USES with the m1 shape (strong cards single-use, the rest 2-3). Mana is not pursued
+(pass 1: its decisions sat near its controls, and its planner "chump-plays" cheap cards to save water).
+
+Next
+- Confirm the mechanism directly: flat 2-3 for everyone except the top ~10 cards by power at 1 use. If that matches
+  m1, the rule for designers is simply "the strong cards are one-shot".
+- Make m1 the uses table in water.js (it is still the base formula, which the sims use with an offset or a curve).
+- Build the uses UI in the game (water badge per card, greyed-out dry cards at prep) and retune the encounters
+  for picking from a squad: the designed lineups are trivial at the current difficulty.

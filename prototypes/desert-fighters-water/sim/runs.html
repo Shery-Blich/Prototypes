@@ -20,7 +20,7 @@
      --est 12               fights per win-rate estimate · --close-xp 10   "close call" = options within this many score points (a win = 25)
      --recruit enemy|random recruits from the defeated lineup (what main.js does) or 3 random cards
      --squad N --squad-pool starter|all   start with N random cards (default: the whole 9-card starter pack)
-     --uses-offset -1       uses: shift every card's uses (min 1)
+     --uses-offset -1       uses: shift every card's uses (min 1) · --uses-curve m1|shallow|steep   a USES_CURVES table from water.js
      --enemy-shift 1        every encounter one designed tier harder (easy→medium→hard; battle 1 easy→medium)
      --strip id1,id2        those cards lose their ability (control) · --save name   writes sim/results-name.txt
      Depth metrics:
@@ -32,7 +32,7 @@
 <pre id="out"></pre>
 <script type="module">
   import { CHARACTERS } from '../characters.js';
-  import { RUN_WATER, waterOf } from '../water.js';
+  import { RUN_WATER, waterOf, USES_CURVES, powerOf } from '../water.js';
   import { STARTER_PACK_IDS } from '../characters.js';
 
   const argList = (new URLSearchParams(location.search).get('args') || '').split(/\s+/).filter(Boolean);
@@ -42,7 +42,7 @@
   const cfg = {
     mode: args.mode || 'off', water: Number(args.water ?? RUN_WATER), flat: args.flat != null ? Number(args.flat) : null,
     policies: String(args.policies || 'greedy,plan,random').split(','), rollouts: Number(args.rollouts || 12), k: Number(args.k || 6),
-    est: Number(args.est || 12), closeXp: Number(args['close-xp'] || 10), recruit: args.recruit || 'enemy', squad: Number(args.squad || 0), squadPool: args['squad-pool'] || 'starter', usesOffset: Number(args['uses-offset'] || 0), enemyShift: Number(args['enemy-shift'] || 0), seed: Number(args.seed || 1),
+    est: Number(args.est || 12), closeXp: Number(args['close-xp'] || 10), recruit: args.recruit || 'enemy', squad: Number(args.squad || 0), squadPool: args['squad-pool'] || 'starter', usesOffset: Number(args['uses-offset'] || 0), enemyShift: Number(args['enemy-shift'] || 0), usesCurve: args['uses-curve'] || null, seed: Number(args.seed || 1),
     strip: args.strip ? String(args.strip).split(',') : [], hpBonus: 0, atkBonus: 0,
   };
   const RUNS = Number(args.runs || 200);
@@ -58,7 +58,7 @@
   const effN = counts => { const t = counts.reduce((a, b) => a + b, 0); return t ? Math.exp(-counts.reduce((a, c) => a + (c ? (c / t) * Math.log(c / t) : 0), 0)) : 0; };
 
   const waterDesc = cfg.mode === 'mana' ? `mana, supply ${cfg.water}${cfg.flat != null ? `, flat cost ${cfg.flat}` : ''}`
-    : cfg.mode === 'uses' ? `uses${cfg.flat != null ? `, flat ${cfg.flat} uses` : ''}${cfg.usesOffset ? `, offset ${cfg.usesOffset}` : ''}` : 'off';
+    : cfg.mode === 'uses' ? `uses${cfg.flat != null ? `, flat ${cfg.flat} uses` : ''}${cfg.usesOffset ? `, offset ${cfg.usesOffset}` : ''}${cfg.usesCurve ? `, curve ${cfg.usesCurve}` : ''}` : 'off';
   hint.textContent = `${RUNS} runs × ${cfg.policies.join('/')} · water ${waterDesc} · ${WORKERS} workers`;
 
   // ── run on all cores ──
@@ -83,7 +83,8 @@
 
   // ── report ──
   const by = Object.fromEntries(cfg.policies.map(p => [p, rows.filter(r => r.policy === p).sort((a, b) => a.run - b.run)]));
-  const starterWater = cfg.mode === 'off' ? '' : ` · starter pack water: ${STARTER_PACK_IDS.map(id => `${nm(id)} ${waterOf(id, cfg.mode, cfg.flat)}`).join(', ')}`;
+  const shownWater = id => cfg.mode === 'uses' && cfg.flat == null ? (cfg.usesCurve ? USES_CURVES[cfg.usesCurve](powerOf(id)) : Math.max(1, waterOf(id, 'uses') + cfg.usesOffset)) : waterOf(id, cfg.mode, cfg.flat);
+  const starterWater = cfg.mode === 'off' ? '' : ` · starter pack water: ${STARTER_PACK_IDS.map(id => `${nm(id)} ${shownWater(id)}`).join(', ')}`;
   log(`Desert Fighters run sim · ${RUNS} runs · water ${waterDesc} · squad ${cfg.squad ? `${cfg.squad} random from ${cfg.squadPool}` : 'starter pack (9)'} · enemies +${cfg.enemyShift} tier · recruit ${cfg.recruit} · rollouts ${cfg.rollouts} · est ${cfg.est} · seed ${cfg.seed}${cfg.strip.length ? ` · stripped: ${cfg.strip.join(',')}` : ''} · ${secs}s on ${WORKERS} workers`);
   if (starterWater) log(starterWater.slice(3));
   log('');

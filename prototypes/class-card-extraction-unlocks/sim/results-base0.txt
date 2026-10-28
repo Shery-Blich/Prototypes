@@ -1,0 +1,26 @@
+grid base · 2000 games · 6 trials per order · seed 1
+
+== base
+hp 4/6/8 · atk 1/2/3 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 14.9 · p10 7 · median 9 · p90 18 · 6+ clashes 98.3% · ties 14.2% · power spread (sd) 14.0
+  card              power   6+clash%  front%
+  warlock_attack     37.6     100      33
+  warlock_start      28.0     100      33
+  rhino              16.3      97      35
+  support_start      13.1      96      31
+  buffalo             2.0      99      31
+  support_attack      1.1      98      36
+  warrior_start       0.9      95      35
+  rotator_start      -0.3      98      31
+  healer_hurt        -1.3     100      33
+  warlock_death      -2.5      99      34
+  rotator_attack     -4.1      99      33
+  healer_death       -4.2     100      34
+  warrior_attack     -4.4      98      42
+  support_death      -4.6      99      33
+  rotator_death      -7.2      99      33
+  healer_start      -10.0     100      25
+  jackal            -11.4      98      35
+  warrior_death     -13.2      97      33
+  tortoise          -16.7      99      33
+  jerboa            -20.9      98      33

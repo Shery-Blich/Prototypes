@@ -15,7 +15,7 @@ import { CHARACTERS, STARTER_PACK_IDS, RECRUITABLE, XP_CONFIG } from '../charact
 import { TEAM_SLOTS } from '../battle.js';
 import { generateEncounter } from '../encounters.js';
 import { MAP_NODES, canReachExtraction } from '../map.js';
-import { waterOf, powerOf, RUN_WATER } from '../water.js';
+import { waterOf, powerOf, RUN_WATER, USES_CURVES } from '../water.js';
 import { fight, reseed, rand, getRng, setRng } from './core.mjs';
 
 const CAMP_MAX = 10;
@@ -44,8 +44,8 @@ async function winRate(ids, enemy, cfg) {
 
 // ─── water ─────────────────────────────────────────────────────────────────────
 const cost = (id, cfg) => waterOf(id, cfg.mode, cfg.flat);
-// uses: cfg.usesOffset shifts every card's uses (never below 1) to tighten or loosen the mode
-const usesOf = (id, cfg) => Math.max(1, cost(id, cfg) + (cfg.usesOffset || 0));
+// uses: cfg.usesCurve picks a tuning curve from water.js; else cfg.usesOffset shifts every card's uses (min 1)
+const usesOf = (id, cfg) => (cfg.usesCurve && cfg.flat == null ? USES_CURVES[cfg.usesCurve](powerOf(id)) : Math.max(1, cost(id, cfg) + (cfg.usesOffset || 0)));
 
 function canField(cards, st, cfg) {
   if (cfg.mode === 'mana') return cards.reduce((a, c) => a + cost(c.id, cfg), 0) <= st.water;

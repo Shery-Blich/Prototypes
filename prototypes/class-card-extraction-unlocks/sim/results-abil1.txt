@@ -1,0 +1,201 @@
+grid abil1 · 2000 games · 6 trials per order · seed 1
+
+== A0 base
+hp 4/6/8 · atk 1/2/3 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 9.5 · p10 7 · median 9 · p90 13 · 6+ clashes 98.3% · ties 10.9% (timeouts 0.0%) · power spread (sd) 12.7
+  card              power   6+clash%  front%
+  warlock_start      26.8      99      33
+  rhino              22.5      97      37
+  support_start      19.6      96      29
+  warlock_attack      8.2     100      24
+  buffalo             5.9      99      29
+  support_attack      4.3      98      38
+  healer_hurt         4.0     100      34
+  warrior_start       3.6      94      35
+  rotator_start      -1.0      98      31
+  warrior_attack     -1.5      97      44
+  rotator_attack     -1.6      99      34
+  warlock_death      -1.7      99      36
+  support_death      -2.8      99      35
+  healer_death       -3.4     100      34
+  rotator_death      -4.8      99      33
+  healer_start       -8.8     100      23
+  warrior_death     -13.0      97      36
+  jackal            -14.3      98      37
+  tortoise          -16.5      99      32
+  jerboa            -26.6      98      31
+
+== A1 damage low 2
+hp 4/6/8 · atk 1/2/3 · amounts hp 2/3 atk 1/2 dmg 2/3
+clashes mean 9.1 · p10 6 · median 9 · p90 13 · 6+ clashes 94.3% · ties 10.3% (timeouts 0.0%) · power spread (sd) 12.0
+  card              power   6+clash%  front%
+  warlock_start      25.1      97      33
+  rhino              19.8      95      37
+  support_start      15.5      91      28
+  warrior_attack     10.0      86      43
+  warlock_attack      6.2      98      24
+  buffalo             5.3      97      29
+  healer_hurt         4.9      99      32
+  warrior_death       4.9      88      38
+  warrior_start       1.8      89      35
+  support_attack      1.5      95      43
+  rotator_start      -2.8      95      32
+  warlock_death      -3.3      97      35
+  healer_death       -4.4      95      34
+  support_death      -4.8      95      37
+  rotator_attack     -6.5      97      32
+  rotator_death      -7.6      94      32
+  healer_start       -9.7      98      23
+  jackal            -13.6      92      36
+  tortoise          -17.1      95      32
+  jerboa            -26.1      93      33
+
+== A2 heal 3/4
+hp 4/6/8 · atk 1/2/3 · amounts hp 3/4 atk 1/2 dmg 1/3
+clashes mean 9.7 · p10 7 · median 9 · p90 14 · 6+ clashes 98.3% · ties 10.8% (timeouts 0.0%) · power spread (sd) 12.4
+  card              power   6+clash%  front%
+  warlock_start      24.6      99      34
+  rhino              20.5      97      37
+  support_start      18.6      96      31
+  healer_hurt        13.1     100      34
+  warlock_attack      7.0     100      23
+  buffalo             4.5      99      30
+  support_attack      4.2      98      38
+  warrior_start       0.8      94      34
+  healer_death       -0.7     100      34
+  rotator_start      -1.8      98      30
+  warlock_death      -2.3      99      37
+  rotator_attack     -2.7      99      35
+  warrior_attack     -2.8      97      44
+  support_death      -3.3      99      34
+  healer_start       -3.7     100      20
+  rotator_death      -5.9      99      33
+  warrior_death     -13.6      97      36
+  jackal            -15.0      98      36
+  tortoise          -16.8      99      33
+  jerboa            -26.3      98      34
+
+== A3 hexer low/low
+hp 4/6/8 · atk 1/2/3 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 9.6 · p10 7 · median 9 · p90 14 · 6+ clashes 98.3% · ties 11.7% (timeouts 0.0%) · power spread (sd) 12.0
+  card              power   6+clash%  front%
+  rhino              26.5      97      37
+  support_start      22.2      96      30
+  warlock_attack      8.2     100      27
+  support_attack      8.0      98      37
+  buffalo             7.0      99      30
+  warlock_start       6.3     100      30
+  healer_hurt         6.0     100      34
+  warrior_start       3.9      94      34
+  rotator_start      -0.6      98      31
+  rotator_attack     -1.0      99      36
+  warrior_attack     -1.3      98      44
+  healer_death       -1.3     100      33
+  warlock_death      -2.1      99      36
+  support_death      -2.5      99      36
+  rotator_death      -4.4      99      33
+  healer_start       -6.7     100      21
+  warrior_death     -11.5      97      37
+  jackal            -14.1      98      36
+  tortoise          -15.8      99      32
+  jerboa            -27.4      98      33
+
+== A4 hexer mid/low
+hp 4/6/8 · atk 1/2/3 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 9.8 · p10 7 · median 9 · p90 14 · 6+ clashes 98.3% · ties 11.8% (timeouts 0.0%) · power spread (sd) 12.1
+  card              power   6+clash%  front%
+  rhino              25.5      97      36
+  support_start      21.2      96      30
+  warlock_start      13.3     100      30
+  warlock_attack      8.2     100      27
+  support_attack      7.2      98      38
+  buffalo             7.0      99      30
+  healer_hurt         5.6     100      34
+  warrior_start       3.5      94      34
+  rotator_start      -0.6      98      32
+  warrior_attack     -1.3      98      45
+  warlock_death      -1.9      99      37
+  healer_death       -2.1     100      34
+  rotator_attack     -2.5      99      35
+  support_death      -2.6      99      35
+  rotator_death      -3.9      99      34
+  healer_start       -7.4     100      20
+  warrior_death     -11.6      97      37
+  jackal            -14.8      98      36
+  tortoise          -16.3      99      32
+  jerboa            -27.3      98      32
+
+== A5 warcry mid/low
+hp 4/6/8 · atk 1/2/3 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 9.7 · p10 7 · median 9 · p90 14 · 6+ clashes 98.5% · ties 9.6% (timeouts 0.0%) · power spread (sd) 12.2
+  card              power   6+clash%  front%
+  warlock_start      26.0     100      33
+  rhino              23.7      97      35
+  warlock_attack      8.0     100      24
+  buffalo             8.0      99      30
+  support_start       7.9      97      28
+  support_attack      5.2      98      39
+  healer_hurt         4.9     100      34
+  warrior_start       4.0      95      33
+  warrior_attack     -0.4      98      42
+  warlock_death      -0.5      99      37
+  rotator_start      -0.9      99      32
+  rotator_attack     -1.0      99      35
+  support_death      -2.0      99      36
+  rotator_death      -3.4      99      34
+  healer_death       -3.9     100      35
+  healer_start       -7.6     100      22
+  warrior_death     -10.2      97      36
+  jackal            -13.3      98      38
+  tortoise          -16.7      99      33
+  jerboa            -28.4      98      30
+
+== A6 A1+A2+A4+A5
+hp 4/6/8 · atk 1/2/3 · amounts hp 3/4 atk 1/2 dmg 2/3
+clashes mean 9.9 · p10 6 · median 9 · p90 14 · 6+ clashes 95.7% · ties 8.5% (timeouts 0.0%) · power spread (sd) 10.9
+  card              power   6+clash%  front%
+  rhino              22.1      96      36
+  healer_hurt        15.7      99      33
+  warrior_attack      9.5      90      43
+  warlock_start       9.2      99      30
+  warrior_death       7.3      91      41
+  support_start       6.1      95      28
+  buffalo             5.8      97      29
+  warlock_attack      4.5      99      27
+  support_attack      3.7      97      40
+  warrior_start       0.9      91      33
+  healer_death       -0.6      97      34
+  warlock_death      -3.0      97      36
+  healer_start       -3.0      98      19
+  rotator_start      -4.1      96      32
+  support_death      -5.0      96      36
+  rotator_death      -6.3      95      33
+  rotator_attack     -6.9      97      32
+  jackal            -13.2      94      36
+  tortoise          -17.0      97      34
+  jerboa            -26.1      94      33
+
+== A7 A6 + hp 5/7/9
+hp 5/7/9 · atk 1/2/3 · amounts hp 3/4 atk 1/2 dmg 2/3
+clashes mean 12.1 · p10 8 · median 12 · p90 17 · 6+ clashes 99.5% · ties 7.6% (timeouts 0.0%) · power spread (sd) 11.0
+  card              power   6+clash%  front%
+  rhino              19.0     100      33
+  healer_hurt        17.8     100      32
+  warrior_attack     11.7      98      42
+  support_start       9.6     100      29
+  support_attack      9.5     100      40
+  warlock_start       8.5     100      30
+  warrior_death       4.6      99      39
+  warlock_attack      4.2     100      28
+  buffalo             4.0     100      29
+  warrior_start       2.0      98      34
+  healer_death       -2.4     100      35
+  support_death      -3.8     100      39
+  warlock_death      -3.9     100      35
+  rotator_start      -4.2     100      33
+  rotator_attack     -7.1     100      35
+  rotator_death      -7.4     100      31
+  healer_start       -7.7     100      22
+  jackal            -14.4     100      35
+  tortoise          -17.0      99      33
+  jerboa            -23.6      99      33

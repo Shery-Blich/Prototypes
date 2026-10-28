@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Balance Sim</title>
+<style>
+  body { margin: 0; padding: 16px; background: #1f140c; color: #e8d3b0; font: 12px/1.45 ui-monospace, Consolas, monospace; }
+  pre { white-space: pre; overflow-x: auto; }
+</style>
+</head>
+<body>
+<!-- balance.html?grid=stats&games=2000&trials=6&seed=1&cards=0&save=name
+     grid: a set from grids.mjs · cards=0 hides the per-card table · save writes sim/results-name.txt -->
+<div id="hint">Starting…</div>
+<pre id="out"></pre>
+<script type="module">
+  import { evaluate, report } from './balance.mjs';
+  import { GRIDS } from './grids.mjs';
+
+  const q = new URLSearchParams(location.search);
+  const grid = GRIDS[q.get('grid') || 'base'];
+  const opts = { games: +(q.get('games') || 2000), trials: +(q.get('trials') || 6), seed: +(q.get('seed') || 1) };
+  const showCards = q.get('cards') !== '0';
+  const out = document.getElementById('out');
+  const hint = document.getElementById('hint');
+  const text = [`grid ${q.get('grid') || 'base'} · ${opts.games} games · ${opts.trials} trials per order · seed ${opts.seed}`, ''];
+  out.textContent = text.join('\n');
+  window.results = [];
+  const t0 = performance.now();
+  for (let k = 0; k < grid.length; k++) {
+    const [label, config] = grid[k];
+    hint.textContent = `${k + 1}/${grid.length}: ${label}`;
+    await new Promise(r => setTimeout(r, 0));
+    const r = evaluate(config, opts);
+    window.results.push({ label, ...r });
+    text.push(report(label, r, { cards: showCards }), '');
+    out.textContent = text.join('\n');
+  }
+  hint.textContent = `Done in ${((performance.now() - t0) / 1000).toFixed(1)}s`;
+  if (q.get('save')) {
+    await fetch(`results-${q.get('save')}.txt`, { method: 'PUT', body: text.join('\n') });
+    hint.textContent += ` · saved results-${q.get('save')}.txt`;
+  }
+  window.done = true;
+</script>
+</body>
+</html>

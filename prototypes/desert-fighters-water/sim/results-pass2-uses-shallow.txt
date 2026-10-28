@@ -1,0 +1,24 @@
+runs.html?args=--runs 300 --mode uses --uses-curve shallow --enemy-shift 2 --squad 6 --rollouts 16 --policies greedy,plan --save pass2-uses-shallow
+
+Desert Fighters run sim · 300 runs · water uses, curve shallow · squad 6 random from starter · enemies +2 tier · recruit enemy · rollouts 16 · est 12 · seed 1 · 168s on 8 workers
+starter pack water: Jackal 3, Hyena 2, Camel 2, Sloth 3, Owl 2, Warthog 2, Buffalo 2, Iron Hide 2, Claw Strike 2
+
+RUN OUTCOMES (score = 25/win + 50 on success · XP = the game run XP, which also pays 22 per card played · ± = standard error)
+ policy    score         XP    wins  fights cards  success extracted  ends: extracted/evac/dry/forced/wiped   uses left
+ greedy    156.8 ±4.1   463.5   4.6    5.5  13.9   85%     10.8      85%   0%   0%  14%   1%   16.1
+ plan      169.6 ±3.1   491.8   4.9    5.7  14.6   95%     11.7      95%   0%   0%   5%   0%   17.5
+
+VALUE OF PLANNING   plan − greedy  = +12.8 ±2.9 score   (same runs; ≈0 = nothing to plan)
+
+DECISIONS (every prep screen of a real run)
+ greedy   1652 decisions · legal lineups 440.5 · cards fielded 2.5
+ plan     1700 decisions · legal lineups 447.8 · cards fielded 2.6
+          planner: close calls (2+ options within 10 score of the best)  94% · options within 10: 5.2 of 8.8 · best−worst option 88.3 score
+          TRAPS (the obvious "best win rate now" lineup is > 10 score worse than the best option):  11% of decisions · average cost of the obvious play 4.0 score
+          planner overrides "best win rate now":   7% of decisions (evacuates:   0%) · win rate it gives up: 38.3 points
+
+VARIETY (cards fielded across all runs)
+ greedy   effective cards fielded 13.4 of 16 · winning lineups: 306 distinct of 1370 wins (effective 166.2)
+          most fielded: Warthog 14%, Grace Aura 12%, Hyena 11%, Buffalo 11%, Jackal 9%, Claw Strike 8%, Trample Share 5%, Hex Scales 5%
+ plan     effective cards fielded 13.6 of 16 · winning lineups: 320 distinct of 1465 wins (effective 190.2)
+          most fielded: Warthog 14%, Grace Aura 12%, Buffalo 11%, Hyena 11%, Claw Strike 8%, Jackal 8%, Trample Share 6%, Owl 5%

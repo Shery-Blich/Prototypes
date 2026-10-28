@@ -1,0 +1,24 @@
+runs.html?args=--runs 300 --mode uses --uses-curve m1 --enemy-shift 2 --squad 6 --rollouts 16 --policies greedy,plan --save pass2-uses-m1
+
+Desert Fighters run sim · 300 runs · water uses, curve m1 · squad 6 random from starter · enemies +2 tier · recruit enemy · rollouts 16 · est 12 · seed 1 · 141s on 8 workers
+starter pack water: Jackal 3, Hyena 1, Camel 3, Sloth 3, Owl 2, Warthog 1, Buffalo 1, Iron Hide 3, Claw Strike 2
+
+RUN OUTCOMES (score = 25/win + 50 on success · XP = the game run XP, which also pays 22 per card played · ± = standard error)
+ policy    score         XP    wins  fights cards  success extracted  ends: extracted/evac/dry/forced/wiped   uses left
+ greedy    131.9 ±4.1   418.3   3.7    5.5  13.0   80%      9.5      80%   0%   0%  19%   1%   14.6
+ plan      151.3 ±3.3   453.7   4.2    5.5  13.7   95%     10.8      94%   1%   0%   5%   0%   16.8
+
+VALUE OF PLANNING   plan − greedy  = +19.3 ±3.4 score   (same runs; ≈0 = nothing to plan)
+
+DECISIONS (every prep screen of a real run)
+ greedy   1649 decisions · legal lineups 267.7 · cards fielded 2.4
+ plan     1662 decisions · legal lineups 309.5 · cards fielded 2.5
+          planner: close calls (2+ options within 10 score of the best)  88% · options within 10: 4.4 of 8.7 · best−worst option 75.6 score
+          TRAPS (the obvious "best win rate now" lineup is > 10 score worse than the best option):  20% of decisions · average cost of the obvious play 6.1 score
+          planner overrides "best win rate now":  12% of decisions (evacuates:   0%) · win rate it gives up: 34.3 points
+
+VARIETY (cards fielded across all runs)
+ greedy   effective cards fielded 14.6 of 16 · winning lineups: 255 distinct of 1101 wins (effective 147.9)
+          most fielded: Claw Strike 11%, Grace Aura 9%, Jackal 9%, Warthog 9%, Trample Share 8%, Hex Scales 8%, Hyena 7%, Buffalo 7%
+ plan     effective cards fielded 14.7 of 16 · winning lineups: 309 distinct of 1247 wins (effective 187.5)
+          most fielded: Claw Strike 10%, Grace Aura 10%, Warthog 8%, Jackal 8%, Trample Share 8%, Hyena 7%, Hex Scales 7%, Buffalo 6%

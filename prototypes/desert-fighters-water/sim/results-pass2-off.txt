@@ -1,0 +1,23 @@
+runs.html?args=--runs 300 --mode off --enemy-shift 2 --squad 6 --rollouts 16 --policies greedy,plan --save pass2-off
+
+Desert Fighters run sim · 300 runs · water off · squad 6 random from starter · enemies +2 tier · recruit enemy · rollouts 16 · est 12 · seed 1 · 177s on 8 workers
+
+RUN OUTCOMES (score = 25/win + 50 on success · XP = the game run XP, which also pays 22 per card played · ± = standard error)
+ policy    score         XP    wins  fights cards  success extracted  ends: extracted/evac/dry/forced/wiped
+ greedy    158.7 ±4.2   464.0   4.7    5.5  13.9   84%     10.9      84%   0%   0%  15%   0%
+ plan      167.3 ±3.4   483.5   4.8    5.6  14.4   93%     11.5      93%   0%   0%   7%   0%
+
+VALUE OF PLANNING   plan − greedy  = +8.7 ±2.8 score   (same runs; ≈0 = nothing to plan)
+
+DECISIONS (every prep screen of a real run)
+ greedy   1645 decisions · legal lineups 443.9 · cards fielded 2.5
+ plan     1675 decisions · legal lineups 454.8 · cards fielded 2.6
+          planner: close calls (2+ options within 10 score of the best)  95% · options within 10: 5.5 of 8.8 · best−worst option 88.7 score
+          TRAPS (the obvious "best win rate now" lineup is > 10 score worse than the best option):   9% of decisions · average cost of the obvious play 3.3 score
+          planner overrides "best win rate now":   6% of decisions (evacuates:   0%) · win rate it gives up: 36.6 points
+
+VARIETY (cards fielded across all runs)
+ greedy   effective cards fielded 10.9 of 16 · winning lineups: 252 distinct of 1398 wins (effective 121.5)
+          most fielded: Warthog 20%, Buffalo 16%, Hyena 14%, Grace Aura 10%, Claw Strike 9%, Owl 6%, Iron Hide 4%, Camel 3%
+ plan     effective cards fielded 10.9 of 16 · winning lineups: 262 distinct of 1450 wins (effective 127.3)
+          most fielded: Warthog 20%, Buffalo 16%, Hyena 14%, Grace Aura 10%, Claw Strike 10%, Owl 5%, Iron Hide 4%, Camel 3%

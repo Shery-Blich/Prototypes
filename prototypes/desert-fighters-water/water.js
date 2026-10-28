@@ -41,6 +41,16 @@ export function baseWater(id) {
   };
 }
 
+// Uses curves for tuning (sim: --uses-curve name). Each maps power to uses; they differ in how far apart
+// strong and weak cards are, at about the same average (≈2.1, the base curve with one use less):
+//   m1      : the base curve − 1 (pass 1)            shallow : 1..3, a gentle slope
+//   steep   : 1..5, strong cards 1, weak cards up to 5
+export const USES_CURVES = {
+  m1:      p => clamp(Math.round(3 - p / 12) - 1, 1, 5),
+  shallow: p => clamp(Math.round(2.1 - p / 30), 1, 3),
+  steep:   p => clamp(Math.round(1.6 - p / 7), 1, 5),
+};
+
 // The card's water in this mode. `flat` (a number) gives every card the same water: the control that
 // separates "per-card water creates choices" from "any limit does".
 export function waterOf(id, mode, flat = null) {

@@ -1,0 +1,121 @@
+grid stats · 1500 games · 6 trials per order · seed 1
+
+== hp 3/5/7 atk 1/2/3
+hp 3/5/7 · atk 1/2/3 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 8.3 · p10 5 · median 8 · p90 11 · 6+ clashes 88.9% · ties 11.7% · power spread (sd) 12.2
+  top: rhino 25, warlock_start 22, support_start 18, healer_hurt 10 · bottom: tortoise -14, jackal -16, jerboa -25
+
+== hp 3/5/7 atk 1/2/4
+hp 3/5/7 · atk 1/2/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 8.1 · p10 5 · median 8 · p90 11 · 6+ clashes 86.9% · ties 11.3% · power spread (sd) 12.4
+  top: rhino 31, warlock_start 19, support_start 19, healer_hurt 8 · bottom: tortoise -13, jackal -15, jerboa -25
+
+== hp 3/5/7 atk 1/3/4
+hp 3/5/7 · atk 1/3/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 6.6 · p10 4 · median 6 · p90 10 · 6+ clashes 64.7% · ties 13.8% · power spread (sd) 12.6
+  top: warlock_start 25, rhino 24, support_start 16, buffalo 12 · bottom: jackal -13, tortoise -18, jerboa -26
+
+== hp 3/5/7 atk 2/3/4
+hp 3/5/7 · atk 2/3/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 6.0 · p10 4 · median 6 · p90 8 · 6+ clashes 55.5% · ties 17.9% · power spread (sd) 13.6
+  top: warlock_start 31, warlock_attack 25, rhino 19, support_start 12 · bottom: warrior_death -15, jackal -17, jerboa -22
+
+== hp 4/6/8 atk 1/2/3
+hp 4/6/8 · atk 1/2/3 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 9.5 · p10 7 · median 9 · p90 13 · 6+ clashes 98.1% · ties 11.2% · power spread (sd) 12.5
+  top: warlock_start 27, rhino 22, support_start 20, warlock_attack 8 · bottom: jackal -13, tortoise -16, jerboa -25
+
+== hp 4/6/8 atk 1/2/4
+hp 4/6/8 · atk 1/2/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 9.2 · p10 6 · median 9 · p90 13 · 6+ clashes 95.1% · ties 10.7% · power spread (sd) 12.5
+  top: rhino 29, warlock_start 24, support_start 17, warlock_attack 8 · bottom: warrior_death -13, tortoise -15, jerboa -25
+
+== hp 4/6/8 atk 1/3/4
+hp 4/6/8 · atk 1/3/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 7.8 · p10 5 · median 7 · p90 11 · 6+ clashes 84.1% · ties 11.3% · power spread (sd) 12.6
+  top: warlock_start 27, rhino 22, support_start 19, warlock_attack 12 · bottom: healer_start -12, tortoise -19, jerboa -25
+
+== hp 4/6/8 atk 2/3/4
+hp 4/6/8 · atk 2/3/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 6.9 · p10 5 · median 7 · p90 9 · 6+ clashes 80.5% · ties 17.2% · power spread (sd) 14.0
+  top: warlock_start 35, warlock_attack 30, rhino 19, support_start 14 · bottom: jackal -13, tortoise -15, jerboa -22
+
+== hp 4/6/9 atk 1/2/3
+hp 4/6/9 · atk 1/2/3 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 9.5 · p10 7 · median 9 · p90 14 · 6+ clashes 98.1% · ties 10.8% · power spread (sd) 12.6
+  top: rhino 27, warlock_start 25, support_start 19, buffalo 10 · bottom: warrior_death -13, tortoise -16, jerboa -23
+
+== hp 4/6/9 atk 1/2/4
+hp 4/6/9 · atk 1/2/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 9.3 · p10 6 · median 9 · p90 13 · 6+ clashes 95.6% · ties 10.2% · power spread (sd) 12.7
+  top: rhino 32, warlock_start 21, support_start 17, buffalo 10 · bottom: warrior_death -12, tortoise -15, jerboa -24
+
+== hp 4/6/9 atk 1/3/4
+hp 4/6/9 · atk 1/3/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 7.8 · p10 5 · median 7 · p90 11 · 6+ clashes 84.9% · ties 11.2% · power spread (sd) 12.7
+  top: rhino 26, warlock_start 25, support_start 17, warlock_attack 12 · bottom: healer_start -12, tortoise -19, jerboa -24
+
+== hp 4/6/9 atk 2/3/4
+hp 4/6/9 · atk 2/3/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 6.9 · p10 5 · median 7 · p90 9 · 6+ clashes 81.0% · ties 16.5% · power spread (sd) 14.0
+  top: warlock_start 33, warlock_attack 30, rhino 22, support_start 13 · bottom: jackal -13, tortoise -16, jerboa -21
+
+== hp 5/7/9 atk 1/2/3
+hp 5/7/9 · atk 1/2/3 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 11.7 · p10 8 · median 11 · p90 16 · 6+ clashes 99.9% · ties 8.9% · power spread (sd) 12.0
+  top: warlock_start 24, support_start 20, rhino 20, support_attack 11 · bottom: healer_start -12, tortoise -16, jerboa -24
+
+== hp 5/7/9 atk 1/2/4
+hp 5/7/9 · atk 1/2/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 11.4 · p10 8 · median 11 · p90 16 · 6+ clashes 99.4% · ties 8.6% · power spread (sd) 12.1
+  top: rhino 29, warlock_start 21, support_start 19, support_attack 9 · bottom: healer_start -11, tortoise -15, jerboa -24
+
+== hp 5/7/9 atk 1/3/4
+hp 5/7/9 · atk 1/3/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 9.5 · p10 6 · median 9 · p90 13 · 6+ clashes 98.1% · ties 12.4% · power spread (sd) 12.1
+  top: warlock_start 26, rhino 19, support_start 18, warlock_attack 12 · bottom: healer_start -13, tortoise -18, jerboa -27
+
+== hp 5/7/9 atk 2/3/4
+hp 5/7/9 · atk 2/3/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 8.4 · p10 6 · median 8 · p90 11 · 6+ clashes 98.0% · ties 14.5% · power spread (sd) 13.7
+  top: warlock_start 34, warlock_attack 30, rhino 16, support_start 15 · bottom: tortoise -14, jackal -15, jerboa -22
+
+== hp 5/7/10 atk 1/2/3
+hp 5/7/10 · atk 1/2/3 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 11.8 · p10 8 · median 11 · p90 16 · 6+ clashes 99.9% · ties 9.2% · power spread (sd) 12.2
+  top: rhino 24, warlock_start 23, support_start 19, support_attack 9 · bottom: healer_start -11, tortoise -16, jerboa -25
+
+== hp 5/7/10 atk 1/2/4
+hp 5/7/10 · atk 1/2/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 11.5 · p10 8 · median 11 · p90 16 · 6+ clashes 99.5% · ties 8.6% · power spread (sd) 12.3
+  top: rhino 31, warlock_start 19, support_start 17, support_attack 8 · bottom: healer_start -11, tortoise -14, jerboa -24
+
+== hp 5/7/10 atk 1/3/4
+hp 5/7/10 · atk 1/3/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 9.5 · p10 6 · median 9 · p90 14 · 6+ clashes 98.1% · ties 12.0% · power spread (sd) 12.2
+  top: rhino 24, warlock_start 23, support_start 18, warlock_attack 12 · bottom: healer_start -13, tortoise -17, jerboa -26
+
+== hp 5/7/10 atk 2/3/4
+hp 5/7/10 · atk 2/3/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 8.5 · p10 6 · median 8 · p90 11 · 6+ clashes 98.0% · ties 14.5% · power spread (sd) 13.7
+  top: warlock_start 31, warlock_attack 29, rhino 22, support_start 14 · bottom: tortoise -13, jackal -14, jerboa -21
+
+== hp 6/8/11 atk 1/2/3
+hp 6/8/11 · atk 1/2/3 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 12.7 · p10 9 · median 12 · p90 18 · 6+ clashes 99.9% · ties 7.3% · power spread (sd) 12.5
+  top: warlock_start 24, rhino 23, support_start 23, support_attack 11 · bottom: healer_start -13, tortoise -16, jerboa -22
+
+== hp 6/8/11 atk 1/2/4
+hp 6/8/11 · atk 1/2/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 12.4 · p10 8 · median 12 · p90 18 · 6+ clashes 99.9% · ties 6.9% · power spread (sd) 12.6
+  top: rhino 31, warlock_start 21, support_start 20, support_attack 9 · bottom: warrior_death -12, tortoise -14, jerboa -22
+
+== hp 6/8/11 atk 1/3/4
+hp 6/8/11 · atk 1/3/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 10.3 · p10 7 · median 9 · p90 15 · 6+ clashes 99.3% · ties 10.0% · power spread (sd) 12.7
+  top: warlock_start 25, rhino 24, support_start 20, warlock_attack 11 · bottom: healer_start -12, tortoise -19, jerboa -24
+
+== hp 6/8/11 atk 2/3/4
+hp 6/8/11 · atk 2/3/4 · amounts hp 2/3 atk 1/2 dmg 1/3
+clashes mean 9.1 · p10 7 · median 9 · p90 12 · 6+ clashes 99.1% · ties 12.9% · power spread (sd) 14.4
+  top: warlock_attack 32, warlock_start 31, rhino 22, support_start 14 · bottom: tortoise -15, warrior_death -18, jerboa -20
